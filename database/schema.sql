@@ -1,0 +1,219 @@
+-- ============================================================
+-- OSMOS Database Schema
+-- ============================================================
+
+-- A. Entities
+CREATE TABLE IF NOT EXISTS entities (
+    entity_id VARCHAR(50) PRIMARY KEY,
+    entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('Client', 'Prospect')),
+    original_entity_type VARCHAR(20) CHECK (original_entity_type IN ('Client', 'Prospect', NULL)),
+    created_at VARCHAR(50),
+    converted_at VARCHAR(50),
+    conversion_event_id VARCHAR(50),
+    completed_client_profile BOOLEAN,
+    region VARCHAR(100),
+    source_channel VARCHAR(100),
+    segment VARCHAR(100),
+    persona VARCHAR(100),
+    age_group VARCHAR(20),
+    preferred_device VARCHAR(50),
+    preferred_category VARCHAR(100),
+    marketing_consent BOOLEAN,
+    price_sensitivity NUMERIC(5, 4),
+    income_power_score NUMERIC(5, 4),
+    initial_interest_score NUMERIC(5, 4),
+    basic_profile_score NUMERIC(5, 4) DEFAULT 0.5,
+    created_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- B. Customer Profiles
+-- Note: This table contains personal data (PII). Encryption and strict access control are required in production.
+CREATE TABLE IF NOT EXISTS customer_profiles (
+    entity_id VARCHAR(50) PRIMARY KEY REFERENCES entities(entity_id) ON DELETE CASCADE,
+    age INTEGER,
+    sex VARCHAR(20),
+    email VARCHAR(255),
+    customer_type VARCHAR(20) CHECK (customer_type IN ('B2C', 'B2B', NULL)),
+    household_size INTEGER,
+    phone_number VARCHAR(50),
+    company_name VARCHAR(255),
+    job_title VARCHAR(255),
+    city VARCHAR(100),
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE customer_profiles IS 'Contains personal data. Encryption and access controls are required in production deployments.';
+
+-- C. Digital Twin Snapshots
+CREATE TABLE IF NOT EXISTS digital_twin_snapshots (
+    entity_id VARCHAR(50) PRIMARY KEY REFERENCES entities(entity_id) ON DELETE CASCADE,
+    snapshot_date VARCHAR(50),
+    recency_days NUMERIC(10, 2),
+    visits_30d NUMERIC(10, 2),
+    product_views_30d NUMERIC(10, 2),
+    cart_additions_30d NUMERIC(10, 2),
+    purchases_90d NUMERIC(10, 2),
+    total_spent_90d_mad NUMERIC(12, 2),
+    avg_order_value_mad NUMERIC(12, 2),
+    email_open_rate NUMERIC(5, 4),
+    email_click_rate NUMERIC(5, 4),
+    complaint_count_90d NUMERIC(10, 2),
+    review_score_avg NUMERIC(3, 2),
+    social_mentions_30d NUMERIC(10, 2),
+    social_sentiment_avg NUMERIC(5, 4),
+    conversion_probability NUMERIC(5, 4),
+    churn_risk_score NUMERIC(5, 4),
+    rfm_score NUMERIC(5, 4),
+    behavioral_engagement_score NUMERIC(5, 4),
+    predictive_value_score NUMERIC(5, 4),
+    decision_priority_score NUMERIC(5, 4),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- D. Event History
+CREATE TABLE IF NOT EXISTS event_history (
+    event_id VARCHAR(50) PRIMARY KEY,
+    entity_id VARCHAR(50) NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    event_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    old_class VARCHAR(100),
+    new_class VARCHAR(100),
+    class_changed BOOLEAN,
+    old_entity_type VARCHAR(20),
+    new_entity_type VARCHAR(20),
+    prospect_to_client_conversion BOOLEAN,
+    completed_client_profile BOOLEAN,
+    changed_variables JSONB,
+    before_values JSONB,
+    after_values JSONB,
+    old_clv_amount_mad NUMERIC(12, 2),
+    new_clv_amount_mad NUMERIC(12, 2),
+    old_clv_score NUMERIC(6, 2),
+    new_clv_score NUMERIC(6, 2),
+    old_clv_segment VARCHAR(100),
+    new_clv_segment VARCHAR(100),
+    clv_changed BOOLEAN,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_history_entity_id ON event_history(entity_id);
+CREATE INDEX IF NOT EXISTS idx_event_history_event_date ON event_history(event_date);
+CREATE INDEX IF NOT EXISTS idx_event_history_event_type ON event_history(event_type);
+
+-- E. RFM-ES Scores (Historical/Versioned)
+CREATE TABLE IF NOT EXISTS rfm_es_scores (
+    id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    event_id VARCHAR(50) REFERENCES event_history(event_id) ON DELETE SET NULL,
+    R_raw NUMERIC(12, 4),
+    F_raw NUMERIC(12, 4),
+    M_raw NUMERIC(12, 4),
+    E_raw NUMERIC(12, 4),
+    S_raw NUMERIC(12, 4),
+    rfm_recency_score INTEGER,
+    rfm_frequency_score INTEGER,
+    rfm_monetary_score INTEGER,
+    rfm_engagement_score INTEGER,
+    rfm_sentiment_score INTEGER,
+    rfm_score_raw_1_to_5 NUMERIC(6, 4),
+    rfm_score NUMERIC(5, 4),
+    ahp_weight_R NUMERIC(6, 5),
+    ahp_weight_F NUMERIC(6, 5),
+    ahp_weight_M NUMERIC(6, 5),
+    ahp_weight_E NUMERIC(6, 5),
+    ahp_weight_S NUMERIC(6, 5),
+    ahp_group_CR NUMERIC(8, 6),
+    ahp_group_CI NUMERIC(8, 6),
+    ahp_expert_count INTEGER,
+    calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rfm_es_scores_entity_id ON rfm_es_scores(entity_id);
+
+-- I. Model Registry
+CREATE TABLE IF NOT EXISTS model_registry (
+    id SERIAL PRIMARY KEY,
+    model_type VARCHAR(50) NOT NULL, -- 'classification', 'clv_amount', 'clv_segment', etc.
+    model_name VARCHAR(100) NOT NULL,
+    artifact_path VARCHAR(500),
+    entity_type_format VARCHAR(50),
+    rfm_version VARCHAR(100),
+    selection_metric VARCHAR(100),
+    feature_count INTEGER,
+    metrics JSONB,
+    export_date VARCHAR(50),
+    registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- F. Classification Predictions (Historical/Versioned)
+CREATE TABLE IF NOT EXISTS classification_predictions (
+    id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    event_id VARCHAR(50) REFERENCES event_history(event_id) ON DELETE SET NULL,
+    dynamic_class VARCHAR(100) NOT NULL,
+    confidence NUMERIC(5, 4),
+    top_3_probs JSONB,
+    model_name VARCHAR(100),
+    model_version VARCHAR(50),
+    model_registry_id INTEGER REFERENCES model_registry(id) ON DELETE SET NULL,
+    predicted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_class_pred_entity_id ON classification_predictions(entity_id);
+CREATE INDEX IF NOT EXISTS idx_class_pred_predicted_at ON classification_predictions(predicted_at);
+CREATE INDEX IF NOT EXISTS idx_class_pred_dynamic_class ON classification_predictions(dynamic_class);
+
+-- G. CLV Predictions (Historical/Versioned)
+CREATE TABLE IF NOT EXISTS clv_predictions (
+    id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    event_id VARCHAR(50) REFERENCES event_history(event_id) ON DELETE SET NULL,
+    predicted_clv_amount_mad NUMERIC(12, 2),
+    predicted_clv_score NUMERIC(6, 2),
+    predicted_clv_segment VARCHAR(100),
+    clv_model_name VARCHAR(100),
+    clv_segment_model_name VARCHAR(100),
+    clv_method_used VARCHAR(100),
+    ml_predicted_clv_amount_mad NUMERIC(12, 2),
+    math_clv_amount_mad NUMERIC(12, 2),
+    clv_segment_prediction_source VARCHAR(100),
+    clv_segment_confidence NUMERIC(5, 4),
+    clv_segment_top_3 JSONB,
+    model_registry_id INTEGER REFERENCES model_registry(id) ON DELETE SET NULL,
+    predicted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_clv_pred_entity_id ON clv_predictions(entity_id);
+CREATE INDEX IF NOT EXISTS idx_clv_pred_predicted_at ON clv_predictions(predicted_at);
+CREATE INDEX IF NOT EXISTS idx_clv_pred_segment ON clv_predictions(predicted_clv_segment);
+
+-- H. Customer Segments & Personas (Historical/Versioned)
+CREATE TABLE IF NOT EXISTS customer_segments (
+    id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    event_id VARCHAR(50) REFERENCES event_history(event_id) ON DELETE SET NULL,
+    customer_segment VARCHAR(100),
+    customer_persona VARCHAR(100),
+    persona_description TEXT,
+    persona_recommended_action TEXT,
+    segmentation_method VARCHAR(100),
+    ml_cluster_id INTEGER,
+    ml_cluster_label VARCHAR(100),
+    cluster_persona VARCHAR(100),
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cust_segments_entity_id ON customer_segments(entity_id);
+
+-- J. Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    action_type VARCHAR(100) NOT NULL,
+    entity_id VARCHAR(50),
+    event_id VARCHAR(50),
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
