@@ -21,30 +21,51 @@ from database.repositories import (
 
 logger = logging.getLogger("OSMOS_POSTGRES_STORAGE")
 
+def _is_scalar_na(v):
+    """Safely check if a scalar value is NA/None without crashing on arrays."""
+    try:
+        return pd.isna(v)
+    except (ValueError, TypeError):
+        # pd.isna() raises ValueError on arrays/multi-element objects
+        return False
+
 def clean_dict_values(d):
-    """Ensure all numpy/pandas types in dictionary are native python types."""
+    """Ensure all numpy/pandas types in dictionary are native python types.
+
+    Type-check ordering matters:
+    1. bool BEFORE int  — bool is a subclass of int in Python, so isinstance(True, int)
+       returns True. Checking int first would silently cast True→1, False→0, causing
+       PostgreSQL BOOLEAN column type mismatches.
+    2. np.ndarray/list BEFORE isna — pd.isna() on an array returns an array whose
+       truth value raises 'ValueError: ambiguous'. Arrays must be handled before any
+       scalar None/NA check.
+    """
     import numpy as np
     clean = {}
     for k, v in d.items():
-        if isinstance(v, bool):
-            # IMPORTANT: bool must be checked BEFORE int because in Python
-            # bool is a subclass of int (isinstance(True, int) == True).
-            # Without this ordering, True/False would be cast to 1/0,
-            # causing PostgreSQL BOOLEAN column type mismatches.
-            clean[k] = v
-        elif v is None or (not isinstance(v, bool) and pd.isna(v)):
-            clean[k] = None
-        elif isinstance(v, (np.integer, int)):
-            clean[k] = int(v)
-        elif isinstance(v, (np.floating, float)):
-            clean[k] = float(v)
+        # Step 1: native bool or numpy bool_ (before int check!)
+        if isinstance(v, (bool, np.bool_)):
+            clean[k] = bool(v)
+        # Step 2: arrays/lists (before isna check — pd.isna(array) returns array)
         elif isinstance(v, (np.ndarray, list)):
             clean[k] = list(v)
+        # Step 3: None / scalar NA
+        elif v is None or _is_scalar_na(v):
+            clean[k] = None
+        # Step 4: integer types
+        elif isinstance(v, (np.integer, int)):
+            clean[k] = int(v)
+        # Step 5: float types
+        elif isinstance(v, (np.floating, float)):
+            clean[k] = float(v)
+        # Step 6: nested dict
         elif isinstance(v, dict):
             clean[k] = clean_dict_values(v)
+        # Step 7: everything else → string
         else:
             clean[k] = str(v)
     return clean
+
 
 # --------------------------------------------------------
 # 1. PostgreSQL Load Data
