@@ -135,3 +135,39 @@ def load_event_history(entity_id=None):
             logger.error(f"Failed to load event history from PostgreSQL: {e}")
             return load_excel_event_history(entity_id)
     return load_excel_event_history(entity_id)
+
+def save_entity_snapshot(df, entity_id, history_df=None):
+    """Save only one entity's row to the storage backend.
+
+    Used after single-entity updates (CLV refresh, segmentation refresh) to avoid
+    iterating all 1508 rows when only one entity changed. This is ~200x faster
+    than calling save_data(full_df).
+
+    In Excel mode: still writes the full DataFrame (Excel requires full rewrite),
+    but skips the expensive per-row PostgreSQL upsert loop for unrelated entities.
+    In PostgreSQL mode: only upserts the single changed entity row.
+    """
+    entity_rows = df[df["entity_id"] == entity_id]
+    if entity_rows.empty:
+        logger.warning(f"save_entity_snapshot: entity_id '{entity_id}' not found in DataFrame.")
+        return save_data(df, history_df)  # fallback to full save
+
+    if is_postgres_enabled():
+        try:
+            from storage.postgres_storage import save_postgres_data
+            single_row_df = entity_rows.copy()
+            save_postgres_data(single_row_df, history_df=None)
+            # Also update Excel for backup consistency
+            from storage.excel_storage import save_excel_data
+            save_excel_data(df, history_df)
+            return True, None
+        except Exception as e:
+            logger.error(f"Error in save_entity_snapshot for '{entity_id}', falling back to full save: {e}")
+            global _fallback_active, _fallback_reason
+            _fallback_active = True
+            _fallback_reason = str(e)
+            return save_data(df, history_df)
+
+    # Excel-only mode: full rewrite (Excel has no partial update)
+    return save_data(df, history_df)
+

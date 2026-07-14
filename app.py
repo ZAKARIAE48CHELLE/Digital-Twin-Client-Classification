@@ -3383,8 +3383,10 @@ if __name__ == "__main__":
                         df_data = update_client_clv(df_data, selected_entity_id, clv_art)
                         df_data = update_customer_segmentation(df_data, selected_entity_id)
                         _, history = get_data()
-                        save_data(df_data, history)
+                        # Save only this one entity row — not all 1508
+                        storage_manager.save_entity_snapshot(df_data, selected_entity_id, history)
                         st.session_state["df"] = df_data
+
                     st.success("✅ CLV and Customer Segment refreshed successfully!")
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
