@@ -1,5 +1,10 @@
 import os
 import logging
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from database.db import test_connection
 from storage.excel_storage import (
     load_excel_data,

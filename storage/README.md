@@ -6,15 +6,17 @@ This folder contains the abstraction layer decoupling the Streamlit frontend (`a
 
 ## Configuration
 
-The active storage engine is governed by the environment variable:
+The active storage engine is governed by the environment variable `OSMOS_STORAGE_BACKEND` which is read from a root `.env` file (copied from `.env.example`).
 
 ```ini
-OSMOS_STORAGE_BACKEND=excel
-# or
 OSMOS_STORAGE_BACKEND=postgres
 ```
 
-If the variable is omitted, the platform defaults to **`excel`**.
+Once the `.env` file contains your database credentials and backend selection, the application can be started directly with:
+
+```bash
+streamlit run app.py
+```
 
 ---
 
