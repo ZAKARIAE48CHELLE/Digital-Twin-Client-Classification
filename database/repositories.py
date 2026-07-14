@@ -1,13 +1,23 @@
 import json
+import psycopg2.extras
 from database.db import get_cursor
 
-# Helper to serialize values to JSON safely
+# Helper to serialize values to JSONB safely using psycopg2.extras.Json
 def safe_json(val):
     if val is None:
         return None
     if isinstance(val, (dict, list)):
-        return json.dumps(val)
-    return str(val)
+        return psycopg2.extras.Json(val)
+    if isinstance(val, str):
+        val_str = val.strip()
+        if (val_str.startswith('{') and val_str.endswith('}')) or (val_str.startswith('[') and val_str.endswith(']')):
+            try:
+                parsed = json.loads(val_str)
+                return psycopg2.extras.Json(parsed)
+            except Exception:
+                pass
+    return psycopg2.extras.Json(val)
+
 
 # Helper to parse JSON values safely
 def safe_parse_json(val):

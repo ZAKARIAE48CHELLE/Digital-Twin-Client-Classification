@@ -112,10 +112,10 @@ def load_pkl_metadata(path):
         return artifact, None
     except Exception as e:
         return None, str(e)
-
 def migrate_models(dry_run):
     registered_count = 0
     warnings = []
+    registered_models_dict = {}
     
     paths_to_check = [
         ("classification", ["base models/RFM/osmos_best_model_artifact.pkl", "osmos_best_model_artifact.pkl"]),
@@ -177,6 +177,8 @@ def migrate_models(dry_run):
                     "export_date": export_date
                 }
                 
+                registered_models_dict[m_type] = model_name
+                
                 if not dry_run:
                     register_model(model_dict)
                     logger.info(f"Registered model {model_name} in PostgreSQL.")
@@ -192,7 +194,8 @@ def migrate_models(dry_run):
             logger.warning(msg)
             warnings.append(msg)
             
-    return registered_count, warnings
+    return registered_count, warnings, registered_models_dict
+
 
 def main():
     parser = argparse.ArgumentParser(description="OSMOS Excel to PostgreSQL Migration Script")
@@ -210,15 +213,15 @@ def main():
         logger.error(f"Excel data file not found at: {args.excel_path}")
         sys.exit(1)
         
-    success, message = test_connection()
-    if not success:
-        if args.dry_run:
-            logger.warning(f"Database connection check failed (ignored for dry-run): {message}")
-        else:
+    if not args.dry_run:
+        success, message = test_connection()
+        if not success:
             logger.error(f"Database connection check failed: {message}")
             sys.exit(1)
-    else:
         logger.info("Successfully connected to database.")
+    else:
+        logger.info("Dry-run mode active. Skipping database connection test.")
+
 
     
     if args.truncate and not args.dry_run:
@@ -252,17 +255,23 @@ def main():
     }
     
     # Let's run model registry migration
-    registered_models, model_warnings = migrate_models(args.dry_run)
+    registered_models, model_warnings, registered_models_dict = migrate_models(args.dry_run)
     counts["models"] = registered_models
+    classification_model_name = registered_models_dict.get("classification", "Dynamic Classification Model")
+
     
     # --------------------------------------------------------
     # A. Migrate Digital Twins
     # --------------------------------------------------------
     logger.info("Migrating Digital Twin profiles...")
+    migrated_entity_ids = set()
+    skipped_rows_count = 0
     for idx, row in dt_df.iterrows():
         entity_id = clean_str(row.get("entity_id"))
         if not entity_id:
+            skipped_rows_count += 1
             continue
+        migrated_entity_ids.add(entity_id)
             
         entity_type = clean_str(row.get("entity_type"))
         
@@ -366,7 +375,7 @@ def main():
             "dynamic_class": clean_str(row.get("dynamic_class")) or "Unknown",
             "confidence": 1.0, # default to 1.0 as it is not in the excel
             "top_3_probs": None,
-            "model_name": clean_str(row.get("clv_model_name")) or "Best Classification Model",
+            "model_name": classification_model_name,
             "model_version": "1.0",
             "model_registry_id": None
         }
@@ -441,18 +450,20 @@ def main():
             if has_clv: counts["clvs"] += 1
             if has_segment: counts["segments"] += 1
 
-    # --------------------------------------------------------
     # B. Migrate Event History
     # --------------------------------------------------------
     logger.info("Migrating Event History records...")
+    skipped_events_count = 0
     for idx, row in hist_df.iterrows():
         event_id = clean_str(row.get("event_id"))
-        if not event_id:
+        entity_id = clean_str(row.get("entity_id"))
+        if not event_id or not entity_id:
+            skipped_events_count += 1
             continue
             
         event_data = {
             "event_id": event_id,
-            "entity_id": clean_str(row.get("entity_id")),
+            "entity_id": entity_id,
             "event_type": clean_str(row.get("event_type")),
             "event_date": clean_str(row.get("event_date")),
             "old_class": clean_str(row.get("old_class")),
@@ -482,15 +493,17 @@ def main():
             exists = cursor.fetchone()
             cursor.close()
             conn.close()
-            
-            if exists:
-                insert_event_history(event_data)
-                counts["events"] += 1
-            else:
-                # Reference entity missing in Digital_Twins sheet, skip or log
-                logger.warning(f"Skipping event {event_id} due to missing parent entity: {event_data['entity_id']}")
         else:
+            exists = event_data["entity_id"] in migrated_entity_ids
+            
+        if exists:
+            if not args.dry_run:
+                insert_event_history(event_data)
             counts["events"] += 1
+        else:
+            skipped_events_count += 1
+            if not args.dry_run:
+                logger.warning(f"Skipping event {event_id} due to missing parent entity: {event_data['entity_id']}")
 
     # --------------------------------------------------------
     # C. Print Summary
@@ -519,6 +532,23 @@ def main():
             print(f"  - {warning}")
             
     print("============================================================")
+
+    # Write JSON report
+    report_data = {
+        "dry_run": args.dry_run,
+        "counts": counts,
+        "skipped_rows": skipped_rows_count,
+        "skipped_events": skipped_events_count,
+        "warnings": model_warnings
+    }
+    
+    report_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "migration_report.json"))
+    try:
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2)
+        logger.info(f"Migration report successfully saved to {report_path}")
+    except Exception as e:
+        logger.error(f"Failed to write migration report to {report_path}: {e}")
 
 if __name__ == "__main__":
     main()

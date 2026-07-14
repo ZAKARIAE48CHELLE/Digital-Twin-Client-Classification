@@ -2,7 +2,13 @@
 
 This directory contains the PostgreSQL database schema, connection utility, repository layer, test script, and the Excel migration utility. This foundation is prepared for the transition of data persistence from Excel spreadsheets (`osmos_digital_twin_data.xlsx`) to a robust, normalized relational database structure.
 
+> [!IMPORTANT]
+> **Phase 1 creates the database foundation only.**
+> `app.py` must **not** be connected to PostgreSQL until `schema.sql`, `test_db_connection.py`, and the migration dry-run all pass successfully.
+> Do not modify `app.py` or remove the Excel data sheet during this phase.
+
 ---
+
 
 ## Folder Structure
 
