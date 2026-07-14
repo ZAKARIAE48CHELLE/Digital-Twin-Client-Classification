@@ -26,7 +26,13 @@ def clean_dict_values(d):
     import numpy as np
     clean = {}
     for k, v in d.items():
-        if pd.isna(v) or v is None:
+        if isinstance(v, bool):
+            # IMPORTANT: bool must be checked BEFORE int because in Python
+            # bool is a subclass of int (isinstance(True, int) == True).
+            # Without this ordering, True/False would be cast to 1/0,
+            # causing PostgreSQL BOOLEAN column type mismatches.
+            clean[k] = v
+        elif v is None or (not isinstance(v, bool) and pd.isna(v)):
             clean[k] = None
         elif isinstance(v, (np.integer, int)):
             clean[k] = int(v)
@@ -36,8 +42,6 @@ def clean_dict_values(d):
             clean[k] = list(v)
         elif isinstance(v, dict):
             clean[k] = clean_dict_values(v)
-        elif isinstance(v, bool):
-            clean[k] = v
         else:
             clean[k] = str(v)
     return clean
