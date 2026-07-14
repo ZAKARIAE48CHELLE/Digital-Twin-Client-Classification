@@ -2103,9 +2103,10 @@ def simulate_event(df, history, entity_id, event_type, event_value=None):
 
     
     history = pd.concat([history_row, history], ignore_index=True)
-    save_data(df, history)
+    storage_manager.save_entity_snapshot(df, entity_id, history)
     
     return df, history, before_row, df.loc[idx], old_class, new_class, pred_res, is_conversion_trigger, new_event_id
+
 
 # 13. Create New Entity logic
 def create_new_entity(df, entity_data):
@@ -2226,9 +2227,10 @@ def create_new_entity(df, entity_data):
         
     # Reload or fetch history directly
     _, history = get_data()
-    save_data(df, history)
+    storage_manager.save_entity_snapshot(df, new_id, history)
     
     return df, new_id, initial_class
+
 
 def update_client_profile(df, entity_id, profile_data):
     idx = df[df["entity_id"] == entity_id].index[0]
@@ -2361,7 +2363,7 @@ def render_dialog_ui(entity_id, is_edit=False):
                 if len(h_idx) > 0:
                     df_history.at[h_idx[0], "completed_client_profile"] = True
                     
-            save_data(df_data, df_history)
+            storage_manager.save_entity_snapshot(df_data, entity_id, df_history)
             
             st.session_state["conversion_form_open"] = False
             st.session_state["edit_form_open"] = False
@@ -2381,12 +2383,13 @@ def render_dialog_ui(entity_id, is_edit=False):
                 if len(h_idx) > 0:
                     df_history.at[h_idx[0], "completed_client_profile"] = False
                     
-            save_data(df_data, df_history)
+            storage_manager.save_entity_snapshot(df_data, entity_id, df_history)
             st.warning("⚠️ Profile enrichment skipped. You can edit this profile later.")
             
         st.session_state["conversion_form_open"] = False
         st.session_state["edit_form_open"] = False
         st.rerun()
+
 
 # Execute Streamlit layout rendering only under __main__ scope
 if __name__ == "__main__":
