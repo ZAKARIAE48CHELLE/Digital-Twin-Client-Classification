@@ -2433,6 +2433,7 @@ if __name__ == "__main__":
         ("Customer Segments & Personas", "🎯"),
         ("Simulate Event",     "⚡"),
         ("Create New Entity",  "➕"),
+        ("Database Intelligence", "🧠"),
     ]
     _active = st.session_state["active_page"]
 
@@ -4054,3 +4055,8 @@ if __name__ == "__main__":
 
             if entity_type == "Client":
                 st.rerun()
+
+    elif page == "Database Intelligence":
+        from admin.database_dashboard import render_database_dashboard
+        render_database_dashboard(df_data, df_history)
+

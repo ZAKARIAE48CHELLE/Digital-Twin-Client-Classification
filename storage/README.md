@@ -54,3 +54,9 @@ If `OSMOS_STORAGE_BACKEND=postgres` is selected but the database connection fail
 - The app will not crash.
 - A warning card will display in the Streamlit sidebar highlighting the connection error.
 - The app will transparently fail over to the local Excel sheet to guarantee operational continuity.
+
+---
+
+> [!NOTE]
+> **Phase 3 Integration**: Phase 3 adds PostgreSQL historical monitoring through the Database Intelligence dashboard.
+
