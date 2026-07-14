@@ -517,10 +517,25 @@ def cleanup_legacy_files():
                 except Exception:
                     pass
 
+def safe_isna(v):
+    """Safely check if a scalar value is NA/None without crashing on lists or arrays.
+    pd.isna() returns an array when called on list/ndarray, which then causes
+    'ValueError: truth value of array is ambiguous' when used in an if condition.
+    """
+    if v is None:
+        return True
+    if isinstance(v, (list, np.ndarray)):
+        return False  # Non-empty collections are never NA
+    try:
+        return bool(pd.isna(v))
+    except (ValueError, TypeError):
+        return False
+
 def save_data(df, history):
     success, err = storage_manager.save_data(df, history)
     if not success:
         st.error(err)
+
 
 
 # 5. Load Initial Data Function
@@ -2049,9 +2064,9 @@ def simulate_event(df, history, entity_id, event_type, event_value=None):
         a_val = df.loc[idx, c]
         
         has_chg = False
-        if pd.isna(b_val) and pd.isna(a_val):
+        if safe_isna(b_val) and safe_isna(a_val):
             has_chg = False
-        elif pd.isna(b_val) or pd.isna(a_val):
+        elif safe_isna(b_val) or safe_isna(a_val):
             has_chg = True
         else:
             try:
@@ -2062,8 +2077,9 @@ def simulate_event(df, history, entity_id, event_type, event_value=None):
         if has_chg:
             changed_vars_list.append(c)
             
-        before_vals_dict[c] = str(b_val) if not pd.isna(b_val) else None
-        after_vals_dict[c] = str(a_val) if not pd.isna(a_val) else None
+        before_vals_dict[c] = str(b_val) if not safe_isna(b_val) else None
+        after_vals_dict[c] = str(a_val) if not safe_isna(a_val) else None
+
         
     hist_record = {
         "event_id": new_event_id,
