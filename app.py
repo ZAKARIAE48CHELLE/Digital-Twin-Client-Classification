@@ -20,6 +20,7 @@ import re
 import json
 from pathlib import Path
 from datetime import datetime
+import storage.storage_manager as storage_manager
 
 # Set page config
 st.set_page_config(
@@ -516,27 +517,11 @@ def cleanup_legacy_files():
                 except Exception:
                     pass
 
-# 4. Save data safely in a single Excel file and maintain a single backup copy
 def save_data(df, history):
-    excel_path = "osmos_digital_twin_data.xlsx"
-    backup_path = "osmos_digital_twin_data_backup.xlsx"
-    
-    # Keep exactly one backup file
-    if os.path.exists(excel_path):
-        try:
-            shutil.copy2(excel_path, backup_path)
-        except Exception:
-            pass
-            
-    # Save both sheets into the single Excel workbook
-    try:
-        with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name="Digital_Twins", index=False)
-            history.to_excel(writer, sheet_name="Event_History", index=False)
-    except PermissionError:
-        st.error("❌ **Permission Denied**: The data file `osmos_digital_twin_data.xlsx` is currently open in Excel or another program. Please close the file and try again so the platform can save your changes.")
-    except Exception as e:
-        st.error(f"Failed to save data to Excel: {e}")
+    success, err = storage_manager.save_data(df, history)
+    if not success:
+        st.error(err)
+
 
 # 5. Load Initial Data Function
 @st.cache_data
@@ -574,59 +559,12 @@ def load_initial_data():
         
     return df
 
-# 6. Load data from the unified Excel workbook
 def get_data():
-    excel_path = Path("osmos_digital_twin_data.xlsx")
-    backup_path = Path("osmos_digital_twin_data_backup.xlsx")
-    
-    df, history = None, None
-    loaded_ok = False
-    
-    # 1. Try reading the main file
-    if excel_path.exists():
-        try:
-            df = pd.read_excel(excel_path, sheet_name="Digital_Twins")
-            history = pd.read_excel(excel_path, sheet_name="Event_History")
-            loaded_ok = True
-        except Exception as e:
-            st.warning(f"⚠️ Failed to read main data file: {e}. Trying backup...")
-            
-    # 2. Try reading the backup file if the main file failed
-    if not loaded_ok and backup_path.exists():
-        try:
-            df = pd.read_excel(backup_path, sheet_name="Digital_Twins")
-            history = pd.read_excel(backup_path, sheet_name="Event_History")
-            loaded_ok = True
-            st.info("✅ Restored data from backup copy.")
-        except Exception as e:
-            st.warning(f"⚠️ Failed to read backup data file: {e}.")
-            
-    # 3. Fallback bootstrap
-    if loaded_ok:
-        df = ensure_client_columns(df)
-        history = ensure_history_columns(history)
-    else:
-        df = load_initial_data()
-        if df is None:
-            df = pd.DataFrame(columns=[
-                "entity_id", "entity_type", "purchases_90d", "total_spent_90d_mad", "avg_order_value_mad",
-                "recency_days", "visits_30d", "product_views_30d", "cart_additions_30d",
-                "email_open_rate", "email_click_rate", "complaint_count_90d", "review_score_avg",
-                "social_sentiment_avg", "conversion_probability", "churn_risk_score",
-                "rfm_score", "price_sensitivity", "income_power_score", "dynamic_class"
-            ])
-        df = ensure_client_columns(df)
-        
-        history = pd.DataFrame(columns=[
-            'event_id', 'entity_id', 'event_type', 'event_date', 
-            'old_class', 'new_class', 'changed_variables', 'class_changed',
-            'old_entity_type', 'new_entity_type', 'prospect_to_client_conversion',
-            'completed_client_profile', 'before_values', 'after_values'
-        ])
-        history = ensure_history_columns(history)
-        save_data(df, history)
-        
+    df, history = storage_manager.load_data()
+    df = ensure_client_columns(df)
+    history = ensure_history_columns(history)
     return df, history
+
 
 # 7. Load Model Artifact
 @st.cache_resource
@@ -2667,6 +2605,38 @@ if __name__ == "__main__":
         <div style='display: flex; justify-content: space-between; font-size: 11px;'>
             <span style='color: #64748b;'>Seg F1-Macro</span>
             <span style='color: #34d399; font-weight: 700; font-family: JetBrains Mono, monospace;'>{clv_seg_f1_str}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Panel 3: Storage Backend ──
+    is_pg = storage_manager.is_postgres_enabled()
+    fallback_active, fallback_reason = storage_manager.get_fallback_status()
+    
+    if fallback_active:
+        backend_label = "Excel (Fallback)"
+        backend_color = "#fb7185" # Rose/Red
+        backend_status_text = f"PostgreSQL failed: {fallback_reason[:30]}..."
+    elif is_pg:
+        backend_label = "PostgreSQL"
+        backend_color = "#34d399" # Emerald/Green
+        backend_status_text = "Active & Connected"
+    else:
+        backend_label = "Excel"
+        backend_color = "#cbd5e1" # Slate/Grey
+        backend_status_text = "Active & Local File"
+        
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>Storage Backend</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+            <span style='font-size: 18px;'>💾</span>
+            <span style='font-size: 13px; font-weight: 700; color: {backend_color}; font-family: JetBrains Mono, monospace;'>{backend_label}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: {backend_color}; font-weight: 600; font-size: 10px;'>{backend_status_text}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
