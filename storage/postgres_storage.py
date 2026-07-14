@@ -1,7 +1,8 @@
 import pandas as pd
 import json
 import logging
-from database.db import get_connection, get_cursor
+from sqlalchemy import create_engine
+from database.db import get_connection, get_cursor, get_connection_string
 from database.repositories import (
     upsert_entity,
     upsert_customer_profile,
@@ -45,85 +46,82 @@ def clean_dict_values(d):
 # 1. PostgreSQL Load Data
 # --------------------------------------------------------
 def load_postgres_data():
-    conn = get_connection()
-    try:
-        # Load all entities
-        entities_df = pd.read_sql("SELECT * FROM entities;", conn)
-        if entities_df.empty:
-            return pd.DataFrame(), pd.DataFrame()
-            
-        # Load profiles
-        profiles_df = pd.read_sql("SELECT * FROM customer_profiles;", conn)
+    engine = create_engine(get_connection_string())
+    # Load all entities
+    entities_df = pd.read_sql("SELECT * FROM entities;", engine)
+    if entities_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
         
-        # Load snapshots
-        snapshots_df = pd.read_sql("SELECT * FROM digital_twin_snapshots;", conn)
+    # Load profiles
+    profiles_df = pd.read_sql("SELECT * FROM customer_profiles;", engine)
+    
+    # Load snapshots
+    snapshots_df = pd.read_sql("SELECT * FROM digital_twin_snapshots;", engine)
+    
+    # Load latest RFM scores
+    rfm_df = pd.read_sql("""
+        SELECT DISTINCT ON (entity_id) * 
+        FROM rfm_es_scores 
+        ORDER BY entity_id, calculated_at DESC;
+    """, engine)
+    # Drop calculated_at/id to avoid conflicts
+    if not rfm_df.empty:
+        rfm_df = rfm_df.drop(columns=["id", "event_id", "calculated_at"], errors="ignore")
         
-        # Load latest RFM scores
-        rfm_df = pd.read_sql("""
-            SELECT DISTINCT ON (entity_id) * 
-            FROM rfm_es_scores 
-            ORDER BY entity_id, calculated_at DESC;
-        """, conn)
-        # Drop calculated_at/id to avoid conflicts
-        if not rfm_df.empty:
-            rfm_df = rfm_df.drop(columns=["id", "event_id", "calculated_at"], errors="ignore")
-            
-        # Load latest classifications
-        class_df = pd.read_sql("""
-            SELECT DISTINCT ON (entity_id) 
-                entity_id, dynamic_class, confidence as prediction_confidence, 
-                model_name as classification_model_name, top_3_probs as classification_top_3
-            FROM classification_predictions 
-            ORDER BY entity_id, predicted_at DESC;
-        """, conn)
+    # Load latest classifications
+    class_df = pd.read_sql("""
+        SELECT DISTINCT ON (entity_id) 
+            entity_id, dynamic_class, confidence as prediction_confidence, 
+            model_name as classification_model_name, top_3_probs as classification_top_3
+        FROM classification_predictions 
+        ORDER BY entity_id, predicted_at DESC;
+    """, engine)
+    
+    # Load latest CLVs
+    clv_df = pd.read_sql("""
+        SELECT DISTINCT ON (entity_id) * 
+        FROM clv_predictions 
+        ORDER BY entity_id, predicted_at DESC;
+    """, engine)
+    if not clv_df.empty:
+        clv_df = clv_df.drop(columns=["id", "event_id", "predicted_at", "model_registry_id"], errors="ignore")
         
-        # Load latest CLVs
-        clv_df = pd.read_sql("""
-            SELECT DISTINCT ON (entity_id) * 
-            FROM clv_predictions 
-            ORDER BY entity_id, predicted_at DESC;
-        """, conn)
-        if not clv_df.empty:
-            clv_df = clv_df.drop(columns=["id", "event_id", "predicted_at", "model_registry_id"], errors="ignore")
-            
-        # Load latest segments
-        segments_df = pd.read_sql("""
-            SELECT DISTINCT ON (entity_id) * 
-            FROM customer_segments 
-            ORDER BY entity_id, assigned_at DESC;
-        """, conn)
-        if not segments_df.empty:
-            segments_df = segments_df.drop(columns=["id", "event_id", "assigned_at"], errors="ignore")
-            
-        # Merge all into one DataFrame
-        df = entities_df
-        if not profiles_df.empty:
-            df = df.merge(profiles_df.drop(columns=["created_at", "updated_at"], errors="ignore"), on="entity_id", how="left")
-        if not snapshots_df.empty:
-            df = df.merge(snapshots_df.drop(columns=["snapshot_date", "updated_at"], errors="ignore"), on="entity_id", how="left")
-        if not rfm_df.empty:
-            df = df.merge(rfm_df, on="entity_id", how="left")
-        if not class_df.empty:
-            df = df.merge(class_df, on="entity_id", how="left")
-        if not clv_df.empty:
-            df = df.merge(clv_df, on="entity_id", how="left")
-        if not segments_df.empty:
-            df = df.merge(segments_df, on="entity_id", how="left")
-            
-        # Standardize NaN and boolean columns for Streamlit compatibility
-        df = df.loc[:, ~df.columns.duplicated()]
+    # Load latest segments
+    segments_df = pd.read_sql("""
+        SELECT DISTINCT ON (entity_id) * 
+        FROM customer_segments 
+        ORDER BY entity_id, assigned_at DESC;
+    """, engine)
+    if not segments_df.empty:
+        segments_df = segments_df.drop(columns=["id", "event_id", "assigned_at"], errors="ignore")
         
-        # Re-fetch event history log
-        history_list = get_event_history()
-        history_df = pd.DataFrame(history_list) if history_list else pd.DataFrame(columns=[
-            "event_id", "entity_id", "event_type", "event_date", "old_class", "new_class",
-            "class_changed", "old_entity_type", "new_entity_type", "prospect_to_client_conversion",
-            "completed_client_profile", "changed_variables", "before_values", "after_values"
-        ])
+    # Merge all into one DataFrame
+    df = entities_df
+    if not profiles_df.empty:
+        df = df.merge(profiles_df.drop(columns=["created_at", "updated_at"], errors="ignore"), on="entity_id", how="left")
+    if not snapshots_df.empty:
+        df = df.merge(snapshots_df.drop(columns=["snapshot_date", "updated_at"], errors="ignore"), on="entity_id", how="left")
+    if not rfm_df.empty:
+        df = df.merge(rfm_df, on="entity_id", how="left")
+    if not class_df.empty:
+        df = df.merge(class_df, on="entity_id", how="left")
+    if not clv_df.empty:
+        df = df.merge(clv_df, on="entity_id", how="left")
+    if not segments_df.empty:
+        df = df.merge(segments_df, on="entity_id", how="left")
         
-        return df, history_df
-    finally:
-        conn.close()
+    # Standardize NaN and boolean columns for Streamlit compatibility
+    df = df.loc[:, ~df.columns.duplicated()]
+    
+    # Re-fetch event history log
+    history_list = get_event_history()
+    history_df = pd.DataFrame(history_list) if history_list else pd.DataFrame(columns=[
+        "event_id", "entity_id", "event_type", "event_date", "old_class", "new_class",
+        "class_changed", "old_entity_type", "new_entity_type", "prospect_to_client_conversion",
+        "completed_client_profile", "changed_variables", "before_values", "after_values"
+    ])
+    
+    return df, history_df
 
 # --------------------------------------------------------
 # 2. PostgreSQL Save Data / Individual Updates
