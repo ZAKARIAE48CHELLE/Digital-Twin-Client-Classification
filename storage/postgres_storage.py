@@ -47,70 +47,181 @@ def clean_dict_values(d):
 # --------------------------------------------------------
 def load_postgres_data():
     engine = create_engine(get_connection_string())
-    # Load all entities
-    entities_df = pd.read_sql("SELECT * FROM entities;", engine)
-    if entities_df.empty:
+    
+    query = """
+    WITH latest_rfm AS (
+        SELECT DISTINCT ON (entity_id) *
+        FROM rfm_es_scores
+        ORDER BY entity_id, calculated_at DESC
+    ),
+    latest_classification AS (
+        SELECT DISTINCT ON (entity_id) *
+        FROM classification_predictions
+        ORDER BY entity_id, predicted_at DESC
+    ),
+    latest_clv AS (
+        SELECT DISTINCT ON (entity_id) *
+        FROM clv_predictions
+        ORDER BY entity_id, predicted_at DESC
+    ),
+    latest_segment AS (
+        SELECT DISTINCT ON (entity_id) *
+        FROM customer_segments
+        ORDER BY entity_id, assigned_at DESC
+    )
+    SELECT 
+        e.entity_id,
+        e.entity_type,
+        e.original_entity_type,
+        e.created_at,
+        e.converted_at,
+        e.conversion_event_id,
+        e.completed_client_profile,
+        e.region,
+        e.source_channel,
+        e.segment,
+        e.persona,
+        e.age_group,
+        e.preferred_device,
+        e.preferred_category,
+        e.marketing_consent,
+        e.price_sensitivity,
+        e.income_power_score,
+        e.initial_interest_score,
+        e.basic_profile_score,
+        
+        p.age,
+        p.sex,
+        p.email,
+        p.customer_type,
+        p.household_size,
+        p.phone_number,
+        p.company_name,
+        p.job_title,
+        p.city,
+        p.address,
+        
+        s.snapshot_date,
+        s.recency_days,
+        s.visits_30d,
+        s.product_views_30d,
+        s.cart_additions_30d,
+        s.purchases_90d,
+        s.total_spent_90d_mad,
+        s.avg_order_value_mad,
+        s.email_open_rate,
+        s.email_click_rate,
+        s.complaint_count_90d,
+        s.review_score_avg,
+        s.social_mentions_30d,
+        s.social_sentiment_avg,
+        s.conversion_probability,
+        s.churn_risk_score,
+        r.rfm_score,
+        s.behavioral_engagement_score,
+        s.predictive_value_score,
+        s.decision_priority_score,
+        
+        r.r_raw AS "R_raw",
+        r.f_raw AS "F_raw",
+        r.m_raw AS "M_raw",
+        r.e_raw AS "E_raw",
+        r.s_raw AS "S_raw",
+        r.rfm_recency_score,
+        r.rfm_frequency_score,
+        r.rfm_monetary_score,
+        r.rfm_engagement_score,
+        r.rfm_sentiment_score,
+        r.rfm_score_raw_1_to_5,
+        r.ahp_weight_r AS "ahp_weight_R",
+        r.ahp_weight_f AS "ahp_weight_F",
+        r.ahp_weight_m AS "ahp_weight_M",
+        r.ahp_weight_e AS "ahp_weight_E",
+        r.ahp_weight_s AS "ahp_weight_S",
+        r.ahp_group_cr AS "ahp_group_CR",
+        r.ahp_group_ci AS "ahp_group_CI",
+        r.ahp_expert_count,
+        
+        c.dynamic_class,
+        c.confidence AS "prediction_confidence",
+        c.model_name AS "classification_model_name",
+        c.top_3_probs AS "classification_top_3",
+        
+        v.predicted_clv_amount_mad,
+        v.predicted_clv_score,
+        v.predicted_clv_segment,
+        v.clv_model_name,
+        v.clv_segment_model_name,
+        v.clv_method_used,
+        v.ml_predicted_clv_amount_mad,
+        v.math_clv_amount_mad,
+        v.clv_segment_prediction_source,
+        v.clv_segment_confidence,
+        v.clv_segment_top_3,
+        v.predicted_at AS "clv_last_updated",
+        
+        g.customer_segment,
+        g.customer_persona,
+        g.persona_description,
+        g.persona_recommended_action,
+        g.persona_recommended_action AS "recommended_action",
+        g.segmentation_method,
+        g.ml_cluster_id,
+        g.ml_cluster_label,
+        g.cluster_persona,
+        g.assigned_at AS "segmentation_last_updated"
+    FROM entities e
+    LEFT JOIN customer_profiles p ON e.entity_id = p.entity_id
+    LEFT JOIN digital_twin_snapshots s ON e.entity_id = s.entity_id
+    LEFT JOIN latest_rfm r ON e.entity_id = r.entity_id
+    LEFT JOIN latest_classification c ON e.entity_id = c.entity_id
+    LEFT JOIN latest_clv v ON e.entity_id = v.entity_id
+    LEFT JOIN latest_segment g ON e.entity_id = g.entity_id;
+    """
+    
+    df = pd.read_sql(query, engine)
+    if df.empty:
         return pd.DataFrame(), pd.DataFrame()
         
-    # Load profiles
-    profiles_df = pd.read_sql("SELECT * FROM customer_profiles;", engine)
+    # Safely parse JSON columns
+    for col in ["classification_top_3", "clv_segment_top_3"]:
+        if col in df.columns:
+            df[col] = df[col].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+            
+    # Standardize columns to match Excel Digital_Twins exactly
+    excel_cols = [
+        "entity_id", "entity_type", "original_entity_type", "snapshot_date", "created_at", "converted_at", "conversion_event_id", "completed_client_profile",
+        "recency_days", "visits_30d", "product_views_30d", "cart_additions_30d", "purchases_90d", "total_spent_90d_mad", "avg_order_value_mad",
+        "email_open_rate", "email_click_rate", "complaint_count_90d", "review_score_avg", "social_mentions_30d", "social_sentiment_avg",
+        "basic_profile_score", "behavioral_engagement_score", "predictive_value_score", "decision_priority_score", "conversion_probability", "churn_risk_score",
+        "R_raw", "F_raw", "M_raw", "E_raw", "S_raw",
+        "rfm_recency_score", "rfm_frequency_score", "rfm_monetary_score", "rfm_engagement_score", "rfm_sentiment_score",
+        "rfm_score_raw_1_to_5", "rfm_score",
+        "ahp_weight_R", "ahp_weight_F", "ahp_weight_M", "ahp_weight_E", "ahp_weight_S",
+        "ahp_group_CR", "ahp_group_CI", "ahp_expert_count",
+        "dynamic_class", "prediction_confidence", "classification_model_name", "classification_top_3",
+        "predicted_clv_amount_mad", "predicted_clv_score", "predicted_clv_segment",
+        "clv_model_name", "clv_segment_model_name", "clv_method_used",
+        "ml_predicted_clv_amount_mad", "math_clv_amount_mad",
+        "clv_segment_prediction_source", "clv_segment_confidence", "clv_segment_top_3", "clv_last_updated",
+        "customer_segment", "customer_persona", "persona_description", "persona_recommended_action", "recommended_action",
+        "segmentation_method", "ml_cluster_id", "ml_cluster_label", "cluster_persona", "segmentation_last_updated",
+        "age", "sex", "email", "customer_type", "household_size", "phone_number", "company_name", "job_title", "city", "address",
+        "region", "source_channel", "segment", "persona", "age_group", "preferred_device", "preferred_category", "marketing_consent",
+        "price_sensitivity", "income_power_score", "initial_interest_score"
+    ]
     
-    # Load snapshots
-    snapshots_df = pd.read_sql("SELECT * FROM digital_twin_snapshots;", engine)
-    
-    # Load latest RFM scores
-    rfm_df = pd.read_sql("""
-        SELECT DISTINCT ON (entity_id) * 
-        FROM rfm_es_scores 
-        ORDER BY entity_id, calculated_at DESC;
-    """, engine)
-    # Drop calculated_at/id to avoid conflicts
-    if not rfm_df.empty:
-        rfm_df = rfm_df.drop(columns=["id", "event_id", "calculated_at"], errors="ignore")
-        
-    # Load latest classifications
-    class_df = pd.read_sql("""
-        SELECT DISTINCT ON (entity_id) 
-            entity_id, dynamic_class, confidence as prediction_confidence, 
-            model_name as classification_model_name, top_3_probs as classification_top_3
-        FROM classification_predictions 
-        ORDER BY entity_id, predicted_at DESC;
-    """, engine)
-    
-    # Load latest CLVs
-    clv_df = pd.read_sql("""
-        SELECT DISTINCT ON (entity_id) * 
-        FROM clv_predictions 
-        ORDER BY entity_id, predicted_at DESC;
-    """, engine)
-    if not clv_df.empty:
-        clv_df = clv_df.drop(columns=["id", "event_id", "predicted_at", "model_registry_id"], errors="ignore")
-        
-    # Load latest segments
-    segments_df = pd.read_sql("""
-        SELECT DISTINCT ON (entity_id) * 
-        FROM customer_segments 
-        ORDER BY entity_id, assigned_at DESC;
-    """, engine)
-    if not segments_df.empty:
-        segments_df = segments_df.drop(columns=["id", "event_id", "assigned_at"], errors="ignore")
-        
-    # Merge all into one DataFrame
-    df = entities_df
-    if not profiles_df.empty:
-        df = df.merge(profiles_df.drop(columns=["created_at", "updated_at"], errors="ignore"), on="entity_id", how="left")
-    if not snapshots_df.empty:
-        df = df.merge(snapshots_df.drop(columns=["snapshot_date", "updated_at"], errors="ignore"), on="entity_id", how="left")
-    if not rfm_df.empty:
-        df = df.merge(rfm_df, on="entity_id", how="left")
-    if not class_df.empty:
-        df = df.merge(class_df, on="entity_id", how="left")
-    if not clv_df.empty:
-        df = df.merge(clv_df, on="entity_id", how="left")
-    if not segments_df.empty:
-        df = df.merge(segments_df, on="entity_id", how="left")
-        
-    # Standardize NaN and boolean columns for Streamlit compatibility
+    # Copy profile duplicate columns if they exist in excel cols
+    for col in ["price_sensitivity", "income_power_score", "marketing_consent"]:
+        for suffix in ["_profile", "_profile_profile"]:
+            col_suf = f"{col}{suffix}"
+            if col_suf not in df.columns and col in df.columns:
+                df[col_suf] = df[col]
+                
+    for col in excel_cols:
+        if col not in df.columns:
+            df[col] = None
+            
     df = df.loc[:, ~df.columns.duplicated()]
     
     # Re-fetch event history log

@@ -1,0 +1,65 @@
+{
+  "excel_row_count": 1508,
+  "postgres_row_count": 1508,
+  "missing_columns_in_postgres": [],
+  "extra_columns_in_postgres": [
+    "price_sensitivity_profile",
+    "classification_top_3",
+    "income_power_score_profile",
+    "ml_cluster_id",
+    "marketing_consent_profile_profile",
+    "price_sensitivity_profile_profile",
+    "prediction_confidence",
+    "cluster_persona",
+    "income_power_score_profile_profile",
+    "ml_cluster_label",
+    "classification_model_name",
+    "marketing_consent_profile"
+  ],
+  "missing_entity_ids_in_postgres": [],
+  "extra_entity_ids_in_postgres": [],
+  "null_rate_comparison": {
+    "entity_id": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    },
+    "entity_type": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    },
+    "original_entity_type": {
+      "excel_null_rate": 0.9986737400530504,
+      "postgres_null_rate": 0.9986737400530504
+    },
+    "dynamic_class": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    },
+    "rfm_score": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    },
+    "predicted_clv_amount_mad": {
+      "excel_null_rate": 0.9960212201591512,
+      "postgres_null_rate": 0.9960212201591512
+    },
+    "predicted_clv_score": {
+      "excel_null_rate": 0.9960212201591512,
+      "postgres_null_rate": 0.9960212201591512
+    },
+    "predicted_clv_segment": {
+      "excel_null_rate": 0.9946949602122016,
+      "postgres_null_rate": 0.9946949602122016
+    },
+    "customer_segment": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    },
+    "customer_persona": {
+      "excel_null_rate": 0.0,
+      "postgres_null_rate": 0.0
+    }
+  },
+  "sample_value_differences": [],
+  "verdict": "PASS"
+}

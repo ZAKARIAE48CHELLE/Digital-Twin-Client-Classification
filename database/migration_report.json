@@ -1,5 +1,5 @@
 {
-  "dry_run": true,
+  "dry_run": false,
   "counts": {
     "entities": 1508,
     "profiles": 2,
