@@ -138,6 +138,8 @@ cython_debug/
 .streamlit/static/
 .streamlit/runtime/
 
+.env
+
 # OS/IDE metadata
 .DS_Store
 Thumbs.db
