@@ -13,6 +13,26 @@ import pandas as pd
 import os
 import storage.storage_manager as storage_manager
 import admin.database_metrics as db_metrics
+import analytics.clv_trend_alerts as clv_alerts
+import analytics.segment_transitions as seg_trans
+import analytics.prediction_drift as pred_drift
+
+@st.cache_data(ttl=60)
+def load_cached_clv_alerts(days=30, drop_threshold=0.20):
+    return clv_alerts.get_clv_trend_alerts(days, drop_threshold)
+
+@st.cache_data(ttl=60)
+def load_cached_segment_transitions(days=90):
+    return seg_trans.get_segment_transitions(days)
+
+@st.cache_data(ttl=60)
+def load_cached_transition_matrix(days=90):
+    return seg_trans.get_segment_transition_matrix(days)
+
+@st.cache_data(ttl=60)
+def load_cached_prediction_drift():
+    return pred_drift.detect_prediction_drift()
+
 
 def render_database_dashboard(df, history_df):
     st.markdown("<h2 style='text-align: center; color: #818cf8;'>🔮 Database Intelligence Dashboard</h2>", unsafe_allow_html=True)
@@ -51,7 +71,11 @@ def render_database_dashboard(df, history_df):
         > [!NOTE]  
         > Switch your environment setting to `OSMOS_STORAGE_BACKEND=postgres` and launch a local PostgreSQL container to activate historical logging, model registry registration, and audit trace timelines.
         """)
+        
+        st.markdown("<div class='section-header'><span class='icon'>📈</span><span class='title'>Advanced Historical Intelligence</span></div>", unsafe_allow_html=True)
+        st.info("Advanced Historical Intelligence requires PostgreSQL historical tables.")
         return
+
 
     # 2. PostgreSQL Active Mode
     if not db_metrics.is_postgres_available():
@@ -190,9 +214,85 @@ def render_database_dashboard(df, history_df):
                 else:
                     st.write("No customer segment/persona assignments logged.")
                     
+    # 5.5. Advanced Historical Intelligence Section
+    st.markdown("<div class='section-header'><span class='icon'>📈</span><span class='title'>Advanced Historical Intelligence</span></div>", unsafe_allow_html=True)
+    
+    tab_clv_alerts, tab_seg_transitions, tab_drift_mon = st.tabs([
+        "🚨 CLV Trend Alerts",
+        "🔀 Segment Transition Matrix",
+        "📊 Prediction Drift Monitoring"
+    ])
+    
+    # Tab 1: CLV Trend Alerts
+    with tab_clv_alerts:
+        clv_alerts_df = load_cached_clv_alerts()
+        if clv_alerts_df is not None and not clv_alerts_df.empty:
+            total_alerts = len(clv_alerts_df)
+            high_alerts = len(clv_alerts_df[clv_alerts_df["alert_level"] == "High"])
+            med_alerts = len(clv_alerts_df[clv_alerts_df["alert_level"] == "Medium"])
+            low_alerts = len(clv_alerts_df[clv_alerts_df["alert_level"] == "Low"])
+            
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.metric("Total Alerts", total_alerts)
+            with c2:
+                st.metric("High Alerts", high_alerts, delta_color="inverse")
+            with c3:
+                st.metric("Medium Alerts", med_alerts)
+            with c4:
+                st.metric("Low Alerts", low_alerts)
+                
+            st.dataframe(clv_alerts_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
+    # Tab 2: Segment Transition Matrix
+    with tab_seg_transitions:
+        transitions_df = load_cached_segment_transitions()
+        matrix_df = load_cached_transition_matrix()
+        
+        if transitions_df is not None and not transitions_df.empty:
+            col_m, col_t = st.columns([1, 1])
+            with col_m:
+                st.markdown("<p style='font-size:14px; font-weight:700;'>Transition Matrix</p>", unsafe_allow_html=True)
+                st.dataframe(matrix_df, use_container_width=True)
+            with col_t:
+                st.markdown("<p style='font-size:14px; font-weight:700;'>Top 5 Most Common Transitions</p>", unsafe_allow_html=True)
+                common_df = transitions_df.groupby(["previous_segment", "latest_segment"]).size().reset_index(name="Count")
+                common_df = common_df.sort_values(by="Count", ascending=False).head(5)
+                st.dataframe(common_df, use_container_width=True, hide_index=True)
+                
+            st.markdown("<p style='font-size:14px; font-weight:700;'>Detailed Transition Logs</p>", unsafe_allow_html=True)
+            st.dataframe(transitions_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
+    # Tab 3: Prediction Drift Monitoring
+    with tab_drift_mon:
+        drift_df = load_cached_prediction_drift()
+        if drift_df is not None and not drift_df.empty:
+            has_high_drift = any(drift_df["drift_level"] == "High")
+            if has_high_drift:
+                st.warning("⚠️ **High Drift Detected**: Significant change in lifecycle predictions found! Consider re-evaluating baseline models.")
+            else:
+                st.success("✅ Prediction distribution is stable (no high drift detected).")
+                
+            st.dataframe(
+                drift_df.style.format({
+                    "baseline_percent": "{:.1%}",
+                    "current_percent": "{:.1%}",
+                    "change_percent": "{:+.1%}"
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
     # 6. Model Registry
     st.markdown("<div class='section-header'><span class='icon'>📦</span><span class='title'>Model Registry Lineage Tracking</span></div>", unsafe_allow_html=True)
     registry_df = db_metrics.get_model_registry()
+
     if not registry_df.empty:
         st.dataframe(registry_df, use_container_width=True, hide_index=True)
     else:

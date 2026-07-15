@@ -33,3 +33,12 @@ OSMOS_STORAGE_BACKEND=postgres streamlit run app.py
 ```
 
 *If PostgreSQL mode is inactive, the dashboard will safely fall back to displaying local Excel file telemetry.*
+
+---
+
+## Phase 4: Advanced Historical Intelligence
+Phase 4 extends the admin dashboard with advanced historical telemetry:
+* **CLV Trend Alerts**: Visualizes customer values that drop over a specific window of days and indicates recommended marketing actions (e.g. Trigger retention campaign).
+* **Segment Transition Matrix**: Pivots previous-to-latest segment transitions and lists detailed transition pathways.
+* **Prediction Drift Monitoring**: Compares dynamic class predictions over a 30-day window against a 90-day baseline window to verify model stability.
+
