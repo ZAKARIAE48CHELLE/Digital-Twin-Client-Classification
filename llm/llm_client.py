@@ -121,6 +121,15 @@ def generate_text(prompt, temperature=0.2):
                 logger.error(err_msg)
                 write_llm_audit_log("LLM_HTTP_ERROR", {"status_code": resp.status_code, "error": resp.text})
                 return ""
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Ollama request timed out: {e}")
+            write_llm_audit_log("LLM_TIMEOUT", {"error": str(e)})
+            try:
+                import streamlit as st
+                st.warning("The local LLM did not respond in time. The deterministic alert remains valid. Please retry or check Ollama.")
+            except Exception:
+                pass
+            return "__TIMEOUT__"
         except requests.exceptions.RequestException as e:
             logger.error(f"Ollama connection error during generation: {e}")
             write_llm_audit_log("LLM_CONNECTION_FAILED", {"error": str(e)})
@@ -130,4 +139,21 @@ def generate_text(prompt, temperature=0.2):
 def generate_json(prompt, temperature=0.1, expected_keys=None):
     """Generate structured JSON response from local LLM."""
     raw_text = generate_text(prompt, temperature=temperature)
+    if raw_text == "__TIMEOUT__":
+        return {
+            "summary_fr": "Le modèle local n'a pas répondu dans le délai prévu.",
+            "summary_en": "The local model did not respond within the expected timeout.",
+            "risk_explanation_fr": "L'analyse déterministe reste disponible, mais l'explication LLM n'a pas pu être générée.",
+            "risk_explanation_en": "The deterministic analysis is still available, but the LLM explanation could not be generated.",
+            "priority": "Manual Review",
+            "recommended_action_fr": "Réessayer la génération ou vérifier que le modèle Ollama est bien chargé.",
+            "recommended_action_en": "Retry generation or verify that the Ollama model is properly loaded.",
+            "suggested_channel": "Manual Review",
+            "message_draft_fr": "",
+            "message_draft_en": "",
+            "admin_guidance_fr": "Vérifier Ollama, le modèle utilisé et le délai d'attente configuré.",
+            "admin_guidance_en": "Check Ollama, the selected model, and the configured timeout.",
+            "confidence": "Low"
+        }
     return extract_and_parse_json(raw_text, expected_keys)
+

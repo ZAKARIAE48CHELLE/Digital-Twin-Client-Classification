@@ -45,12 +45,25 @@ To run the local LLM integration:
    OSMOS_LLM_MODEL=qwen3:8b
    OSMOS_LLM_BASE_URL=http://localhost:11434
    OSMOS_LLM_LANGUAGE=fr_en
-   OSMOS_LLM_TIMEOUT=60
+   OSMOS_LLM_TIMEOUT=120
    ```
 4. **Launch OSMOS**:
    ```bash
    streamlit run app.py
    ```
+
+---
+
+## ⚡ Performance Optimization for Local LLMs
+If `qwen3:8b` is too slow or triggers read timeouts on GPUs like the RTX 3070 (8GB VRAM), consider using a lighter model:
+* **Recommended Fallbacks**:
+  * `llama3.1:8b` (via `ollama pull llama3.1:8b`)
+  * `phi4-mini` (via `ollama pull phi4:mini` or similar lightweight tag like `phi3:mini`)
+* **Local Run Tips**:
+  * **First Generation Delay**: The very first generation call can be slow (taking 30–60s) because Ollama is dynamically loading the GGUF weights into system/GPU memory. Subsequent calls will run much faster.
+  * **Pre-load Model**: Start Ollama and run a quick test query via command line before launching OSMOS.
+  * **Free VRAM**: Close other GPU-heavy applications (like game engines, intensive CAD tools, or open browser instances with hardware acceleration) to prevent Ollama from falling back to CPU execution.
+  * **Prompt Sizing**: Keep simulation logs and context sizes reasonably short.
 
 ---
 

@@ -2866,13 +2866,9 @@ if __name__ == "__main__":
     # ── Page 1: Dashboard Overview ────────────────────────────────
     if page == "Dashboard Overview":
         # Header
-        st.markdown(f"""
-        <div style='margin-bottom: 28px;'>
-            <h1 style='margin:0; font-size: 36px;'>🔮 OSMOS <span class='gradient-text'>Digital Twin Dashboard</span></h1>
-
-            <p style='color:#64748b; margin-top:6px; font-size:15px;'>Real-time customer intelligence powered by {active_model} classification</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("<h1 style='margin:0; font-size: 36px;'>🔮 OSMOS <span style='background: linear-gradient(135deg,#818cf8,#c084fc,#22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;'>Digital Twin Dashboard</span></h1>", unsafe_allow_html=True)
+        st.markdown(f"Real-time customer intelligence powered by **{active_model}** classification")
+        st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
         # ── Critical Action Alerts Widget ──
         if storage_manager.is_postgres_enabled():
@@ -2905,32 +2901,62 @@ if __name__ == "__main__":
                 <div style='background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); 
                             border-radius: 12px; padding: 18px; margin-bottom: 24px;'>
                     <div style='font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
-                        <span>🚨</span> Critical Action Alerts ({total_alerts_count})
+                        <span>🚨</span> Critical Action Alerts — Admin Attention Required ({total_alerts_count})
                     </div>
-                    <div style='display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #cbd5e1;'>
+                    <div style='display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #cbd5e1;'>
                 """, unsafe_allow_html=True)
                 
                 # Render CLV drops
                 if not high_clv_drops.empty:
                     for _, row in high_clv_drops.iterrows():
-                        st.markdown(f"• 💰 **CLV Drop Alert**: Client **{row['entity_id']}** experienced a **{row['clv_change_percent']*100:.1f}%** drop in CLV (value: {row['latest_clv_amount']:.2f} MAD). Recommended Action: *{row['recommended_action']}*")
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #f87171; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #f87171;'>[💰 CLV Drop Alert]</strong><br>
+                            <b>Client:</b> {row['entity_id']} | <b>Severity:</b> {row['alert_level']}<br>
+                            <b>Reason:</b> CLV dropped by {row['clv_change_percent']*100:.1f}% to {row['latest_clv_amount']:.2f} MAD (previously {row['previous_clv_amount']:.2f} MAD).<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ CLV Alert Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 # Render Transitions
                 if not risky_transitions.empty:
                     for _, row in risky_transitions.iterrows():
-                        st.markdown(f"• 🔀 **Segment Transition Alert**: Client **{row['entity_id']}** downgraded from **{row['previous_segment']}** to **{row['latest_segment']}** ({row['transition_type']}).")
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #fbbf24; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #fbbf24;'>[🔀 Segment Transition Alert]</strong><br>
+                            <b>Client:</b> {row['entity_id']} | <b>Severity:</b> High<br>
+                            <b>Reason:</b> Segment downgraded/changed from '{row['previous_segment']}' ({row['previous_persona']}) to '{row['latest_segment']}' ({row['latest_persona']}).<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Segment Transition Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 # Render Drift
                 if not high_drift_alerts.empty:
                     for _, row in high_drift_alerts.iterrows():
-                        st.markdown(f"• 📊 **Prediction Drift Alert**: Dynamic class **{row['dynamic_class']}** has high distribution drift ({row['change_percent']*100:+.1f}% vs baseline).")
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #fb7185; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #fb7185;'>[📊 Prediction Drift Alert]</strong><br>
+                            <b>Class:</b> {row['dynamic_class']} | <b>Severity:</b> High<br>
+                            <b>Reason:</b> Distribution changed by {row['change_percent']*100:+.1f}% vs baseline.<br>
+                            <i>This means the proportion of this class changed significantly compared with the baseline period.</i><br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Prediction Drift Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                 # Render Pending LLM recommendations
                 if pending_actions:
                     for item in pending_actions:
-                        st.markdown(f"• 🧠 **Pending LLM Recommendation** for **{item['entity_id'] or 'Platform'}**: *{item['recommended_action_fr']}* (Priority: **{item['priority']}**, Channel: *{item['suggested_channel']}*)")
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #818cf8; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #818cf8;'>[🧠 Pending LLM Recommendation]</strong><br>
+                            <b>Entity:</b> {item['entity_id'] or 'Platform'} | <b>Priority:</b> {item['priority']} | <b>Suggested Channel:</b> {item['suggested_channel']}<br>
+                            <b>Action Drafted (FR):</b> {item['recommended_action_fr']}<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Review recommendation details and update status under <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Generated Recommendations</i>.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 st.markdown("</div></div>", unsafe_allow_html=True)
+
 
 
         total_entities = len(df_data)

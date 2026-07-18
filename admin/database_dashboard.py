@@ -112,7 +112,7 @@ def render_database_dashboard(df, history_df):
     st.markdown("<div class='section-header'><span class='icon'>🗂️</span><span class='title'>Database Table Inventories</span></div>", unsafe_allow_html=True)
     t_counts = db_metrics.get_table_counts()
     t_df = pd.DataFrame(t_counts)
-    st.dataframe(t_df, use_container_width=True, hide_index=True)
+    st.dataframe(t_df, width="stretch", hide_index=True)
     
     # 4. Latest Activities Tabs
     st.markdown("<div class='section-header'><span class='icon'>📝</span><span class='title'>Latest Operational Logs (Database Stream)</span></div>", unsafe_allow_html=True)
@@ -126,17 +126,18 @@ def render_database_dashboard(df, history_df):
     ])
     
     with tab1:
-        st.dataframe(db_metrics.get_latest_events(), use_container_width=True)
+        st.dataframe(db_metrics.get_latest_events(), width="stretch")
     with tab2:
-        st.dataframe(db_metrics.get_latest_classification_predictions(), use_container_width=True)
+        st.dataframe(db_metrics.get_latest_classification_predictions(), width="stretch")
     with tab3:
-        st.dataframe(db_metrics.get_latest_clv_predictions(), use_container_width=True)
+        st.dataframe(db_metrics.get_latest_clv_predictions(), width="stretch")
     with tab4:
-        st.dataframe(db_metrics.get_latest_rfm_scores(), use_container_width=True)
+        st.dataframe(db_metrics.get_latest_rfm_scores(), width="stretch")
     with tab5:
-        st.dataframe(db_metrics.get_latest_customer_segments(), use_container_width=True)
+        st.dataframe(db_metrics.get_latest_customer_segments(), width="stretch")
     with tab6:
-        st.dataframe(db_metrics.get_audit_logs(), use_container_width=True)
+        st.dataframe(db_metrics.get_audit_logs(), width="stretch")
+
         
     # 5. Entity Historical Intelligence Explorer
     st.markdown("<div class='section-header'><span class='icon'>🔍</span><span class='title'>Entity Historical Intelligence Explorer</span></div>", unsafe_allow_html=True)
@@ -179,14 +180,14 @@ def render_database_dashboard(df, history_df):
             # Events Timeline
             with st.expander("📅 Event History Logs Timeline"):
                 if not timeline_df.empty:
-                    st.dataframe(timeline_df, use_container_width=True)
+                    st.dataframe(timeline_df, width="stretch")
                 else:
                     st.write("No historical event logs registered for this entity.")
                     
             # Classification
             with st.expander("🤖 Dynamic Classification History"):
                 if not class_hist.empty:
-                    st.dataframe(class_hist, use_container_width=True)
+                    st.dataframe(class_hist, width="stretch")
                 else:
                     st.write("No lifecycle classification prediction history logged.")
                     
@@ -200,7 +201,7 @@ def render_database_dashboard(df, history_df):
                     with col_chart2:
                         st.markdown("<p style='font-size:11px; text-align:center;'>CLV Value Score Evolution Over Time</p>", unsafe_allow_html=True)
                         st.line_chart(clv_hist.set_index("predicted_at")["predicted_clv_score"], color="#3b82f6")
-                    st.dataframe(clv_hist, use_container_width=True)
+                    st.dataframe(clv_hist, width="stretch")
                 else:
                     st.write("No CLV prediction history logged.")
                     
@@ -209,16 +210,17 @@ def render_database_dashboard(df, history_df):
                 if not rfm_hist.empty:
                     st.markdown("<p style='font-size:11px; text-align:center;'>RFM Score Evolution Over Time</p>", unsafe_allow_html=True)
                     st.line_chart(rfm_hist.set_index("calculated_at")["rfm_score"], color="#ec4899")
-                    st.dataframe(rfm_hist, use_container_width=True)
+                    st.dataframe(rfm_hist, width="stretch")
                 else:
                     st.write("No RFMscore history logged.")
                     
             # Segments
             with st.expander("👥 Cohort Segments & Persona Transition History"):
                 if not seg_hist.empty:
-                    st.dataframe(seg_hist, use_container_width=True)
+                    st.dataframe(seg_hist, width="stretch")
                 else:
                     st.write("No customer segment/persona assignments logged.")
+
                     
     # 5.5. Advanced Historical Intelligence Section
     st.markdown("<div class='section-header'><span class='icon'>📈</span><span class='title'>Advanced Historical Intelligence</span></div>", unsafe_allow_html=True)
@@ -248,7 +250,7 @@ def render_database_dashboard(df, history_df):
             with c4:
                 st.metric("Low Alerts", low_alerts)
                 
-            st.dataframe(clv_alerts_df, use_container_width=True, hide_index=True)
+            st.dataframe(clv_alerts_df, width="stretch", hide_index=True)
         else:
             st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
             
@@ -261,15 +263,15 @@ def render_database_dashboard(df, history_df):
             col_m, col_t = st.columns([1, 1])
             with col_m:
                 st.markdown("<p style='font-size:14px; font-weight:700;'>Transition Matrix</p>", unsafe_allow_html=True)
-                st.dataframe(matrix_df, use_container_width=True)
+                st.dataframe(matrix_df, width="stretch")
             with col_t:
                 st.markdown("<p style='font-size:14px; font-weight:700;'>Top 5 Most Common Transitions</p>", unsafe_allow_html=True)
                 common_df = transitions_df.groupby(["previous_segment", "latest_segment"]).size().reset_index(name="Count")
                 common_df = common_df.sort_values(by="Count", ascending=False).head(5)
-                st.dataframe(common_df, use_container_width=True, hide_index=True)
+                st.dataframe(common_df, width="stretch", hide_index=True)
                 
             st.markdown("<p style='font-size:14px; font-weight:700;'>Detailed Transition Logs</p>", unsafe_allow_html=True)
-            st.dataframe(transitions_df, use_container_width=True, hide_index=True)
+            st.dataframe(transitions_df, width="stretch", hide_index=True)
         else:
             st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
             
@@ -289,11 +291,12 @@ def render_database_dashboard(df, history_df):
                     "current_percent": "{:.1%}",
                     "change_percent": "{:+.1%}"
                 }),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True
             )
         else:
             st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+
 
 
                 
@@ -362,7 +365,7 @@ def render_database_dashboard(df, history_df):
         clv_alerts_df = load_cached_clv_alerts()
         if clv_alerts_df is not None and not clv_alerts_df.empty:
             st.markdown("<p style='font-size:14px; font-weight:700;'>CLV Drop Alerts Available</p>", unsafe_allow_html=True)
-            st.dataframe(clv_alerts_df, use_container_width=True, hide_index=True)
+            st.dataframe(clv_alerts_df, width="stretch", hide_index=True)
             
             selected_alert_entity_id = st.selectbox("Select entity ID to generate action recommendations:", clv_alerts_df['entity_id'].unique(), key="clv_alert_sel")
             
@@ -380,7 +383,7 @@ def render_database_dashboard(df, history_df):
         transitions_df = load_cached_segment_transitions()
         if transitions_df is not None and not transitions_df.empty:
             st.markdown("<p style='font-size:14px; font-weight:700;'>Cohort Segment Transitions Available</p>", unsafe_allow_html=True)
-            st.dataframe(transitions_df, use_container_width=True, hide_index=True)
+            st.dataframe(transitions_df, width="stretch", hide_index=True)
             
             selected_trans_entity_id = st.selectbox("Select entity ID to analyze transitions:", transitions_df['entity_id'].unique(), key="trans_alert_sel")
             
@@ -398,7 +401,7 @@ def render_database_dashboard(df, history_df):
         drift_df = load_cached_prediction_drift()
         if drift_df is not None and not drift_df.empty:
             st.markdown("<p style='font-size:14px; font-weight:700;'>Prediction Drift Distributions</p>", unsafe_allow_html=True)
-            st.dataframe(drift_df, use_container_width=True, hide_index=True)
+            st.dataframe(drift_df, width="stretch", hide_index=True)
             
             selected_drift_class = st.selectbox("Select class to generate drift interpretation:", drift_df['dynamic_class'].unique(), key="drift_alert_sel")
             
@@ -418,7 +421,7 @@ def render_database_dashboard(df, history_df):
             recs_df = pd.DataFrame(recs)
             # Reorder for display
             display_cols = ["id", "entity_id", "alert_type", "priority", "status", "suggested_channel", "confidence", "created_at"]
-            st.dataframe(recs_df[display_cols], use_container_width=True, hide_index=True)
+            st.dataframe(recs_df[display_cols], width="stretch", hide_index=True)
             
             st.markdown("<p style='font-size:14px; font-weight:700;'>Update Recommendation Status</p>", unsafe_allow_html=True)
             col_rec_id, col_status, col_act = st.columns(3)
@@ -461,6 +464,7 @@ def render_database_dashboard(df, history_df):
 
 
     if not registry_df.empty:
-        st.dataframe(registry_df, use_container_width=True, hide_index=True)
+        st.dataframe(registry_df, width="stretch", hide_index=True)
     else:
         st.warning("⚠️ **Model Registry is Empty**: No active model artifact records found in PostgreSQL. Please run the Excel-to-PostgreSQL migration tool to populate active model registry items.")
+
