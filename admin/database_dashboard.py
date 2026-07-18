@@ -16,6 +16,9 @@ import admin.database_metrics as db_metrics
 import analytics.clv_trend_alerts as clv_alerts
 import analytics.segment_transitions as seg_trans
 import analytics.prediction_drift as pred_drift
+import database.action_recommendations_repository as action_repo
+import llm.action_intelligence as llm_intel
+
 
 @st.cache_data(ttl=60)
 def load_cached_clv_alerts(days=30, drop_threshold=0.20):
@@ -74,7 +77,10 @@ def render_database_dashboard(df, history_df):
         
         st.markdown("<div class='section-header'><span class='icon'>📈</span><span class='title'>Advanced Historical Intelligence</span></div>", unsafe_allow_html=True)
         st.info("Advanced Historical Intelligence requires PostgreSQL historical tables.")
+        st.markdown("<div class='section-header'><span class='icon'>🧠</span><span class='title'>LLM-Assisted Action Intelligence</span></div>", unsafe_allow_html=True)
+        st.info("LLM-Assisted Action Intelligence requires PostgreSQL historical tables.")
         return
+
 
 
     # 2. PostgreSQL Active Mode
@@ -288,10 +294,171 @@ def render_database_dashboard(df, history_df):
             )
         else:
             st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+
+
+                
+    # 5.6. LLM-Assisted Action Intelligence Section (PostgreSQL mode only)
+    st.markdown("<div class='section-header'><span class='icon'>🧠</span><span class='title'>LLM-Assisted Action Intelligence</span></div>", unsafe_allow_html=True)
+    
+    # Helper to render LLM outputs beautifully
+    def render_recommendation_card(rec):
+        if not rec:
+            return
+        st.markdown(f"""
+        <div style='background: rgba(129,140,248,0.06); border: 1.5px solid rgba(129,140,248,0.2); 
+                    border-radius: 12px; padding: 20px; margin-top: 16px; margin-bottom: 16px;'>
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;'>
+                <h4 style='margin:0; color:#a5b4fc;'>🧠 LLM Recommendation Guidance</h4>
+                <span style='background: rgba(129,140,248,0.2); color: #cbd5e1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;'>
+                    Confidence: {rec.get("confidence", "Medium")}
+                </span>
+            </div>
+            <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; margin-bottom: 16px;'>
+                <div>
+                    <strong style='color:#a5b4fc;'>Priority:</strong> <span style='font-weight: 700; color: #fb7185;'>{rec.get("priority")}</span>
+                </div>
+                <div>
+                    <strong style='color:#a5b4fc;'>Suggested Channel:</strong> <span style='font-weight: 700; color: #fbbf24;'>{rec.get("suggested_channel")}</span>
+                </div>
+            </div>
+            <div style='border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;'>
+                <p style='margin: 0 0 6px 0; color:#818cf8; font-weight: 600;'>Summary / Résumé</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇫🇷 {rec.get("summary_fr")}</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇬🇧 {rec.get("summary_en")}</p>
+            </div>
+            <div style='border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;'>
+                <p style='margin: 0 0 6px 0; color:#818cf8; font-weight: 600;'>Risk Explanation / Explication du Risque</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇫🇷 {rec.get("risk_explanation_fr")}</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇬🇧 {rec.get("risk_explanation_en")}</p>
+            </div>
+            <div style='border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;'>
+                <p style='margin: 0 0 6px 0; color:#34d399; font-weight: 600;'>Recommended Action / Action Recommandée</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇫🇷 {rec.get("recommended_action_fr")}</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1;'>🇬🇧 {rec.get("recommended_action_en")}</p>
+            </div>
+            <div style='border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;'>
+                <p style='margin: 0 0 6px 0; color:#fbbf24; font-weight: 600;'>Message Draft / Projet de Message</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1; font-style: italic;'>🇫🇷 "{rec.get("message_draft_fr")}"</p>
+                <p style='margin: 0 0 12px 0; font-size:12.5px; color:#cbd5e1; font-style: italic;'>🇬🇧 "{rec.get("message_draft_en")}"</p>
+            </div>
+            <div style='border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;'>
+                <p style='margin: 0 0 6px 0; color:#cbd5e1; font-weight: 600;'>Admin Guidance / Directives Administrateur</p>
+                <p style='margin: 0 0 6px 0; font-size:12.5px; color:#94a3b8;'>🇫🇷 {rec.get("admin_guidance_fr")}</p>
+                <p style='margin: 0 0 0 0; font-size:12.5px; color:#94a3b8;'>🇬🇧 {rec.get("admin_guidance_en")}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    tab_llm_clv, tab_llm_seg, tab_llm_drift, tab_llm_recs, tab_llm_guide = st.tabs([
+        "🚨 CLV Alert Actions",
+        "🔀 Segment Transition Actions",
+        "📊 Prediction Drift Actions",
+        "📂 Generated Recommendations",
+        "🤖 Entity Guidance Assistant"
+    ])
+    
+    # Tab 1: CLV Alert Actions
+    with tab_llm_clv:
+        clv_alerts_df = load_cached_clv_alerts()
+        if clv_alerts_df is not None and not clv_alerts_df.empty:
+            st.markdown("<p style='font-size:14px; font-weight:700;'>CLV Drop Alerts Available</p>", unsafe_allow_html=True)
+            st.dataframe(clv_alerts_df, use_container_width=True, hide_index=True)
+            
+            selected_alert_entity_id = st.selectbox("Select entity ID to generate action recommendations:", clv_alerts_df['entity_id'].unique(), key="clv_alert_sel")
+            
+            if st.button("🤖 Generate LLM Recommendation", key="btn_gen_clv_rec"):
+                with st.spinner("Analyzing CLV alert context via Local LLM..."):
+                    alert_row = clv_alerts_df[clv_alerts_df['entity_id'] == selected_alert_entity_id].iloc[0].to_dict()
+                    result = llm_intel.generate_llm_action_for_clv_alert(alert_row)
+                    render_recommendation_card(result)
+                    st.success("✅ Recommendation generated and saved in PostgreSQL!")
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
+    # Tab 2: Segment Transition Actions
+    with tab_llm_seg:
+        transitions_df = load_cached_segment_transitions()
+        if transitions_df is not None and not transitions_df.empty:
+            st.markdown("<p style='font-size:14px; font-weight:700;'>Cohort Segment Transitions Available</p>", unsafe_allow_html=True)
+            st.dataframe(transitions_df, use_container_width=True, hide_index=True)
+            
+            selected_trans_entity_id = st.selectbox("Select entity ID to analyze transitions:", transitions_df['entity_id'].unique(), key="trans_alert_sel")
+            
+            if st.button("🤖 Generate LLM Transition Recommendation", key="btn_gen_seg_rec"):
+                with st.spinner("Analyzing segment transition history via Local LLM..."):
+                    trans_row = transitions_df[transitions_df['entity_id'] == selected_trans_entity_id].iloc[0].to_dict()
+                    result = llm_intel.generate_llm_action_for_segment_transition(trans_row)
+                    render_recommendation_card(result)
+                    st.success("✅ Recommendation generated and saved in PostgreSQL!")
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
+    # Tab 3: Prediction Drift Actions
+    with tab_llm_drift:
+        drift_df = load_cached_prediction_drift()
+        if drift_df is not None and not drift_df.empty:
+            st.markdown("<p style='font-size:14px; font-weight:700;'>Prediction Drift Distributions</p>", unsafe_allow_html=True)
+            st.dataframe(drift_df, use_container_width=True, hide_index=True)
+            
+            selected_drift_class = st.selectbox("Select class to generate drift interpretation:", drift_df['dynamic_class'].unique(), key="drift_alert_sel")
+            
+            if st.button("🤖 Generate LLM Drift Analysis", key="btn_gen_drift_rec"):
+                with st.spinner("Analyzing model prediction distribution drift via Local LLM..."):
+                    drift_row = drift_df[drift_df['dynamic_class'] == selected_drift_class].iloc[0].to_dict()
+                    result = llm_intel.generate_llm_action_for_prediction_drift(drift_row)
+                    render_recommendation_card(result)
+                    st.success("✅ Prediction drift recommendation generated and saved in PostgreSQL!")
+        else:
+            st.info("Not enough historical records yet. Simulate more events to activate this analysis.")
+            
+    # Tab 4: Generated Recommendations
+    with tab_llm_recs:
+        recs = action_repo.get_llm_action_recommendations(limit=100)
+        if recs:
+            recs_df = pd.DataFrame(recs)
+            # Reorder for display
+            display_cols = ["id", "entity_id", "alert_type", "priority", "status", "suggested_channel", "confidence", "created_at"]
+            st.dataframe(recs_df[display_cols], use_container_width=True, hide_index=True)
+            
+            st.markdown("<p style='font-size:14px; font-weight:700;'>Update Recommendation Status</p>", unsafe_allow_html=True)
+            col_rec_id, col_status, col_act = st.columns(3)
+            with col_rec_id:
+                selected_rec_id = st.selectbox("Select Recommendation ID:", recs_df['id'].unique(), key="rec_id_sel")
+            with col_status:
+                new_status = st.selectbox("Select New Status:", ["Pending", "In Progress", "Resolved", "Ignored"], key="status_sel")
+            with col_act:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Update Status", key="btn_update_rec_status"):
+                    action_repo.update_llm_action_status(selected_rec_id, new_status)
+                    st.success(f"✅ Status updated to '{new_status}' successfully!")
+                    st.rerun()
+            
+            # Show details card of selected recommendation
+            selected_rec_data = next((r for r in recs if r['id'] == selected_rec_id), None)
+            if selected_rec_data:
+                st.markdown(f"**Detailed Recommendation Details (ID: {selected_rec_id})**")
+                render_recommendation_card(selected_rec_data)
+        else:
+            st.info("No recommendations have been generated or saved in PostgreSQL yet.")
+            
+    # Tab 5: Entity Guidance Assistant
+    with tab_llm_guide:
+        if df is not None and not df.empty:
+            st.markdown("<p style='font-size:14px; font-weight:700;'>Generate Customer Guidance Summary</p>", unsafe_allow_html=True)
+            selected_guide_entity_id = st.selectbox("Select Customer Entity ID:", sorted(df['entity_id'].dropna().unique()), key="guide_sel")
+            
+            if st.button("🤖 Generate Customer Guidance Summary", key="btn_gen_guide"):
+                with st.spinner("Analyzing complete customer profile and history via Local LLM..."):
+                    result = llm_intel.generate_entity_guidance(selected_guide_entity_id)
+                    render_recommendation_card(result)
+                    st.success("✅ Guidance generated successfully!")
+        else:
+            st.info("No customers loaded.")
             
     # 6. Model Registry
     st.markdown("<div class='section-header'><span class='icon'>📦</span><span class='title'>Model Registry Lineage Tracking</span></div>", unsafe_allow_html=True)
     registry_df = db_metrics.get_model_registry()
+
 
     if not registry_df.empty:
         st.dataframe(registry_df, use_container_width=True, hide_index=True)

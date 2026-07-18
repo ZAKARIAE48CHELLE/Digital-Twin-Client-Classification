@@ -217,3 +217,40 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     details JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- K. LLM Action Recommendations
+CREATE TABLE IF NOT EXISTS llm_action_recommendations (
+    id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) REFERENCES entities(entity_id) ON DELETE CASCADE,
+    alert_type TEXT NOT NULL,
+    alert_source TEXT,
+    alert_level TEXT,
+    summary_fr TEXT,
+    summary_en TEXT,
+    risk_explanation_fr TEXT,
+    risk_explanation_en TEXT,
+    priority TEXT,
+    recommended_action_fr TEXT,
+    recommended_action_en TEXT,
+    suggested_channel TEXT,
+    message_draft_fr TEXT,
+    message_draft_en TEXT,
+    admin_guidance_fr TEXT,
+    admin_guidance_en TEXT,
+    confidence TEXT,
+    status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'In Progress', 'Resolved', 'Ignored')),
+    llm_model TEXT,
+    llm_provider TEXT,
+    input_context JSONB,
+    raw_llm_output JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_llm_rec_entity_id ON llm_action_recommendations(entity_id);
+CREATE INDEX IF NOT EXISTS idx_llm_rec_alert_type ON llm_action_recommendations(alert_type);
+CREATE INDEX IF NOT EXISTS idx_llm_rec_alert_level ON llm_action_recommendations(alert_level);
+CREATE INDEX IF NOT EXISTS idx_llm_rec_priority ON llm_action_recommendations(priority);
+CREATE INDEX IF NOT EXISTS idx_llm_rec_status ON llm_action_recommendations(status);
+CREATE INDEX IF NOT EXISTS idx_llm_rec_created_at ON llm_action_recommendations(created_at);
+

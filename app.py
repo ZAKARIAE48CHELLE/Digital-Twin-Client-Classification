@@ -2661,6 +2661,41 @@ if __name__ == "__main__":
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Panel 4: LLM Assistant ──
+    from llm.llm_client import check_llm_available
+    from llm.llm_config import is_llm_enabled, get_llm_model
+    
+    if not is_llm_enabled():
+        llm_label = "Disabled"
+        llm_color = "#94a3b8"  # Slate/Grey
+        llm_status_text = "OSMOS_LLM_ENABLED=false"
+    else:
+        llm_avail, llm_reason = check_llm_available()
+        if llm_avail:
+            llm_label = "Enabled"
+            llm_color = "#34d399"  # Emerald/Green
+            llm_status_text = f"Connected: {get_llm_model()}"
+        else:
+            llm_label = "Unavailable"
+            llm_color = "#fb7185"  # Rose/Red
+            llm_status_text = llm_reason[:30]
+            
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>LLM Assistant</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+            <span style='font-size: 18px;'>🧠</span>
+            <span style='font-size: 13px; font-weight: 700; color: {llm_color}; font-family: JetBrains Mono, monospace;'>{llm_label}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: {llm_color}; font-weight: 600; font-size: 10px;'>{llm_status_text}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
     # ── Model Diagnostics Expander ──
     with st.sidebar.expander("🛠️ Model Diagnostics"):
         class_loaded_yesno = "Yes" if model_artifact else "No"
@@ -2838,6 +2873,65 @@ if __name__ == "__main__":
             <p style='color:#64748b; margin-top:6px; font-size:15px;'>Real-time customer intelligence powered by {active_model} classification</p>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── Critical Action Alerts Widget ──
+        if storage_manager.is_postgres_enabled():
+            import database.action_recommendations_repository as action_repo
+            import analytics.clv_trend_alerts as clv_alerts
+            import analytics.segment_transitions as seg_trans
+            import analytics.prediction_drift as pred_drift
+            
+            # Fetch data safely (non-blocking)
+            try:
+                pending_actions = action_repo.get_pending_critical_actions(limit=5)
+                # CLV drop alerts of > 35% drop
+                high_clv_drops = clv_alerts.get_clv_trend_alerts(days=30, drop_threshold=0.35)
+                # Segment transitions with Risk Increase or Downgrade in last 90 days
+                transitions = seg_trans.get_segment_transitions(days=90)
+                risky_transitions = transitions[transitions["transition_type"].isin(["Downgrade", "Risk Increase"])] if not transitions.empty else pd.DataFrame()
+                # Drift alerts
+                drift_df = pred_drift.detect_prediction_drift()
+                high_drift_alerts = drift_df[drift_df["drift_level"] == "High"] if not drift_df.empty else pd.DataFrame()
+            except Exception as e:
+                pending_actions = []
+                high_clv_drops = pd.DataFrame()
+                risky_transitions = pd.DataFrame()
+                high_drift_alerts = pd.DataFrame()
+
+            total_alerts_count = len(pending_actions) + len(high_clv_drops) + len(risky_transitions) + len(high_drift_alerts)
+            
+            if total_alerts_count > 0:
+                st.markdown(f"""
+                <div style='background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); 
+                            border-radius: 12px; padding: 18px; margin-bottom: 24px;'>
+                    <div style='font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+                        <span>🚨</span> Critical Action Alerts ({total_alerts_count})
+                    </div>
+                    <div style='display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #cbd5e1;'>
+                """, unsafe_allow_html=True)
+                
+                # Render CLV drops
+                if not high_clv_drops.empty:
+                    for _, row in high_clv_drops.iterrows():
+                        st.markdown(f"• 💰 **CLV Drop Alert**: Client **{row['entity_id']}** experienced a **{row['clv_change_percent']*100:.1f}%** drop in CLV (value: {row['latest_clv_amount']:.2f} MAD). Recommended Action: *{row['recommended_action']}*")
+                
+                # Render Transitions
+                if not risky_transitions.empty:
+                    for _, row in risky_transitions.iterrows():
+                        st.markdown(f"• 🔀 **Segment Transition Alert**: Client **{row['entity_id']}** downgraded from **{row['previous_segment']}** to **{row['latest_segment']}** ({row['transition_type']}).")
+                
+                # Render Drift
+                if not high_drift_alerts.empty:
+                    for _, row in high_drift_alerts.iterrows():
+                        st.markdown(f"• 📊 **Prediction Drift Alert**: Dynamic class **{row['dynamic_class']}** has high distribution drift ({row['change_percent']*100:+.1f}% vs baseline).")
+                        
+                # Render Pending LLM recommendations
+                if pending_actions:
+                    for item in pending_actions:
+                        st.markdown(f"• 🧠 **Pending LLM Recommendation** for **{item['entity_id'] or 'Platform'}**: *{item['recommended_action_fr']}* (Priority: **{item['priority']}**, Channel: *{item['suggested_channel']}*)")
+                
+                st.markdown("</div></div>", unsafe_allow_html=True)
+
 
         total_entities = len(df_data)
         total_prospects = len(df_data[df_data["entity_type"] == "Prospect"])
