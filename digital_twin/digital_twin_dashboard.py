@@ -236,3 +236,27 @@ def render_digital_twin_explorer_tab(df=None):
                 """, unsafe_allow_html=True)
             else:
                 st.warning("Unable to generate LLM summary.")
+
+    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+    # H. Campaign History for this Digital Twin
+    st.markdown("<div class='section-header'><span class='icon'>🚀</span><span class='title'>Campaign History for this Digital Twin</span></div>", unsafe_allow_html=True)
+    if is_postgres_available():
+        from campaigns.campaign_metrics import get_entity_campaign_history
+        camp_h = get_entity_campaign_history(selected_entity_id)
+        if not camp_h["dispatches"].empty:
+            c1_dt, c2_dt = st.columns(2)
+            with c1_dt:
+                st.markdown("<strong style='font-size:13px; color:#818cf8;'>Dispatched Campaigns</strong>", unsafe_allow_html=True)
+                st.dataframe(camp_h["dispatches"][["campaign_id", "campaign_title", "status", "priority", "created_at"]], width="stretch", hide_index=True)
+            with c2_dt:
+                st.markdown("<strong style='font-size:13px; color:#34d399;'>Simulated Customer Responses</strong>", unsafe_allow_html=True)
+                if not camp_h["responses"].empty:
+                    st.dataframe(camp_h["responses"][["response_id", "campaign_id", "response_type", "simulated_at"]], width="stretch", hide_index=True)
+                else:
+                    st.info("No responses recorded for this entity.")
+        else:
+            st.info("No campaign activity recorded for this entity.")
+    else:
+        st.info("Campaign history tracking requires PostgreSQL backend.")
+

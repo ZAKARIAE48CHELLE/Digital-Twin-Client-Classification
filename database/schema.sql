@@ -281,4 +281,51 @@ CREATE INDEX IF NOT EXISTS idx_persona_lib_persona ON persona_library(persona_na
 CREATE INDEX IF NOT EXISTS idx_persona_lib_priority ON persona_library(priority_level);
 CREATE INDEX IF NOT EXISTS idx_persona_lib_active ON persona_library(is_active);
 
+-- M. Campaign Dispatches
+CREATE TABLE IF NOT EXISTS campaign_dispatches (
+    campaign_id SERIAL PRIMARY KEY,
+    recommendation_id INTEGER NULL REFERENCES llm_action_recommendations(id) ON DELETE SET NULL,
+    entity_id TEXT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    campaign_type TEXT NOT NULL,
+    campaign_channel TEXT,
+    campaign_title TEXT,
+    campaign_message_fr TEXT,
+    campaign_message_en TEXT,
+    action_source TEXT,
+    priority TEXT,
+    status TEXT DEFAULT 'Draft' CHECK (status IN ('Draft', 'Approved', 'Simulated Dispatch', 'Responded', 'No Response', 'Cancelled')),
+    created_by TEXT DEFAULT 'admin',
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    dispatched_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_camp_disp_entity_id ON campaign_dispatches(entity_id);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_rec_id ON campaign_dispatches(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_type ON campaign_dispatches(campaign_type);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_channel ON campaign_dispatches(campaign_channel);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_priority ON campaign_dispatches(priority);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_status ON campaign_dispatches(status);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_dispatched_at ON campaign_dispatches(dispatched_at);
+CREATE INDEX IF NOT EXISTS idx_camp_disp_created_at ON campaign_dispatches(created_at);
+
+-- N. Campaign Responses
+CREATE TABLE IF NOT EXISTS campaign_responses (
+    response_id SERIAL PRIMARY KEY,
+    campaign_id INTEGER REFERENCES campaign_dispatches(campaign_id) ON DELETE CASCADE,
+    entity_id TEXT REFERENCES entities(entity_id) ON DELETE CASCADE,
+    response_type TEXT CHECK (response_type IN ('Opened', 'Clicked', 'Purchased', 'Ignored', 'Unsubscribed', 'Complained', 'Positive Feedback', 'Negative Feedback')),
+    response_score NUMERIC(5, 4),
+    response_event_id TEXT NULL REFERENCES event_history(event_id) ON DELETE SET NULL,
+    response_details JSONB,
+    simulated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_camp_resp_campaign_id ON campaign_responses(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_camp_resp_entity_id ON campaign_responses(entity_id);
+CREATE INDEX IF NOT EXISTS idx_camp_resp_type ON campaign_responses(response_type);
+CREATE INDEX IF NOT EXISTS idx_camp_resp_simulated_at ON campaign_responses(simulated_at);
+
+
 

@@ -2630,10 +2630,12 @@ if __name__ == "__main__":
         ("Entity Profile",     "👤"),
         ("Customer Segments & Personas", "🎯"),
         ("Digital Twin & Persona", "🧬"),
+        ("Campaign Simulation", "🚀"),
         ("Simulate Event",     "⚡"),
         ("Create New Entity",  "➕"),
         ("Database Intelligence", "🧠"),
     ]
+
 
     _active = st.session_state["active_page"]
 
@@ -3140,6 +3142,18 @@ if __name__ == "__main__":
                         """, unsafe_allow_html=True)
                 
                 st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # Small Closed-Loop Campaign Summary Banner
+        try:
+            from campaigns.campaign_repository import get_campaign_metrics
+            c_metrics = get_campaign_metrics()
+            st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
+                <span style='font-size: 13px; font-weight: 700; color: #38bdf8;'>🚀 Closed-Loop Campaign Simulation:</span>
+                <span style='font-size: 12.5px; color: #cbd5e1;'>Drafts: <b style='color:#facc15;'>{c_metrics['draft_campaigns']}</b> \| Dispatches: <b style='color:#38bdf8;'>{c_metrics['simulated_dispatches']}</b> \| Responses: <b style='color:#34d399;'>{c_metrics['total_responses']}</b></span>
+            </div>""", unsafe_allow_html=True)
+        except Exception:
+            pass
+
 
 
 
@@ -4392,8 +4406,13 @@ if __name__ == "__main__":
         from digital_twin.digital_twin_dashboard import render_digital_twin_dashboard
         render_digital_twin_dashboard(df_data, df_history)
 
+    elif page == "Campaign Simulation":
+        from campaigns.campaign_dashboard import render_campaign_dashboard
+        render_campaign_dashboard(df_data)
+
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard
         render_database_dashboard(df_data, df_history)
+
 
 

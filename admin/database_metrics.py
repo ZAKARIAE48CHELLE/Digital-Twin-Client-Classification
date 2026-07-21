@@ -65,9 +65,14 @@ def get_table_counts():
         ("classification_predictions", "Historical dynamic customer lifecycle classification predictions"),
         ("clv_predictions", "Historical customer lifetime value prediction parameters"),
         ("customer_segments", "Historical customer segment/persona assignments"),
+        ("persona_library", "Segment-to-persona blueprint catalog definitions"),
+        ("llm_action_recommendations", "LLM-generated action advisory logs & feedback"),
+        ("campaign_dispatches", "Simulated marketing campaign dispatches and metadata"),
+        ("campaign_responses", "Simulated customer campaign responses and event mapping"),
         ("model_registry", "Metadata of trained machine learning model artifacts"),
         ("audit_logs", "Platform security and maintenance audit log trail")
     ]
+
     
     if not is_postgres_available():
         return [{"table_name": t[0], "row_count": 0, "purpose": t[1]} for t in tables]
