@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from admin.database_metrics import is_postgres_available
-from database.repositories import get_llm_action_recommendations
+from database.action_recommendations_repository import get_llm_action_recommendations
+
 from digital_twin.digital_twin_builder import build_digital_twin_profile
 from campaigns.campaign_repository import (
     get_campaign_dispatches,

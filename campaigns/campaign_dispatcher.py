@@ -1,5 +1,6 @@
 import logging
-from database.repositories import get_llm_recommendation_by_id
+from database.action_recommendations_repository import get_llm_recommendation_by_id
+
 from digital_twin.digital_twin_builder import build_digital_twin_profile
 from campaigns.campaign_repository import (
     create_campaign_dispatch,

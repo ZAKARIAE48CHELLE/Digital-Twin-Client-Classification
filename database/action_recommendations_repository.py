@@ -100,3 +100,15 @@ def get_pending_critical_actions(limit=20):
     except Exception as e:
         logger.error(f"Failed to retrieve pending critical actions: {e}")
         return []
+
+def get_llm_recommendation_by_id(rec_id):
+    """Retrieves a single LLM action recommendation by ID."""
+    query = "SELECT * FROM llm_action_recommendations WHERE id = %(id)s;"
+    try:
+        with get_cursor(commit=False) as cur:
+            cur.execute(query, {"id": rec_id})
+            return cur.fetchone()
+    except Exception as e:
+        logger.error(f"Failed to fetch LLM recommendation #{rec_id}: {e}")
+        return None
+
