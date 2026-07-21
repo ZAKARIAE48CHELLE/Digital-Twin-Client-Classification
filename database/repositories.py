@@ -204,11 +204,67 @@ def upsert_digital_twin_snapshot(snapshot_dict):
         return res['entity_id'] if res else None
 
 def get_digital_twin_snapshot(entity_id):
-    """Gets latest snapshot state for entity."""
-    query = "SELECT * FROM digital_twin_snapshots WHERE entity_id = %s;"
-    with get_cursor(commit=False) as cur:
-        cur.execute(query, (entity_id,))
-        return cur.fetchone()
+    """Gets latest snapshot state for entity including identity, predictions, CLV, and segment."""
+    from admin.database_metrics import is_postgres_available
+    if not is_postgres_available():
+        from storage.storage_manager import load_data
+        df, _ = load_data()
+        if df is not None and not df.empty and "entity_id" in df.columns:
+            match = df[df["entity_id"] == entity_id]
+            if not match.empty:
+                return match.iloc[0].to_dict()
+        return None
+        
+    query = """
+        SELECT 
+            s.*,
+            e.entity_type,
+            e.created_at,
+            e.converted_at,
+            e.completed_client_profile,
+            c.dynamic_class,
+            clv.predicted_clv_amount_mad,
+            clv.predicted_clv_score,
+            clv.predicted_clv_segment,
+            seg.customer_segment,
+            seg.customer_persona
+        FROM digital_twin_snapshots s
+        LEFT JOIN entities e ON s.entity_id = e.entity_id
+        LEFT JOIN (
+            SELECT DISTINCT ON (entity_id) entity_id, dynamic_class
+            FROM classification_predictions
+            ORDER BY entity_id, predicted_at DESC
+        ) c ON s.entity_id = c.entity_id
+        LEFT JOIN (
+            SELECT DISTINCT ON (entity_id) entity_id, predicted_clv_amount_mad, predicted_clv_score, predicted_clv_segment
+            FROM clv_predictions
+            ORDER BY entity_id, predicted_at DESC
+        ) clv ON s.entity_id = clv.entity_id
+        LEFT JOIN (
+            SELECT DISTINCT ON (entity_id) entity_id, customer_segment, customer_persona
+            FROM customer_segments
+            ORDER BY entity_id, assigned_at DESC
+        ) seg ON s.entity_id = seg.entity_id
+        WHERE s.entity_id = %s;
+    """
+    try:
+        with get_cursor(commit=False) as cur:
+            cur.execute(query, (entity_id,))
+            res = cur.fetchone()
+            if res:
+                return dict(res)
+    except Exception as e:
+        logger.error(f"Failed to fetch digital twin snapshot for {entity_id}: {e}")
+        
+    from storage.storage_manager import load_data
+    df, _ = load_data()
+    if df is not None and not df.empty and "entity_id" in df.columns:
+        match = df[df["entity_id"] == entity_id]
+        if not match.empty:
+            return match.iloc[0].to_dict()
+            
+    return None
+
 
 def get_all_digital_twins():
     """Gets all digital twins snapshots."""
