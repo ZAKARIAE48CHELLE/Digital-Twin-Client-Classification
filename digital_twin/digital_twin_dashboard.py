@@ -53,63 +53,56 @@ def render_digital_twin_explorer_tab(df=None):
     deterministic_exp = explain_digital_twin_state(profile)
     assignment_chain = explain_persona_assignment(selected_entity_id)
 
+def _is_valid_data(val):
+    if val is None:
+        return False
+    if isinstance(val, pd.DataFrame):
+        return not val.empty
+    if isinstance(val, (list, tuple)):
+        return len(val) > 0
+    return False
+
     # B. Digital Twin Summary Card
-    st.markdown(f"""
-    <div style='background: rgba(30, 41, 59, 0.8); border: 1.5px solid rgba(129, 140, 248, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 24px;'>
+    st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.8); border: 1.5px solid rgba(129, 140, 248, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 24px;'>
         <div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;'>
             <div>
                 <span style='font-size:22px; font-weight:800; color:#818cf8;'>👤 Entity [{identity['entity_id']}]</span>
                 <span style='font-size:14px; color:#94a3b8; margin-left:10px;'>Type: <b>{identity['entity_type']}</b></span>
             </div>
             <div>
-                <span style='background:rgba(59, 130, 246, 0.2); color:#60a5fa; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px;'>
-                    Class: {predictions['dynamic_class']}
-                </span>
-                <span style='background:rgba(192, 132, 252, 0.2); color:#c084fc; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px; margin-left:6px;'>
-                    Segment: {persona['customer_segment']}
-                </span>
-                <span style='background:rgba(251, 191, 36, 0.2); color:#fbbf24; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px; margin-left:6px;'>
-                    Persona: 🎭 {persona['customer_persona']}
-                </span>
+                <span style='background:rgba(59, 130, 246, 0.2); color:#60a5fa; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px;'>Class: {predictions['dynamic_class']}</span>
+                <span style='background:rgba(192, 132, 252, 0.2); color:#c084fc; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px; margin-left:6px;'>Segment: {persona['customer_segment']}</span>
+                <span style='background:rgba(251, 191, 36, 0.2); color:#fbbf24; padding:4px 10px; border-radius:6px; font-weight:600; font-size:13px; margin-left:6px;'>Persona: 🎭 {persona['customer_persona']}</span>
             </div>
         </div>
-        
         <div style='display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-top:16px;'>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>CLV Amount</span><br>
-                <strong style='font-size:16px; color:#34d399;'>{predictions['predicted_clv_amount_mad']:.2f} MAD</strong>
+                <span style='font-size:11px; color:#94a3b8;'>CLV Amount</span><br><strong style='font-size:16px; color:#34d399;'>{predictions['predicted_clv_amount_mad']:.2f} MAD</strong>
             </div>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>CLV Score</span><br>
-                <strong style='font-size:16px; color:#60a5fa;'>{scores['clv_score']:.2f}</strong>
+                <span style='font-size:11px; color:#94a3b8;'>CLV Score</span><br><strong style='font-size:16px; color:#60a5fa;'>{scores['clv_score']:.2f}</strong>
             </div>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>RFM-ES Score</span><br>
-                <strong style='font-size:16px; color:#c084fc;'>{scores['rfm_score']:.2f}</strong>
+                <span style='font-size:11px; color:#94a3b8;'>RFM-ES Score</span><br><strong style='font-size:16px; color:#c084fc;'>{scores['rfm_score']:.2f}</strong>
             </div>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>Churn Risk</span><br>
-                <strong style='font-size:15px; color:#f87171;'>{scores['churn_risk']}</strong>
+                <span style='font-size:11px; color:#94a3b8;'>Churn Risk</span><br><strong style='font-size:15px; color:#f87171;'>{scores['churn_risk']}</strong>
             </div>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>Engagement</span><br>
-                <strong style='font-size:15px; color:#38bdf8;'>{scores['engagement_score']}</strong>
+                <span style='font-size:11px; color:#94a3b8;'>Engagement</span><br><strong style='font-size:15px; color:#38bdf8;'>{scores['engagement_score']}</strong>
             </div>
             <div style='background:rgba(15, 23, 42, 0.6); padding:10px; border-radius:8px; text-align:center;'>
-                <span style='font-size:11px; color:#94a3b8;'>Decision Priority</span><br>
-                <strong style='font-size:15px; color:#fbbf24;'>{scores['decision_priority_score']}</strong>
+                <span style='font-size:11px; color:#94a3b8;'>Decision Priority</span><br><strong style='font-size:15px; color:#fbbf24;'>{scores['decision_priority_score']}</strong>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
 
     # C. Digital Twin State Cards
     st.markdown("<div class='section-header'><span class='icon'>📊</span><span class='title'>Digital Twin Multi-Dimensional States</span></div>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     
     with c1:
-        st.markdown(f"""
-        <div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #3b82f6; padding:14px; border-radius:8px;'>
+        st.markdown(f"""<div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #3b82f6; padding:14px; border-radius:8px;'>
             <strong style='color:#60a5fa;'>🛍️ Behavioral State</strong>
             <ul style='font-size:12px; color:#cbd5e1; margin-top:6px; padding-left:18px;'>
                 <li>Recency: <b>{behavior['recency_days']} days</b></li>
@@ -118,12 +111,10 @@ def render_digital_twin_explorer_tab(df=None):
                 <li>Purchases (90d): <b>{behavior['purchases_90d']}</b></li>
                 <li>Total Spent (90d): <b>{behavior['total_spent_90d_mad']:.2f} MAD</b></li>
             </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     with c2:
-        st.markdown(f"""
-        <div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #34d399; padding:14px; border-radius:8px;'>
+        st.markdown(f"""<div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #34d399; padding:14px; border-radius:8px;'>
             <strong style='color:#34d399;'>💎 Predictive & Value State</strong>
             <ul style='font-size:12px; color:#cbd5e1; margin-top:6px; padding-left:18px;'>
                 <li>Predicted CLV: <b>{predictions['predicted_clv_amount_mad']:.2f} MAD</b></li>
@@ -131,12 +122,10 @@ def render_digital_twin_explorer_tab(df=None):
                 <li>CLV Score: <b>{scores['clv_score']:.2f}</b></li>
                 <li>Avg Order Value: <b>{behavior['avg_order_value_mad']:.2f} MAD</b></li>
             </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     with c3:
-        st.markdown(f"""
-        <div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #f87171; padding:14px; border-radius:8px;'>
+        st.markdown(f"""<div style='background:rgba(30, 41, 59, 0.5); border-left:4px solid #f87171; padding:14px; border-radius:8px;'>
             <strong style='color:#f87171;'>⚠️ Risk & Engagement State</strong>
             <ul style='font-size:12px; color:#cbd5e1; margin-top:6px; padding-left:18px;'>
                 <li>Churn Risk: <b>{scores['churn_risk']}</b></li>
@@ -144,8 +133,7 @@ def render_digital_twin_explorer_tab(df=None):
                 <li>Complaints (90d): <b>{behavior['complaint_count_90d']}</b></li>
                 <li>Email Open Rate: <b>{behavior['email_open_rate']*100:.1f}%</b></li>
             </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
@@ -161,38 +149,39 @@ def render_digital_twin_explorer_tab(df=None):
     
     with t_ev:
         evs = history.get("events", [])
-        if evs:
+        if _is_valid_data(evs):
             st.dataframe(pd.DataFrame(evs), width="stretch", hide_index=True)
         else:
             st.info("No recorded event history for this entity.")
 
     with t_clv:
         clv_h = history.get("clv_history", [])
-        if clv_h:
+        if _is_valid_data(clv_h):
             st.dataframe(pd.DataFrame(clv_h), width="stretch", hide_index=True)
         else:
             st.info("No CLV history recorded.")
 
     with t_rfm:
         rfm_h = history.get("rfm_history", [])
-        if rfm_h:
+        if _is_valid_data(rfm_h):
             st.dataframe(pd.DataFrame(rfm_h), width="stretch", hide_index=True)
         else:
             st.info("No RFM history recorded.")
 
     with t_class:
         class_h = history.get("classification_history", [])
-        if class_h:
+        if _is_valid_data(class_h):
             st.dataframe(pd.DataFrame(class_h), width="stretch", hide_index=True)
         else:
             st.info("No classification history recorded.")
 
     with t_seg:
         seg_h = history.get("segment_history", [])
-        if seg_h:
+        if _is_valid_data(seg_h):
             st.dataframe(pd.DataFrame(seg_h), width="stretch", hide_index=True)
         else:
             st.info("No segment transition history recorded.")
+
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
