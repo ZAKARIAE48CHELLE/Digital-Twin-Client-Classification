@@ -30,388 +30,569 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── Premium Dark‑Mode UI ── Google Fonts + Glassmorphism + Neon Accents
+# OSMOS UI Style System
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-    /* ─── Global Reset & Dark Base ─── */
-    html, body, [data-testid="stAppViewContainer"], .stApp {
-        background: #080c18 !important;
-        color: #e2e8f0 !important;
-        font-family: 'Inter', sans-serif !important;
+    :root {
+        --bg-main: #06090e;
+        --bg-surface: #0b1019;
+        --panel: rgba(13, 19, 31, 0.75);
+        --panel-solid: #0d131f;
+        --panel-2: #101726;
+        --panel-3: #141e30;
+        --panel-hover: #162032;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(34, 211, 238, 0.38);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        --text-faint: #64748b;
+        
+        --cyan: #22d3ee;
+        --cyan-glow: rgba(34, 211, 238, 0.25);
+        --teal: #06b6d4;
+        --indigo: #6366f1;
+        --indigo-glow: rgba(99, 102, 241, 0.25);
+        --amber: #f59e0b;
+        --rose: #f43f5e;
+        --green: #10b981;
+        --blue: #3b82f6;
+        --violet: #8b5cf6;
+        
+        --radius-sm: 8px;
+        --radius: 12px;
+        --radius-lg: 16px;
+        --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.25);
+        --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.35);
+        --shadow-glow: 0 0 24px rgba(34, 211, 238, 0.12);
     }
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0d1117 0%, #0f172a 100%) !important;
-        border-right: 1px solid rgba(99,102,241,0.2) !important;
+
+    body * {
+        box-sizing: border-box;
     }
-    /* Animated star-field background */
+
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
+        background: var(--bg-main) !important;
+        color: var(--text-main) !important;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+
+    /* Atmospheric Ambient Glowing Background */
     [data-testid="stAppViewContainer"]::before {
         content: '';
         position: fixed;
         inset: 0;
-        background:
-            radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99,102,241,0.12) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139,92,246,0.10) 0%, transparent 55%),
-            radial-gradient(ellipse 40% 30% at 60% 30%, rgba(6,182,212,0.07) 0%, transparent 50%);
         pointer-events: none;
         z-index: 0;
+        background:
+            radial-gradient(ellipse 70% 40% at 15% 10%, rgba(34, 211, 238, 0.07), transparent 60%),
+            radial-gradient(ellipse 60% 45% at 85% 20%, rgba(99, 102, 241, 0.06), transparent 50%),
+            radial-gradient(ellipse 50% 50% at 50% 90%, rgba(16, 185, 129, 0.04), transparent 60%),
+            repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 64px),
+            repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 64px);
     }
+
     [data-testid="stAppViewContainer"] > div { position: relative; z-index: 1; }
 
-    /* ─── Typography ─── */
-    h1 { font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: #f1f5f9 !important; letter-spacing: -1px !important; }
-    h2 { font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: #e2e8f0 !important; }
-    h3 { font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: #cbd5e1 !important; margin-bottom: 12px !important; }
-    p, li, span, label, div { color: #cbd5e1; }
-
-    /* ─── Gradient Text ─── */
-    .gradient-text {
-        background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #22d3ee 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 900 !important;
-    }
-    .gradient-text-gold {
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 800;
+    [data-testid="stMainBlockContainer"], section.main > div {
+        max-width: 1560px !important;
+        padding-top: 24px !important;
+        padding-right: 32px !important;
+        padding-left: 32px !important;
+        padding-bottom: 48px !important;
     }
 
-    /* ─── Glass Cards ─── */
-    .glass-card {
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-    .glass-card:hover {
-        border-color: rgba(129,140,248,0.4);
-        box-shadow: 0 12px 40px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,0.07);
-    }
-    .glass-card-accent {
-        background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.10) 100%);
-        border: 1px solid rgba(129,140,248,0.35);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+    /* Modern Typography */
+    h1, h2, h3, h4 {
+        font-family: 'Outfit', 'Space Grotesk', sans-serif !important;
+        color: var(--text-main) !important;
+        letter-spacing: -0.02em !important;
     }
 
-    /* ─── KPI Cards ─── */
-    .kpi-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
-        margin-bottom: 28px;
+    h1 { font-size: 34px !important; font-weight: 800 !important; line-height: 1.15 !important; }
+    h2 { font-size: 22px !important; font-weight: 700 !important; }
+    h3 { font-size: 17px !important; font-weight: 600 !important; }
+    p, li, label, span, div { color: inherit; }
+
+    .gradient-text, .gradient-text-gold, h1 span[style*="background"] {
+        background: linear-gradient(135deg, var(--cyan), var(--indigo)) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        color: var(--cyan) !important;
     }
-    .kpi-card {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(99,102,241,0.18);
-        border-radius: 14px;
-        padding: 20px 16px;
-        text-align: center;
-        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-        backdrop-filter: blur(12px);
-        cursor: default;
+
+    /* Page Hero Header Banner */
+    .page-hero {
         position: relative;
-        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 0 0 26px 0;
+        padding: 0 0 20px 0;
+        border-bottom: 1px solid var(--line);
     }
+
+    .page-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 120px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--cyan), var(--indigo), transparent);
+    }
+
+    .page-kicker {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(99, 102, 241, 0.12));
+        border: 1px solid rgba(34, 211, 238, 0.25);
+        color: var(--cyan);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .page-hero h1 {
+        margin: 2px 0 0 0 !important;
+        font-size: 34px !important;
+        background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .page-hero p {
+        max-width: 820px;
+        margin: 4px 0 0 0 !important;
+        color: var(--text-muted) !important;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #070a0f, #0a0e16 60%, #070a0f) !important;
+        border-right: 1px solid var(--line) !important;
+        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px 8px 16px;
+    }
+
+    .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius);
+        color: #ffffff;
+        background: linear-gradient(135deg, #06b6d4, #6366f1);
+        font-family: 'Outfit', sans-serif;
+        font-weight: 900;
+        font-size: 22px;
+        box-shadow: 0 0 24px rgba(6, 182, 212, 0.4);
+    }
+
+    .brand-title {
+        color: var(--text-main);
+        font-family: 'Outfit', sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+    }
+
+    .brand-subtitle {
+        color: var(--cyan);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-top: 4px;
+    }
+
+    .sidebar-rule {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent);
+        margin: 4px 0 16px;
+    }
+
+    /* Custom Nav Buttons in Sidebar */
+    [data-testid="stSidebar"] .stButton > button {
+        width: 100% !important;
+        min-height: 44px !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        border-radius: var(--radius) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        background: rgba(255, 255, 255, 0.025) !important;
+        color: var(--text-muted) !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        padding: 11px 16px !important;
+        margin-bottom: 6px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    [data-testid="stSidebar"] .stButton > button:hover {
+        transform: translateX(4px) !important;
+        background: rgba(34, 211, 238, 0.08) !important;
+        border-color: rgba(34, 211, 238, 0.3) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    [data-testid="stSidebar"] button[title] {
+        text-align: left !important;
+    }
+
+    .privacy-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: var(--radius);
+        border: 1px solid rgba(244, 63, 94, 0.25);
+        background: rgba(244, 63, 94, 0.06);
+        color: var(--text-muted);
+        font-size: 11.5px;
+        line-height: 1.55;
+    }
+
+    /* Cards & Containers */
+    .glass-card, .glass-card-accent, [data-testid="stVerticalBlockBorderWrapper"], [data-testid="stForm"], [data-testid="stExpander"], [data-testid="stMetric"], .persona-card {
+        background: var(--panel) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: var(--radius) !important;
+        box-shadow: var(--shadow-md) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
+    .glass-card, .glass-card-accent, .persona-card { padding: 22px !important; }
+    .glass-card-accent {
+        border-left: 4px solid var(--cyan) !important;
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.05), rgba(13, 19, 31, 0.8)) !important;
+    }
+
+    div[style*="border-radius: 10px"], div[style*="border-radius:10px"], div[style*="border-radius: 12px"], div[style*="border-radius:12px"], div[style*="border-radius: 14px"], div[style*="border-radius:14px"], div[style*="border-radius: 16px"], div[style*="border-radius:16px"], div[style*="border-radius: 18px"], div[style*="border-radius:18px"] {
+        border-radius: var(--radius) !important;
+    }
+
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0 16px !important;
+        padding-bottom: 10px !important;
+        border-bottom: 1px solid var(--line) !important;
+    }
+
+    .section-header .icon {
+        display: inline-grid !important;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: rgba(34, 211, 238, 0.12);
+        border: 1px solid rgba(34, 211, 238, 0.25);
+        color: var(--cyan);
+        font-size: 16px !important;
+    }
+
+    .section-header .title {
+        color: var(--text-main) !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 17px !important;
+        font-weight: 700 !important;
+    }
+
+    /* KPI Grid & Cards */
+    .kpi-container {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        gap: 14px !important;
+        margin-bottom: 28px !important;
+    }
+
+    .kpi-card {
+        position: relative;
+        min-height: 130px;
+        padding: 18px !important;
+        text-align: left !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        overflow: hidden;
+        border-radius: var(--radius) !important;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)), var(--panel-solid) !important;
+        border: 1px solid var(--line) !important;
+        box-shadow: var(--shadow-md) !important;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
     .kpi-card::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(129,140,248,0.6), transparent);
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--cyan), var(--indigo));
     }
-    .kpi-card:hover { transform: translateY(-5px); border-color: rgba(129,140,248,0.5); box-shadow: 0 20px 40px rgba(99,102,241,0.2); }
-    .kpi-card:hover::before { opacity: 1; }
+
+    .kpi-card:hover {
+        transform: translateY(-4px) !important;
+        border-color: var(--line-strong) !important;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), var(--shadow-glow) !important;
+    }
+
+    .kpi-icon {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 22px !important;
+        opacity: 0.8;
+    }
+
     .kpi-val {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 30px;
-        font-weight: 700;
-        margin-bottom: 6px;
-        line-height: 1;
+        position: relative;
+        z-index: 1;
+        color: var(--text-main);
+        font-family: 'Outfit', 'Space Grotesk', sans-serif;
+        font-size: 32px !important;
+        font-weight: 800 !important;
+        line-height: 1 !important;
+        overflow-wrap: anywhere;
+        max-width: 100%;
     }
+
     .kpi-label {
-        font-size: 10px;
+        position: relative;
+        z-index: 1;
+        color: var(--text-muted) !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: #64748b;
-        font-weight: 600;
+        letter-spacing: 0.06em;
+        margin-top: 8px;
     }
-    .kpi-icon { font-size: 20px; margin-bottom: 8px; display: block; }
 
-    /* ─── KPI Value Colors ─── */
-    .color-total   { color: #e2e8f0; }
-    .color-prospect{ color: #818cf8; }
-    .color-client  { color: #34d399; }
-    .color-cold    { color: #94a3b8; }
-    .color-warm    { color: #fbbf24; }
-    .color-hot     { color: #f87171; }
-    .color-active  { color: #4ade80; }
-    .color-vip     { color: #c084fc; }
-    .color-churn   { color: #fb7185; }
+    /* Colors */
+    .color-total { color: var(--text-main) !important; }
+    .color-prospect { color: var(--cyan) !important; }
+    .color-client, .color-active { color: var(--green) !important; }
+    .color-cold { color: var(--text-muted) !important; }
+    .color-warm { color: var(--amber) !important; }
+    .color-hot, .color-churn { color: var(--rose) !important; }
+    .color-vip { color: var(--violet) !important; }
 
-    /* ─── Tags / Badges ─── */
-    .tag {
-        display: inline-block;
-        padding: 5px 13px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        text-align: center;
-        letter-spacing: 0.3px;
+    .tag, .persona-segment-tag, .persona-client-count, .status-badge {
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        padding: 5px 12px !important;
     }
-    .tag-cold    { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
-    .tag-warm    { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
-    .tag-hot     { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
-    .tag-new     { background: rgba(129,140,248,0.15); color: #818cf8; border: 1px solid rgba(129,140,248,0.3); }
-    .tag-active  { background: rgba(52,211,153,0.15);  color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
-    .tag-loyal   { background: rgba(34,211,238,0.15);  color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
-    .tag-vip     { background: rgba(192,132,252,0.15); color: #c084fc; border: 1px solid rgba(192,132,252,0.3); }
-    .tag-dormant { background: rgba(100,116,139,0.15); color: #64748b; border: 1px solid rgba(100,116,139,0.3); }
-    .tag-churn   { background: rgba(251,113,133,0.15); color: #fb7185; border: 1px solid rgba(251,113,133,0.3); }
-    /* CLV Segment Badges */
-    .tag-clv-low    { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
-    .tag-clv-medium { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
-    .tag-clv-high   { background: rgba(34,211,238,0.15);  color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
-    .tag-clv-veryhigh { background: rgba(192,132,252,0.15); color: #c084fc; border: 1px solid rgba(192,132,252,0.3); }
-    .status-badge { font-weight: 700; font-size: 14px; padding: 6px 14px; border-radius: 8px; border: 1px solid; }
 
-    /* ─── Score Progress Bars ─── */
+    /* Score & Progress Bars */
     .score-bar-wrap { margin: 12px 0; }
-    .score-bar-label { display: flex; justify-content: space-between; font-size: 13.5px; color: #94a3b8; margin-bottom: 6px; }
-    .score-bar-track { height: 10px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
-    .score-bar-fill  { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
-    .fill-indigo { background: linear-gradient(90deg, #4f46e5, #818cf8); }
-    .fill-violet { background: linear-gradient(90deg, #7c3aed, #c084fc); }
-    .fill-cyan   { background: linear-gradient(90deg, #0891b2, #22d3ee); }
-    .fill-rose   { background: linear-gradient(90deg, #e11d48, #fb7185); }
-    .fill-amber  { background: linear-gradient(90deg, #d97706, #fbbf24); }
-    .fill-green  { background: linear-gradient(90deg, #15803d, #4ade80); }
+    .score-bar-label { color: var(--text-muted) !important; font-size: 13px !important; }
+    .score-bar-track {
+        height: 8px !important;
+        border-radius: 999px !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        overflow: hidden;
+    }
+    .score-bar-fill { height: 100%; border-radius: 999px !important; }
+    .fill-indigo { background: linear-gradient(90deg, #0284c7, var(--cyan)) !important; }
+    .fill-violet { background: linear-gradient(90deg, #7c3aed, var(--indigo)) !important; }
+    .fill-cyan { background: linear-gradient(90deg, #06b6d4, #38bdf8) !important; }
+    .fill-rose { background: linear-gradient(90deg, #e11d48, var(--rose)) !important; }
+    .fill-amber { background: linear-gradient(90deg, #d97706, var(--amber)) !important; }
+    .fill-green { background: linear-gradient(90deg, #059669, var(--green)) !important; }
 
-    /* ─── Info Row / Stat pairs ─── */
+    /* Key-Value Info Rows */
     .info-row {
         display: flex;
         justify-content: space-between;
+        gap: 14px;
         align-items: center;
-        padding: 9px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         font-size: 13px;
     }
     .info-row:last-child { border-bottom: none; }
-    .info-label { color: #64748b; font-weight: 500; }
-    .info-value { color: #e2e8f0; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .info-label { color: var(--text-muted) !important; font-weight: 600; }
+    .info-value { color: var(--text-main) !important; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700; text-align: right; }
 
-    /* ─── Section Headers ─── */
-    .section-header {
-        display: flex; align-items: center; gap: 10px;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid rgba(99,102,241,0.2);
-    }
-    .section-header .icon { font-size: 20px; }
-    .section-header .title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: #e2e8f0; }
-
-    /* ─── Conversion Banner ─── */
-    .conversion-banner {
-        background: linear-gradient(135deg, rgba(52,211,153,0.15) 0%, rgba(16,185,129,0.08) 100%);
-        border: 1px solid rgba(52,211,153,0.4);
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 20px;
-        text-align: center;
+    /* Buttons */
+    .stButton > button, [data-testid="stFormSubmitButton"] button {
+        min-height: 42px !important;
+        border-radius: var(--radius) !important;
+        border: 1px solid rgba(34, 211, 238, 0.4) !important;
+        background: linear-gradient(135deg, var(--teal), #0284c7) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25) !important;
+        white-space: normal !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* ─── Streamlit overrides ─── */
-    [data-testid="stMetricValue"] { color: #818cf8 !important; }
-    .stButton > button {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
-        color: #fff !important;
-        border: none !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        padding: 10px 22px !important;
-        transition: all 0.25s ease !important;
-        box-shadow: 0 4px 15px rgba(99,102,241,0.35) !important;
-        font-family: 'Inter', sans-serif !important;
-    }
-    .stButton > button:hover {
+    .stButton > button:hover, [data-testid="stFormSubmitButton"] button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(99,102,241,0.5) !important;
+        border-color: var(--cyan) !important;
+        box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4) !important;
     }
-    /* secondary button */
+
     .stButton > button[kind="secondary"] {
-        background: rgba(99,102,241,0.12) !important;
-        border: 1px solid rgba(99,102,241,0.4) !important;
-        color: #818cf8 !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        color: var(--cyan) !important;
+        border-color: rgba(34, 211, 238, 0.25) !important;
         box-shadow: none !important;
     }
+    .stButton > button[kind="secondary"]:hover {
+        background: rgba(34, 211, 238, 0.1) !important;
+        border-color: rgba(34, 211, 238, 0.5) !important;
+    }
+
+    /* Inputs & Controls */
     [data-testid="stSelectbox"] > div > div,
     [data-testid="stTextInput"] > div > div > input,
     [data-testid="stNumberInput"] > div > div > input,
-    [data-testid="stTextArea"] > div > div > textarea {
-        background: rgba(15,23,42,0.9) !important;
-        border: 1px solid rgba(99,102,241,0.25) !important;
-        color: #e2e8f0 !important;
-        border-radius: 8px !important;
-    }
-    [data-testid="stDataFrame"] { border: 1px solid rgba(99,102,241,0.2) !important; border-radius: 10px !important; overflow: hidden; }
-    [data-testid="stDataFrame"] thead th { background: rgba(99,102,241,0.2) !important; color: #818cf8 !important; }
-    [data-testid="stDataFrame"] tbody tr:nth-child(even) { background: rgba(255,255,255,0.02) !important; }
-    [data-testid="stRadio"] label { color: #cbd5e1 !important; }
-    [data-testid="stRadio"] label span { font-weight: 500; }
-    [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3 { color: #e2e8f0 !important; }
-    .stProgress > div > div > div { background: linear-gradient(90deg,#4f46e5,#818cf8) !important; border-radius: 99px !important; }
-    [data-testid="stAlert"] { border-radius: 10px !important; border-left-width: 3px !important; }
-    [data-testid="stSidebar"] [data-testid="stRadio"] { gap: 4px; }
-    div[role="radiogroup"] label {
-        background: rgba(99,102,241,0.07);
-        border: 1px solid rgba(99,102,241,0.15);
-        border-radius: 8px;
-        padding: 8px 12px !important;
-        transition: all 0.2s ease;
-        margin-bottom: 4px;
-        display: block;
-    }
-    div[role="radiogroup"] label:hover {
-        background: rgba(99,102,241,0.15);
-        border-color: rgba(129,140,248,0.4);
-    }
-    /* ─── Sidebar nav buttons: dark glass (override global .stButton rule) ─── */
-    [data-testid="stSidebar"] .stButton > button {
-        background: rgba(13, 17, 35, 0.7) !important;
-        border: 1px solid rgba(99,102,241,0.18) !important;
-        color: #64748b !important;
-        font-weight: 500 !important;
-        box-shadow: none !important;
-        transform: none !important;
-    }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(99,102,241,0.13) !important;
-        border-color: rgba(129,140,248,0.4) !important;
-        color: #c7d2fe !important;
-        transform: translateX(3px) !important;
-        box-shadow: 0 0 16px rgba(99,102,241,0.12), -3px 0 0 #818cf8 !important;
-    }
-
-    /* ─── Selectbox dropdown popup ─── */
-    [data-baseweb="popover"],
-    [data-baseweb="menu"],
-    [data-baseweb="select"] [role="listbox"],
-    ul[data-baseweb="menu"] {
-        background: #0f172a !important;
-        border: 1px solid rgba(99,102,241,0.3) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
-    }
-    [data-baseweb="menu"] li,
-    [role="option"],
-    [data-baseweb="select"] li {
-        background: transparent !important;
-        color: #94a3b8 !important;
-        font-size: 13px !important;
-    }
-    [data-baseweb="menu"] li:hover,
-    [role="option"]:hover,
-    [data-baseweb="menu"] li[aria-selected="true"],
-    [role="option"][aria-selected="true"] {
-        background: rgba(99,102,241,0.2) !important;
-        color: #e0e7ff !important;
-    }
+    [data-testid="stTextArea"] > div > div > textarea,
     [data-baseweb="select"] > div {
-        background: rgba(13,17,35,0.85) !important;
-        border-color: rgba(99,102,241,0.25) !important;
-        color: #e2e8f0 !important;
+        background: #0a0f18 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: var(--radius) !important;
+        color: var(--text-main) !important;
+        min-height: 42px !important;
+        box-shadow: inset 0 0 0 1px transparent !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
 
-    /* ─── Top header / toolbar ─── */
-    header[data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"] {
-        background: rgba(8,12,24,0.95) !important;
-        border-bottom: 1px solid rgba(99,102,241,0.12) !important;
-    }
-    header[data-testid="stHeader"] * { color: #64748b !important; }
-
-    /* ─── Main block container ─── */
-    [data-testid="stMainBlockContainer"],
-    [data-testid="stMain"],
-    section.main > div {
-        background: transparent !important;
+    [data-testid="stSelectbox"] > div > div:focus-within,
+    [data-testid="stTextInput"] > div > div:focus-within,
+    [data-testid="stNumberInput"] > div > div:focus-within,
+    [data-testid="stTextArea"] > div > div:focus-within,
+    [data-baseweb="select"] > div:focus-within {
+        border-color: var(--cyan) !important;
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18) !important;
     }
 
-    /* ─── Form submit button (dark override) ─── */
-    [data-testid="stForm"] {
-        background: rgba(15,23,42,0.5) !important;
-        border: 1px solid rgba(99,102,241,0.15) !important;
-        border-radius: 14px !important;
-        padding: 20px !important;
+    [data-baseweb="popover"], [data-baseweb="menu"], [data-baseweb="select"] [role="listbox"], ul[data-baseweb="menu"] {
+        background: #0f172a !important;
+        border: 1px solid rgba(34, 211, 238, 0.3) !important;
+        border-radius: var(--radius) !important;
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6) !important;
     }
 
-    /* ─── Checkbox ─── */
-    [data-testid="stCheckbox"] > label {
-        color: #94a3b8 !important;
+    [role="option"], [data-baseweb="menu"] li { color: var(--text-muted) !important; }
+    [role="option"]:hover, [role="option"][aria-selected="true"], [data-baseweb="menu"] li:hover, [data-baseweb="menu"] li[aria-selected="true"] {
+        background: rgba(34, 211, 238, 0.14) !important;
+        color: var(--text-main) !important;
     }
+
+    /* DataFrames */
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--line) !important;
+        border-radius: var(--radius) !important;
+        overflow: hidden;
+        box-shadow: var(--shadow-md) !important;
+    }
+    [data-testid="stDataFrame"] thead th {
+        background: #0f172a !important;
+        color: var(--cyan) !important;
+        font-weight: 800 !important;
+    }
+    [data-testid="stDataFrame"] tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02) !important; }
+
+    /* Tabs */
+    [data-testid="stTabs"] { margin-top: 6px; }
+    [data-testid="stTabs"] button {
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+        color: var(--text-muted) !important;
+        font-weight: 700 !important;
+        padding: 10px 18px !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: var(--cyan) !important;
+        border-bottom-color: var(--cyan) !important;
+        background: rgba(34, 211, 238, 0.08) !important;
+    }
+
+    /* Metrics */
+    [data-testid="stMetric"] { padding: 16px 18px !important; }
+    [data-testid="stMetricValue"] { color: var(--cyan) !important; font-family: 'Outfit', 'Space Grotesk', sans-serif !important; font-weight: 800 !important; }
+    [data-testid="stMetricLabel"] { color: var(--text-muted) !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase; }
+
+    /* Alerts & Callouts */
+    [data-testid="stAlert"] {
+        border-radius: var(--radius) !important;
+        border: 1px solid var(--line) !important;
+        box-shadow: none !important;
+        background: var(--panel-solid) !important;
+    }
+
+    /* Sliders & Checkboxes */
+    [data-testid="stSlider"] [role="slider"],
+    [data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"]::before,
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, var(--cyan), var(--indigo)) !important;
+        border-color: var(--cyan) !important;
+    }
+
+    [data-testid="stCheckbox"] label, [data-testid="stRadio"] label { color: var(--text-muted) !important; }
     [data-baseweb="checkbox"] > div {
-        border-color: rgba(99,102,241,0.4) !important;
-        background: rgba(13,17,35,0.8) !important;
+        background: #0a0f18 !important;
+        border-color: rgba(34, 211, 238, 0.36) !important;
+        border-radius: 4px !important;
     }
 
-    /* ─── Slider ─── */
-    [data-testid="stSlider"] [role="slider"] {
-        background: #818cf8 !important;
-        border-color: #818cf8 !important;
-    }
-    [data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"]::before {
-        background: #818cf8 !important;
+    /* Header Bar Translucency */
+    header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"] {
+        background: rgba(6, 9, 14, 0.85) !important;
+        border-bottom: 1px solid var(--line) !important;
+        backdrop-filter: blur(16px) !important;
     }
 
-    /* ─── Expander ─── */
-    [data-testid="stExpander"] {
-        background: rgba(15,23,42,0.6) !important;
-        border: 1px solid rgba(99,102,241,0.18) !important;
-        border-radius: 10px !important;
-    }
-    [data-testid="stExpander"] summary { color: #cbd5e1 !important; }
+    .persona-card { min-height: 100%; }
+    .persona-metric-chip, .persona-action-box, .persona-rule-box { border-radius: var(--radius) !important; }
+    .persona-client-count { top: 14px !important; right: 14px !important; }
 
-    /* ─── Metric cards ─── */
-    [data-testid="stMetric"] {
-        background: rgba(15,23,42,0.6) !important;
-        border: 1px solid rgba(99,102,241,0.18) !important;
-        border-radius: 12px !important;
-        padding: 14px 18px !important;
-    }
-    [data-testid="stMetricLabel"] { color: #64748b !important; font-size: 12px !important; }
-    [data-testid="stMetricDelta"] { font-size: 12px !important; }
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+    ::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.35); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.6); }
 
-    /* ─── Number input spinner buttons ─── */
-    [data-testid="stNumberInput"] button {
-        background: rgba(99,102,241,0.12) !important;
-        border-color: rgba(99,102,241,0.2) !important;
-        color: #818cf8 !important;
+    @media (max-width: 720px) {
+        [data-testid="stMainBlockContainer"], section.main > div {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+            padding-top: 18px !important;
+        }
+        h1, .page-hero h1 { font-size: 26px !important; }
+        .kpi-container { grid-template-columns: 1fr !important; }
+        .kpi-card { min-height: 118px; }
+        .glass-card, .glass-card-accent, .persona-card { padding: 16px !important; }
+        .info-row { flex-direction: column; gap: 4px; }
+        .info-value { text-align: left; }
     }
-
-    /* ─── Scrollbar ─── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(129,140,248,0.55); }
 </style>
 """, unsafe_allow_html=True)
-
 
 # Helper function for safe min-max scaling
 def minmax_scale(series, reverse=False):
@@ -2433,43 +2614,43 @@ if __name__ == "__main__":
 
     # ── Sidebar ──────────────────────────────────────────────────
     st.sidebar.markdown("""
-    <div style='text-align:center; padding: 20px 0 10px;'>
-        <div style='font-size: 36px; margin-bottom: 6px;'>🔮</div>
-        <div style='font-family: Space Grotesk, sans-serif; font-size: 20px; font-weight: 700;
-                    background: linear-gradient(135deg,#818cf8,#c084fc,#22d3ee);
-                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                    background-clip: text;'>OSMOS</div>
-        <div style='font-size: 11px; color: #475569; letter-spacing: 2px; text-transform: uppercase;
-                    margin-top: 2px; font-weight: 500;'>Digital Twin Platform</div>
+    <div class='sidebar-brand'>
+        <div class='brand-mark'>O</div>
+        <div class='brand-copy'>
+            <div class='brand-title'>OSMOS</div>
+            <div class='brand-subtitle'>Digital Twin Platform</div>
+        </div>
     </div>
+    <div class='sidebar-rule'></div>
     """, unsafe_allow_html=True)
-    st.sidebar.markdown("<hr style='border-color: rgba(99,102,241,0.2); margin: 4px 0 16px;'>", unsafe_allow_html=True)
 
     # ── Custom nav menu ──────────────────────────────────────────
     _pages = [
         ("Dashboard Overview", "📊"),
         ("Entity Profile",     "👤"),
         ("Customer Segments & Personas", "🎯"),
+        ("Digital Twin & Persona", "🧬"),
         ("Simulate Event",     "⚡"),
         ("Create New Entity",  "➕"),
         ("Database Intelligence", "🧠"),
     ]
+
     _active = st.session_state["active_page"]
 
     # Inject base nav button CSS
     _nav_base = (
         "<style>"
         "[data-testid='stSidebar'] .stButton > button {"
-        "width:100%!important;background:rgba(15,23,42,0.55)!important;"
-        "border:1px solid rgba(99,102,241,0.18)!important;border-radius:12px!important;"
-        "color:#64748b!important;font-size:14px!important;font-weight:500!important;"
-        "padding:13px 16px!important;text-align:left!important;margin-bottom:5px!important;"
-        "transition:all 0.22s cubic-bezier(0.4,0,0.2,1)!important;box-shadow:none!important;"
-        "letter-spacing:0.3px!important;line-height:1.4!important;transform:none!important;}"
+        "width:100%!important;background:rgba(255,255,255,0.025)!important;"
+        "border:1px solid rgba(255,255,255,0.07)!important;border-radius:10px!important;"
+        "color:#94a3b8!important;font-size:13.5px!important;font-weight:600!important;"
+        "padding:12px 16px!important;text-align:left!important;margin-bottom:6px!important;"
+        "transition:all 0.2s cubic-bezier(0.4,0,0.2,1)!important;box-shadow:none!important;"
+        "letter-spacing:0!important;line-height:1.4!important;transform:none!important;}"
         "[data-testid='stSidebar'] .stButton > button:hover {"
-        "background:rgba(99,102,241,0.14)!important;border-color:rgba(129,140,248,0.4)!important;"
-        "color:#c7d2fe!important;transform:translateX(3px)!important;"
-        "box-shadow:0 0 18px rgba(99,102,241,0.12),-3px 0 0 #818cf8!important;}"
+        "background:linear-gradient(90deg,rgba(34,211,238,0.12),rgba(99,102,241,0.06))!important;border-color:rgba(34,211,238,0.35)!important;"
+        "color:#f8fafc!important;transform:translateX(4px)!important;"
+        "box-shadow:0 6px 20px rgba(0,0,0,0.25)!important;}"
         "</style>"
     )
     st.sidebar.markdown(_nav_base, unsafe_allow_html=True)
@@ -2481,9 +2662,9 @@ if __name__ == "__main__":
             _act = (
                 "<style>[data-testid='stSidebar'] button[title='"
                 + _pid
-                + "']{background:linear-gradient(135deg,rgba(79,70,229,0.3),rgba(124,58,237,0.18))!important;"
-                "border-color:rgba(129,140,248,0.6)!important;color:#e0e7ff!important;"
-                "font-weight:700!important;box-shadow:0 0 20px rgba(99,102,241,0.2),-3px 0 0 #818cf8!important;}"
+                + "']{background:linear-gradient(90deg,rgba(34,211,238,0.18),rgba(99,102,241,0.08))!important;"
+                "border-color:rgba(34,211,238,0.5)!important;color:#ffffff!important;"
+                "font-weight:700!important;box-shadow:0 4px 16px rgba(34,211,238,0.18),-4px 0 0 #22d3ee!important;}"
                 "</style>"
             )
             st.sidebar.markdown(_act, unsafe_allow_html=True)
@@ -2525,32 +2706,32 @@ if __name__ == "__main__":
                             break
                             
     st.sidebar.markdown(f"""
-    <div style='background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2);
-                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
-        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>Dynamic Classification Model</div>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+    <div style='background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Dynamic Classification Model</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
             <span style='font-size: 18px;'>🤖</span>
-            <span style='font-size: 13px; font-weight: 700; color: #818cf8; font-family: JetBrains Mono, monospace;'>{class_model_name}</span>
+            <span style='font-size: 13px; font-weight: 700; color: #22d3ee; font-family: "JetBrains Mono", monospace;'>{class_model_name}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Status</span>
             <span style='color: #cbd5e1; font-weight: 600;'>{class_status}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Selection Metric</span>
             <span style='color: #cbd5e1; font-weight: 600;'>{class_selection_metric}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>F1-Macro</span>
-            <span style='color: #34d399; font-weight: 700; font-family: JetBrains Mono, monospace;'>{class_f1_str}</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{class_f1_str}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Entity Type Format</span>
             <span style='color: #cbd5e1; font-weight: 600;'>{class_entity_format}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
             <span style='color: #64748b;'>RFM Version</span>
-            <span style='color: #cbd5e1; font-weight: 600; font-size: 10px;'>{class_rfm_version}</span>
+            <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{class_rfm_version}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2599,32 +2780,32 @@ if __name__ == "__main__":
             clv_seg_model = "N/A (Threshold-based)"
             
     st.sidebar.markdown(f"""
-    <div style='background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2);
-                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
-        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>CLV Models</div>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+    <div style='background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>CLV Models</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
             <span style='font-size: 18px;'>💰</span>
-            <span style='font-size: 13px; font-weight: 700; color: #a78bfa; font-family: JetBrains Mono, monospace;'>{clv_amt_model}</span>
+            <span style='font-size: 13px; font-weight: 700; color: #a78bfa; font-family: "JetBrains Mono", monospace;'>{clv_amt_model}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Status</span>
             <span style='color: #cbd5e1; font-weight: 600;'>{clv_status}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Segment Model</span>
-            <span style='color: #cbd5e1; font-weight: 600; font-size: 10px;'>{clv_seg_model}</span>
+            <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{clv_seg_model}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Segment Classifier</span>
             <span style='color: #cbd5e1; font-weight: 600;'>{clv_seg_avail}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
             <span style='color: #64748b;'>Amt Metric</span>
-            <span style='color: #34d399; font-weight: 700; font-family: JetBrains Mono, monospace;'>{clv_amt_metric}</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_amt_metric}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
             <span style='color: #64748b;'>Seg F1-Macro</span>
-            <span style='color: #34d399; font-weight: 700; font-family: JetBrains Mono, monospace;'>{clv_seg_f1_str}</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_seg_f1_str}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2635,11 +2816,11 @@ if __name__ == "__main__":
     
     if fallback_active:
         backend_label = "Excel (Fallback)"
-        backend_color = "#fb7185" # Rose/Red
+        backend_color = "#f43f5e" # Rose/Red
         backend_status_text = f"PostgreSQL failed: {fallback_reason[:30]}..."
     elif is_pg:
         backend_label = "PostgreSQL"
-        backend_color = "#34d399" # Emerald/Green
+        backend_color = "#10b981" # Emerald/Green
         backend_status_text = "Active & Connected"
     else:
         backend_label = "Excel"
@@ -2647,16 +2828,16 @@ if __name__ == "__main__":
         backend_status_text = "Active & Local File"
         
     st.sidebar.markdown(f"""
-    <div style='background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2);
-                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
-        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>Storage Backend</div>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+    <div style='background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Storage Backend</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
             <span style='font-size: 18px;'>💾</span>
-            <span style='font-size: 13px; font-weight: 700; color: {backend_color}; font-family: JetBrains Mono, monospace;'>{backend_label}</span>
+            <span style='font-size: 13px; font-weight: 700; color: {backend_color}; font-family: "JetBrains Mono", monospace;'>{backend_label}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
             <span style='color: #64748b;'>Status</span>
-            <span style='color: {backend_color}; font-weight: 600; font-size: 10px;'>{backend_status_text}</span>
+            <span style='color: {backend_color}; font-weight: 600; font-size: 10.5px;'>{backend_status_text}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2681,16 +2862,16 @@ if __name__ == "__main__":
             llm_status_text = llm_reason[:30]
             
     st.sidebar.markdown(f"""
-    <div style='background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.2);
-                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;'>
-        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;'>LLM Assistant</div>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+    <div style='background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>LLM Assistant</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
             <span style='font-size: 18px;'>🧠</span>
-            <span style='font-size: 13px; font-weight: 700; color: {llm_color}; font-family: JetBrains Mono, monospace;'>{llm_label}</span>
+            <span style='font-size: 13px; font-weight: 700; color: {llm_color}; font-family: "JetBrains Mono", monospace;'>{llm_label}</span>
         </div>
-        <div style='display: flex; justify-content: space-between; font-size: 11px;'>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
             <span style='color: #64748b;'>Status</span>
-            <span style='color: {llm_color}; font-weight: 600; font-size: 10px;'>{llm_status_text}</span>
+            <span style='color: {llm_color}; font-weight: 600; font-size: 10.5px;'>{llm_status_text}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2739,9 +2920,8 @@ if __name__ == "__main__":
             st.rerun()
 
     st.sidebar.markdown("""
-    <div style='background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.25);
-                border-radius: 10px; padding: 12px 14px; font-size: 11px; color: #94a3b8; line-height: 1.6;'>
-        🔒 <strong style='color: #fb7185;'>Privacy Notice</strong><br>
+    <div class='privacy-card'>
+        <strong style='color:#fb7185;'>Privacy Notice</strong><br>
         Email, Phone & Address are personal data stored for local prototype testing only.
         Production deployments must enforce encrypted storage & access controls.
     </div>
@@ -2805,7 +2985,7 @@ if __name__ == "__main__":
             all_segs = ["Low Future Value", "Medium Future Value", "High Future Value", "Very High Future Value", "Insufficient History"]
             seg_counts = seg_counts.set_index("CLV Segment").reindex(all_segs, fill_value=0).reset_index()
             
-            st.bar_chart(seg_counts.set_index("CLV Segment"), color="#a78bfa")
+            st.bar_chart(seg_counts.set_index("CLV Segment"), color="#f59e0b")
             
         # CLV Model Info Panel
         amount_model_name = "N/A"
@@ -2837,7 +3017,7 @@ if __name__ == "__main__":
             <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 4px;'>
                 <div>
                     <span style='color: #64748b; font-size: 11px;'>CLV Amount Model</span><br>
-                    <strong style='color: #818cf8; font-family: JetBrains Mono, monospace; font-size: 12px;'>{amount_model_name}</strong>
+                    <strong style='color: #2dd4bf; font-family: JetBrains Mono, monospace; font-size: 12px;'>{amount_model_name}</strong>
                 </div>
                 <div>
                     <span style='color: #64748b; font-size: 11px;'>CLV Segment Model</span><br>
@@ -2866,9 +3046,13 @@ if __name__ == "__main__":
     # ── Page 1: Dashboard Overview ────────────────────────────────
     if page == "Dashboard Overview":
         # Header
-        st.markdown("<h1 style='margin:0; font-size: 36px;'>🔮 OSMOS <span style='background: linear-gradient(135deg,#818cf8,#c084fc,#22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;'>Digital Twin Dashboard</span></h1>", unsafe_allow_html=True)
-        st.markdown(f"Real-time customer intelligence powered by **{active_model}** classification")
-        st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='page-hero'>
+            <div class='page-kicker'>Live Intelligence</div>
+            <h1>OSMOS Digital Twin Dashboard</h1>
+            <p>Real-time customer intelligence powered by <strong>{active_model}</strong> classification.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
         # ── Critical Action Alerts Widget ──
         if storage_manager.is_postgres_enabled():
@@ -2899,7 +3083,7 @@ if __name__ == "__main__":
             if total_alerts_count > 0:
                 st.markdown(f"""
                 <div style='background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); 
-                            border-radius: 12px; padding: 18px; margin-bottom: 24px;'>
+                            border-radius: 8px; padding: 18px; margin-bottom: 24px;'>
                     <div style='font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
                         <span>🚨</span> Critical Action Alerts — Admin Attention Required ({total_alerts_count})
                     </div>
@@ -2947,8 +3131,8 @@ if __name__ == "__main__":
                 if pending_actions:
                     for item in pending_actions:
                         st.markdown(f"""
-                        <div style='border-left: 3px solid #818cf8; padding-left: 10px; margin-bottom: 4px;'>
-                            <strong style='color: #818cf8;'>[🧠 Pending LLM Recommendation]</strong><br>
+                        <div style='border-left: 3px solid #2dd4bf; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #2dd4bf;'>[🧠 Pending LLM Recommendation]</strong><br>
                             <b>Entity:</b> {item['entity_id'] or 'Platform'} | <b>Priority:</b> {item['priority']} | <b>Suggested Channel:</b> {item['suggested_channel']}<br>
                             <b>Action Drafted (FR):</b> {item['recommended_action_fr']}<br>
                             <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Review recommendation details and update status under <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Generated Recommendations</i>.</span>
@@ -3027,7 +3211,7 @@ if __name__ == "__main__":
             with st.container(border=True):
                 class_counts = df_data["dynamic_class"].value_counts().reset_index()
                 class_counts.columns = ["Dynamic Class", "Count"]
-                st.bar_chart(class_counts.set_index("Dynamic Class"), color="#818cf8")
+                st.bar_chart(class_counts.set_index("Dynamic Class"), color="#2dd4bf")
         
         with col2:
             st.markdown("<div class='section-header'><span class='icon'>🌍</span><span class='title'>Top Segments</span></div>", unsafe_allow_html=True)
@@ -3046,7 +3230,7 @@ if __name__ == "__main__":
                         <div class='score-bar-track'><div class='score-bar-fill fill-indigo' style='width:{pct}%'></div></div>
                     </div>""", unsafe_allow_html=True)
 
-                st.markdown("<div style='margin-top:14px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:600;'>Channels</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:14px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0; font-weight:600;'>Channels</div>", unsafe_allow_html=True)
                 max_c = channel_counts.max() if len(channel_counts) > 0 else 1
                 for ch, cnt in channel_counts.items():
                     pct = int(cnt / max_c * 100)
@@ -3069,7 +3253,7 @@ if __name__ == "__main__":
             clients_df = df_data[df_data["entity_type"] == "Client"]
             
             with seg_col1:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;'>Top 5 Customer Segments</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#2dd4bf; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Segments</div>", unsafe_allow_html=True)
                 if len(clients_df) > 0:
                     top_segs = clients_df["customer_segment"].value_counts().head(5)
                     for seg_name, count in top_segs.items():
@@ -3078,16 +3262,16 @@ if __name__ == "__main__":
                     st.caption("No clients available.")
                     
             with seg_col2:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#a78bfa; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;'>Top 5 Customer Personas</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#a78bfa; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Personas</div>", unsafe_allow_html=True)
                 if len(clients_df) > 0:
                     top_pers = clients_df["customer_persona"].value_counts().head(5)
                     for pers_name, count in top_pers.items():
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{pers_name}</span><span style='color:#818cf8; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{pers_name}</span><span style='color:#2dd4bf; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
                 else:
                     st.caption("No clients available.")
                     
             with seg_col3:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#fb7185; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;'>Key Segment Audits</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#fb7185; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Key Segment Audits</div>", unsafe_allow_html=True)
                 at_risk_count = len(clients_df[clients_df["customer_segment"] == "At-Risk Premium Clients"])
                 loyalist_count = len(clients_df[clients_df["customer_segment"] == "High-Value Loyalists"])
                 dormant_count = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
@@ -3153,9 +3337,10 @@ if __name__ == "__main__":
     # ── Page 2: Entity Profile ─────────────────────────────────────
     elif page == "Entity Profile":
         st.markdown("""
-        <div style='margin-bottom: 24px;'>
-            <h1 style='margin:0; font-size:34px;'>👤 Digital Twin <span class='gradient-text'>Entity Profile</span></h1>
-            <p style='color:#64748b; margin-top:6px; font-size:14px;'>Deep-dive behavioral, predictive and decision intelligence for any entity</p>
+        <div class='page-hero'>
+            <div class='page-kicker'>Entity Profile</div>
+            <h1>Digital Twin Entity Profile</h1>
+            <p>Deep-dive behavioral, predictive and decision intelligence for any entity.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -3179,22 +3364,22 @@ if __name__ == "__main__":
         is_incomplete = is_client_entity and (pd.isna(profile_complete_val) or str(profile_complete_val).lower() != "true")
 
         entity_type_val = entity_row.get("entity_type", "Prospect")
-        type_color = "#34d399" if entity_type_val == "Client" else "#818cf8"
+        type_color = "#34d399" if entity_type_val == "Client" else "#2dd4bf"
         incomplete_badge = "<span class='tag tag-churn' style='margin-left:12px;'>⚠️ Profile Incomplete</span>" if is_incomplete else ""
 
         st.markdown(f"""<div class='glass-card-accent' style='display:flex; align-items:center; gap:20px; flex-wrap:wrap;'>
 <div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#64748b; margin-bottom:4px;'>Entity</div>
+<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Entity</div>
 <div style='font-family: JetBrains Mono, monospace; font-size:22px; font-weight:700; color:#e2e8f0;'>{selected_entity_id}</div>
 </div>
 <div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
 <div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#64748b; margin-bottom:4px;'>Type</div>
+<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Type</div>
 <div style='font-size:16px; font-weight:700; color:{type_color};'>{entity_type_val}</div>
 </div>
 <div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
 <div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:#64748b; margin-bottom:6px;'>Classification</div>
+<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:6px;'>Classification</div>
 <span class='tag {class_tag_class}' style='font-size:14px; padding:6px 16px;'>{dyn_class}</span>
 {incomplete_badge}
 </div>
@@ -3238,8 +3423,8 @@ if __name__ == "__main__":
         cr_color = "#34d399" if client_cr <= 0.10 else "#fb7185"
         
         ahp_section_html = "".join([
-            "<div style='margin:10px 0;padding:10px;background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);border-radius:8px;'>",
-            f"<div style='font-size:11px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;'>Group AHP Weights — {expert_count} Experts</div>",
+            "<div style='margin:10px 0;padding:10px;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.15);border-radius:8px;'>",
+            f"<div style='font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:6px;'>Group AHP Weights — {expert_count} Experts</div>",
             "<div style='display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;margin-bottom:8px;'>",
             f"<div><div style='font-size:15px;color:#64748b;'>R</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_R:.3f}</div></div>",
             f"<div><div style='font-size:15px;color:#64748b;'>F</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_F:.3f}</div></div>",
@@ -3417,7 +3602,7 @@ if __name__ == "__main__":
                     method_str = method_used if method_used else clv_model
                     
                     st.markdown(f"""
-                    <div class='info-row'><span class='info-label'>Final CLV Amount</span><span class='info-value' style='font-size:14px;color:#e0e7ff;font-weight:700;'>{clv_amt_str}</span></div>
+                    <div class='info-row'><span class='info-label'>Final CLV Amount</span><span class='info-value' style='font-size:14px;color:#ecfeff;font-weight:700;'>{clv_amt_str}</span></div>
                     <div class='info-row'><span class='info-label'>CLV Score</span><span class='info-value'>{clv_score_str}</span></div>
                     <div class='info-row'><span class='info-label'>Final CLV Segment</span><span class='info-value'><span class='tag {seg_class}'>{clv_seg_str}</span></span></div>
                     <div class='info-row'><span class='info-label'>CLV Amount Model</span><span class='info-value'>{clv_model}</span></div>
@@ -3443,7 +3628,7 @@ if __name__ == "__main__":
                             parsed_top_3 = top_3_val
                             
                     if parsed_top_3:
-                        st.markdown("<div style='font-size:12px; font-weight:600; color:#818cf8; margin-top:14px; margin-bottom:6px;'>Segment Probability Distribution:</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='font-size:12px; font-weight:600; color:#2dd4bf; margin-top:14px; margin-bottom:6px;'>Segment Probability Distribution:</div>", unsafe_allow_html=True)
                         for idx_top, item in enumerate(parsed_top_3):
                             if isinstance(item, (list, tuple)) and len(item) >= 2:
                                 lbl = item[0]
@@ -3485,7 +3670,7 @@ if __name__ == "__main__":
                     
                     st.markdown(f"""
                     <div class='info-row'><span class='info-label'>Customer Segment</span><span class='info-value'><span class='tag {seg_class}'>{seg}</span></span></div>
-                    <div class='info-row'><span class='info-label'>Customer Persona</span><span class='info-value' style='font-weight:700;color:#c084fc;'>{persona}</span></div>
+                    <div class='info-row'><span class='info-label'>Customer Persona</span><span class='info-value' style='font-weight:700;color:#fb7185;'>{persona}</span></div>
                     <div class='info-row'><span class='info-label'>Description</span><span class='info-value' style='font-size:12.5px;color:#cbd5e1;white-space:normal;line-height:1.4;'>{desc}</span></div>
                     <div class='info-row'><span class='info-label'>Recommended Action</span><span class='info-value' style='font-size:12.5px;color:#34d399;font-weight:600;white-space:normal;line-height:1.4;'>{act}</span></div>
                     <div class='info-row'><span class='info-label'>Method</span><span class='info-value'>{method}</span></div>
@@ -3518,9 +3703,10 @@ if __name__ == "__main__":
             # ── Page: Customer Segments & Personas ─────────────────────────
     elif page == "Customer Segments & Personas":
         st.markdown("""
-        <div style='margin-bottom: 24px;'>
-            <h1 style='margin:0; font-size:34px;'>🎯 Customer <span class='gradient-text'>Segments & Personas</span></h1>
-            <p style='color:#64748b; margin-top:6px; font-size:14px;'>Explainable rule-based cohort segmentation and persona assignment with ML clustering complement</p>
+        <div class='page-hero'>
+            <div class='page-kicker'>Customer Cohorts</div>
+            <h1>Customer Segments & Personas</h1>
+            <p>Explainable cohort segmentation, persona assignment, and ML clustering support.</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -3572,20 +3758,20 @@ if __name__ == "__main__":
             chart_col1, chart_col2 = st.columns(2)
             with chart_col1:
                 with st.container(border=True):
-                    st.markdown("<div style='font-size:12px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;'>Clients per Segment</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Segment</div>", unsafe_allow_html=True)
                     if total_clients_cnt > 0:
                         seg_counts = clients_df["customer_segment"].value_counts().reset_index()
                         seg_counts.columns = ["Segment", "Count"]
-                        st.bar_chart(seg_counts.set_index("Segment"), color="#818cf8", height=200)
+                        st.bar_chart(seg_counts.set_index("Segment"), color="#2dd4bf", height=200)
                     else:
                         st.caption("No client data available.")
             with chart_col2:
                 with st.container(border=True):
-                    st.markdown("<div style='font-size:12px;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;'>Clients per Persona</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:12px;font-weight:700;color:#fb7185;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Persona</div>", unsafe_allow_html=True)
                     if total_clients_cnt > 0:
                         pers_counts = clients_df["customer_persona"].value_counts().reset_index()
                         pers_counts.columns = ["Persona", "Count"]
-                        st.bar_chart(pers_counts.set_index("Persona"), color="#c084fc", height=200)
+                        st.bar_chart(pers_counts.set_index("Persona"), color="#fb7185", height=200)
                     else:
                         st.caption("No client data available.")
 
@@ -3670,51 +3856,54 @@ if __name__ == "__main__":
             st.markdown("""
             <style>
             .persona-card {
-                background: rgba(15,23,42,0.78);
-                border: 1px solid rgba(99,102,241,0.22);
-                border-radius: 18px;
-                padding: 22px 22px 18px 22px;
-                margin-bottom: 18px;
-                backdrop-filter: blur(16px);
-                transition: border-color 0.3s ease, box-shadow 0.3s ease;
                 position: relative;
                 overflow: hidden;
+                min-height: 100%;
+                margin-bottom: 16px;
+                padding: 22px 22px 18px 22px;
+                background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018)), var(--panel-2) !important;
+                border: 1px solid var(--line) !important;
+                border-left: 4px solid var(--teal) !important;
+                border-radius: var(--radius) !important;
+                box-shadow: var(--shadow) !important;
+                transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
             }
             .persona-card:hover {
-                border-color: rgba(129,140,248,0.5);
-                box-shadow: 0 14px 44px rgba(99,102,241,0.2);
+                transform: translateY(-3px);
+                border-color: var(--line-strong) !important;
+                background: var(--panel-3) !important;
             }
-            .persona-icon-badge { font-size: 36px; line-height: 1; display: inline-block; margin-bottom: 6px; }
+            .persona-icon-badge { font-size: 32px; line-height: 1; display: inline-block; margin-bottom: 8px; opacity: 0.9; }
             .persona-name {
                 font-family: 'Space Grotesk', sans-serif;
-                font-size: 19px; font-weight: 700; color: #f1f5f9; margin: 4px 0 2px 0;
+                font-size: 19px; font-weight: 800; color: var(--text); margin: 4px 0 4px 0;
             }
             .persona-segment-tag {
-                display: inline-block; font-size: 11px; font-weight: 600;
-                padding: 3px 10px; border-radius: 20px; letter-spacing: 0.4px; margin-bottom: 10px;
+                display: inline-block; font-size: 11px; font-weight: 800;
+                padding: 4px 10px; border-radius: 999px; letter-spacing: 0; margin-bottom: 12px;
             }
-            .persona-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 12px; }
-            .persona-metric-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+            .persona-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+            .persona-metric-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
             .persona-metric-chip {
-                background: rgba(99,102,241,0.10);
-                border: 1px solid rgba(99,102,241,0.22);
-                border-radius: 8px; padding: 6px 12px; font-size: 12px; color: #cbd5e1;
+                background: rgba(255,255,255,0.035);
+                border: 1px solid rgba(148,163,184,0.16);
+                border-radius: var(--radius); padding: 6px 10px; font-size: 12px; color: var(--muted);
             }
-            .persona-metric-chip strong { color: #818cf8; font-family: 'JetBrains Mono', monospace; }
+            .persona-metric-chip strong { color: var(--teal); font-family: 'JetBrains Mono', monospace; }
             .persona-action-box {
-                background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25);
-                border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #34d399; margin-bottom: 10px;
+                background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.24);
+                border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--green); margin-bottom: 10px;
             }
             .persona-rule-box {
-                background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.18);
-                border-radius: 10px; padding: 9px 14px; font-size: 11.5px; color: #818cf8;
+                background: #0b1118; border: 1px solid rgba(148,163,184,0.16);
+                border-radius: var(--radius); padding: 9px 12px; font-size: 11.5px; color: var(--teal);
                 font-family: 'JetBrains Mono', monospace;
             }
             .persona-client-count {
-                position: absolute; top: 16px; right: 18px;
-                background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
-                border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 700;
-                color: #818cf8; font-family: 'Space Grotesk', sans-serif;
+                position: absolute; top: 14px; right: 14px;
+                background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.30);
+                border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800;
+                color: var(--teal); font-family: 'Space Grotesk', sans-serif;
             }
             </style>
             """, unsafe_allow_html=True)
@@ -3724,7 +3913,7 @@ if __name__ == "__main__":
                     "persona": "Premium Loyalist",
                     "segment": "High-Value Loyalists",
                     "icon": "👑",
-                    "tag_style": "background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3);",
+                    "tag_style": "background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);",
                     "description": "Your most valuable and loyal clients. They buy frequently, spend significantly, and show no signs of leaving. They form the backbone of long-term revenue.",
                     "action": "🎁 Reward with VIP offers, exclusive early access, and premium white-glove service. Invite to loyalty programs and ambassador initiatives.",
                     "trigger": "rfm_score ≥ 0.75 AND predicted_clv_score ≥ 75 AND churn_risk_score < 0.35",
@@ -3794,7 +3983,7 @@ if __name__ == "__main__":
                     "persona": "New Explorer",
                     "segment": "New Customers",
                     "icon": "🧭",
-                    "tag_style": "background:rgba(129,140,248,0.15);color:#818cf8;border:1px solid rgba(129,140,248,0.3);",
+                    "tag_style": "background:rgba(45,212,191,0.15);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);",
                     "description": "Recently acquired clients in their discovery phase. The first 90 days are critical — the right experience here determines long-term retention.",
                     "action": "👋 Send onboarding sequences, highlight top products, offer first-purchase follow-up discounts, and invite feedback.",
                     "trigger": "purchases_90d ≤ 1 OR predicted_clv_segment == 'Insufficient History'",
@@ -3869,7 +4058,7 @@ if __name__ == "__main__":
                             <div class='persona-desc'>{p["description"]}</div>
                             <div class='persona-metric-row'>{chips_html}</div>
                             <div class='persona-action-box'>
-                                <strong style='color:#6ee7b7;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>Recommended Action</strong><br>
+                                <strong style='color:#6ee7b7;font-size:11px;text-transform:uppercase;letter-spacing:0;'>Recommended Action</strong><br>
                                 {p["action"]}
                             </div>
                             <div class='persona-rule-box'>
@@ -3896,9 +4085,10 @@ if __name__ == "__main__":
     # ── Page 3: Simulate Event ────────────────────────────────────
     elif page == "Simulate Event":
         st.markdown("""
-        <div style='margin-bottom: 24px;'>
-            <h1 style='margin:0; font-size:34px;'>⚡ Real-time <span class='gradient-text'>Event Simulation</span></h1>
-            <p style='color:#64748b; margin-top:6px; font-size:14px;'>Trigger behavioral events and watch the Digital Twin classification update instantly</p>
+        <div class='page-hero'>
+            <div class='page-kicker'>Simulation Console</div>
+            <h1>Real-time Event Simulation</h1>
+            <p>Trigger behavioral events and watch the Digital Twin classification update instantly.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -3913,13 +4103,13 @@ if __name__ == "__main__":
             ent_details = df_data[df_data["entity_id"] == selected_id].iloc[0]
             ent_type = ent_details['entity_type']
             ent_class = ent_details['dynamic_class']
-            type_color_sim = "#34d399" if ent_type == "Client" else "#818cf8"
+            type_color_sim = "#34d399" if ent_type == "Client" else "#2dd4bf"
             st.markdown(f"""
-            <div style='background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:10px; padding:12px 16px; margin-bottom:16px;'>
+            <div style='background:rgba(45,212,191,0.08); border:1px solid rgba(45,212,191,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px;'>
                 <div style='display:flex; gap:20px; flex-wrap:wrap;'>
-                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;'>Type</div>
+                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Type</div>
                     <div style='font-weight:700;color:{type_color_sim};font-size:14px;'>{ent_type}</div></div>
-                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;'>Current Class</div>
+                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Current Class</div>
                     <div style='font-weight:600;color:#e2e8f0;font-size:14px;font-family:JetBrains Mono,monospace;'>{ent_class}</div></div>
                 </div>
             </div>
@@ -3975,15 +4165,15 @@ if __name__ == "__main__":
                 class_changed = old_c != new_c
 
                 # Main result card
-                result_border = "#34d399" if not class_changed else "#818cf8"
+                result_border = "#34d399" if not class_changed else "#2dd4bf"
                 st.markdown(f"""
-                <div style='background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.10));
-                            border:2px solid {result_border}; border-radius:14px; padding:20px;
+                <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.10));
+                            border:2px solid {result_border}; border-radius:8px; padding:20px;
                             text-align:center; margin-bottom:16px;
-                            box-shadow: 0 8px 30px rgba(99,102,241,0.2);'>
+                            box-shadow: 0 8px 30px rgba(45,212,191,0.2);'>
                     <div style='font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#64748b;margin-bottom:8px;font-weight:600;'>{active_model} Prediction</div>
                     <div style='font-size:26px;font-weight:800;color:#e2e8f0;font-family:Space Grotesk,sans-serif;'>{new_c}</div>
-                    <div style='font-size:15px;font-weight:700;color:#818cf8;margin-top:6px;'>Confidence: {conf*100:.1f}%</div>
+                    <div style='font-size:15px;font-weight:700;color:#2dd4bf;margin-top:6px;'>Confidence: {conf*100:.1f}%</div>
                     <div style='font-size:12px;color:#64748b;margin-top:4px;'>{'✨ Classification Changed' if class_changed else '• Same Classification'}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -3996,10 +4186,10 @@ if __name__ == "__main__":
                     st.metric("Class", new_c, delta="Changed ↑" if class_changed else None)
 
                 # Top 3 probabilities
-                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;'>Probability Distribution</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Probability Distribution</div>", unsafe_allow_html=True)
                 for rank, (cls_name, prob_val) in enumerate(top_3):
                     bar_fill = "fill-indigo" if rank == 0 else ("fill-violet" if rank == 1 else "fill-cyan")
-                    label_color = "#818cf8" if rank == 0 else "#94a3b8"
+                    label_color = "#2dd4bf" if rank == 0 else "#94a3b8"
                     st.markdown(f"""
                     <div class='score-bar-wrap'>
                         <div class='score-bar-label'>
@@ -4013,7 +4203,7 @@ if __name__ == "__main__":
                     """, unsafe_allow_html=True)
 
                 # Variable delta table
-                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;'>Changed Variables</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Changed Variables</div>", unsafe_allow_html=True)
                 comp_cols = [
                     "recency_days", "visits_30d", "product_views_30d", "cart_additions_30d",
                     "purchases_90d", "total_spent_90d_mad", "avg_order_value_mad", "email_open_rate",
@@ -4077,9 +4267,10 @@ if __name__ == "__main__":
     # ── Page 4: Create New Entity ──────────────────────────────────
     elif page == "Create New Entity":
         st.markdown(f"""
-        <div style='margin-bottom: 24px;'>
-            <h1 style='margin:0; font-size:34px;'>➕ Create New <span class='gradient-text'>Entity</span></h1>
-            <p style='color:#64748b; margin-top:6px; font-size:14px;'>Register a new Prospect or Client, initialize their Digital Twin, and get an instant {active_model} classification</p>
+        <div class='page-hero'>
+            <div class='page-kicker'>Entity Intake</div>
+            <h1>Create New Entity</h1>
+            <p>Register a Prospect or Client, initialize their Digital Twin, and get an instant {active_model} classification.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -4125,7 +4316,7 @@ if __name__ == "__main__":
                     initial_product_views_30d = st.number_input("Initial Product Views 30d", min_value=0, value=1, step=1)
                     initial_cart_additions_30d = st.number_input("Initial Cart Additions 30d", min_value=0, value=0, step=1)
                     
-                st.markdown("<div style='margin-top:10px; font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>Optional Email Activity Settings</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:10px; font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0;'>Optional Email Activity Settings</div>", unsafe_allow_html=True)
                 e_col1, e_col2 = st.columns(2)
                 with e_col1:
                     initial_email_open_rate = st.slider("Initial Email Open Rate", 0.0, 1.0, 0.0, 0.05)
@@ -4141,7 +4332,7 @@ if __name__ == "__main__":
                 initial_email_open_rate = 0.0
                 initial_email_click_rate = 0.0
 
-            st.markdown("<div style='margin:20px 0 12px; font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;'>Interest & Financial Scores</div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin:20px 0 12px; font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0;'>Interest & Financial Scores</div>", unsafe_allow_html=True)
             sl1, sl2, sl3 = st.columns(3)
             with sl1: initial_interest_score = st.slider("Initial Interest Score", 0.0, 1.0, 0.3, 0.05)
             with sl2: income_power_score     = st.slider("Income Power Score",    0.0, 1.0, 0.5, 0.05)
@@ -4175,21 +4366,21 @@ if __name__ == "__main__":
                 st.session_state["conversion_event_id"] = None
                 st.session_state["profile_completed"] = False
 
-            type_grad = "#818cf8" if entity_type == "Prospect" else "#34d399"
+            type_grad = "#2dd4bf" if entity_type == "Prospect" else "#34d399"
             st.markdown(f"""
-            <div style='background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.08));
-                        border:2px solid {type_grad}; border-radius:14px; padding:28px;
+            <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.08));
+                        border:2px solid {type_grad}; border-radius:8px; padding:28px;
                         text-align:center; margin-top:20px;
-                        box-shadow:0 8px 30px rgba(99,102,241,0.2);'>
+                        box-shadow:0 8px 30px rgba(45,212,191,0.2);'>
                 <div style='font-size:40px; margin-bottom:10px;'>🔮</div>
                 <h3 style='margin:0 0 14px; font-family:Space Grotesk,sans-serif; color:#f1f5f9;'>Digital Twin Initialized</h3>
                 <div style='display:inline-flex; gap:30px; flex-wrap:wrap; justify-content:center;'>
-                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;'>Entity ID</div>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Entity ID</div>
                     <div style='font-size:20px;font-weight:700;color:#e2e8f0;font-family:JetBrains Mono,monospace;'>{new_entity_id}</div></div>
-                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;'>Type</div>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Type</div>
                     <div style='font-size:20px;font-weight:700;color:{type_grad};'>{entity_type}</div></div>
-                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;'>Predicted Class</div>
-                    <div style='font-size:16px;font-weight:700;color:#818cf8;margin-top:4px;'>{initial_class}</div></div>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Predicted Class</div>
+                    <div style='font-size:16px;font-weight:700;color:#2dd4bf;margin-top:4px;'>{initial_class}</div></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -4197,7 +4388,12 @@ if __name__ == "__main__":
             if entity_type == "Client":
                 st.rerun()
 
+    elif page == "Digital Twin & Persona":
+        from digital_twin.digital_twin_dashboard import render_digital_twin_dashboard
+        render_digital_twin_dashboard(df_data, df_history)
+
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard
         render_database_dashboard(df_data, df_history)
+
 

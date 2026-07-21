@@ -254,3 +254,31 @@ CREATE INDEX IF NOT EXISTS idx_llm_rec_priority ON llm_action_recommendations(pr
 CREATE INDEX IF NOT EXISTS idx_llm_rec_status ON llm_action_recommendations(status);
 CREATE INDEX IF NOT EXISTS idx_llm_rec_created_at ON llm_action_recommendations(created_at);
 
+-- L. Persona Library
+CREATE TABLE IF NOT EXISTS persona_library (
+    persona_id SERIAL PRIMARY KEY,
+    segment_name TEXT UNIQUE NOT NULL,
+    persona_name TEXT NOT NULL,
+    description_fr TEXT,
+    description_en TEXT,
+    behavior_profile_fr TEXT,
+    behavior_profile_en TEXT,
+    value_profile_fr TEXT,
+    value_profile_en TEXT,
+    risk_profile_fr TEXT,
+    risk_profile_en TEXT,
+    recommended_action_fr TEXT,
+    recommended_action_en TEXT,
+    preferred_channel TEXT,
+    priority_level TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_persona_lib_segment ON persona_library(segment_name);
+CREATE INDEX IF NOT EXISTS idx_persona_lib_persona ON persona_library(persona_name);
+CREATE INDEX IF NOT EXISTS idx_persona_lib_priority ON persona_library(priority_level);
+CREATE INDEX IF NOT EXISTS idx_persona_lib_active ON persona_library(is_active);
+
+

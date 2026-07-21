@@ -1,3 +1,5 @@
+SYSTEM_PROMPT_ANALYST = """You are an expert AI Customer Analytics Analyst assisting the OSMOS Digital Twin platform. Analyze the provided multi-dimensional customer data and provide structured, objective insights."""
+
 JSON_SCHEMA_INSTRUCTIONS = """
 You MUST respond with a single valid JSON object containing exactly the following keys:
 {
@@ -18,6 +20,8 @@ You MUST respond with a single valid JSON object containing exactly the followin
 
 Do NOT output any markdown tags (like ```json ... ```), extra intro, or trailing text. Output ONLY the JSON block.
 """
+
+
 
 def explain_clv_alert_prompt(alert_context):
     return f"""
