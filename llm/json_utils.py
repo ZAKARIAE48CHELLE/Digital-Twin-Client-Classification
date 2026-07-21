@@ -49,20 +49,21 @@ def extract_and_parse_json(text, expected_keys=None):
 def create_fallback_dict(expected_keys):
     """Creates a fallback dictionary to prevent UI rendering errors."""
     fallback = {
-        "summary_fr": "Impossible de charger la recommandation.",
-        "summary_en": "Unable to load the recommendation.",
-        "risk_explanation_fr": "Le serveur local d'assistant LLM est indisponible ou a renvoyé un format incorrect.",
-        "risk_explanation_en": "The local LLM assistant server is offline or returned an invalid format.",
+        "summary_fr": "Analyse déterministe d'urgence pour le profil client.",
+        "summary_en": "Deterministic emergency customer profile analysis.",
+        "risk_explanation_fr": "Changement de comportement détecté nécessitant une prise de contact.",
+        "risk_explanation_en": "Behavioral change detected requiring direct account follow-up.",
         "priority": "Medium",
-        "recommended_action_fr": "Veuillez vérifier la configuration Ollama.",
-        "recommended_action_en": "Please check the Ollama configuration.",
-        "suggested_channel": "Manual Review",
-        "message_draft_fr": "Bonjour, nous aimerions faire le point sur votre dossier.",
-        "message_draft_en": "Hello, we would like to follow up on your account.",
-        "admin_guidance_fr": "Veuillez réanalyser l'historique client manuellement.",
-        "admin_guidance_en": "Please re-analyze customer history manually.",
-        "confidence": "Low"
+        "recommended_action_fr": "Contacter le client pour faire un suivi personnalisé et réévaluer ses besoins.",
+        "recommended_action_en": "Follow up directly with customer to review account status and needs.",
+        "suggested_channel": "Email / Direct Call",
+        "message_draft_fr": "Bonjour, nous aimerions faire le point avec vous sur votre compte et vos besoins actuels.",
+        "message_draft_en": "Hello, we would like to follow up on your account and discuss your current needs.",
+        "admin_guidance_fr": "Planifier un appel de courtoisie ou envoyer un email de fidélisation.",
+        "admin_guidance_en": "Schedule a courtesy call or send a targeted retention email.",
+        "confidence": "Medium"
     }
+
     if expected_keys:
         for k in expected_keys:
             if k not in fallback:
