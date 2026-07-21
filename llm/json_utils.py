@@ -61,8 +61,9 @@ def create_fallback_dict(expected_keys):
         "message_draft_en": "Hello, we would like to follow up on your account and discuss your current needs.",
         "admin_guidance_fr": "Planifier un appel de courtoisie ou envoyer un email de fidélisation.",
         "admin_guidance_en": "Schedule a courtesy call or send a targeted retention email.",
-        "confidence": "Medium"
+        "confidence": "Low"
     }
+
 
     if expected_keys:
         for k in expected_keys:
