@@ -9,6 +9,15 @@ from personas.persona_dashboard import render_persona_library_dashboard
 from personas.persona_matcher import explain_persona_assignment
 from admin.database_metrics import is_postgres_available
 
+def _is_valid_data(val):
+    if val is None:
+        return False
+    if isinstance(val, pd.DataFrame):
+        return not val.empty
+    if isinstance(val, (list, tuple)):
+        return len(val) > 0
+    return False
+
 def render_digital_twin_dashboard(df=None, history_df=None):
     """
     Renders the unified Digital Twin & Persona Dashboard page.
@@ -53,16 +62,8 @@ def render_digital_twin_explorer_tab(df=None):
     deterministic_exp = explain_digital_twin_state(profile)
     assignment_chain = explain_persona_assignment(selected_entity_id)
 
-def _is_valid_data(val):
-    if val is None:
-        return False
-    if isinstance(val, pd.DataFrame):
-        return not val.empty
-    if isinstance(val, (list, tuple)):
-        return len(val) > 0
-    return False
-
     # B. Digital Twin Summary Card
+
     st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.8); border: 1.5px solid rgba(129, 140, 248, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 24px;'>
         <div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;'>
             <div>
