@@ -65,13 +65,20 @@ def validate_segment_persona_consistency(df=None):
             pers = row.get("customer_persona")
             
             expected_persona = valid_segments.get(seg)
-            if expected_persona and pers and pers != expected_persona:
+            # Normalize legacy prospect placeholder strings
+            if pers in ["Not Applicable Yet", "Not Applicable", "N/A", None] and seg == "Prospect":
+                pers_normalized = "New Explorer"
+            else:
+                pers_normalized = pers
+
+            if expected_persona and pers_normalized and pers_normalized != expected_persona:
                 inconsistencies.append({
                     "entity_id": e_id,
                     "segment": seg,
                     "actual_persona": pers,
                     "expected_persona": expected_persona
                 })
+
                 
     return {
         "is_consistent": len(inconsistencies) == 0,
