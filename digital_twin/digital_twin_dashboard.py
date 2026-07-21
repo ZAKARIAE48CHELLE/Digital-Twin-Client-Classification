@@ -191,36 +191,27 @@ def render_digital_twin_explorer_tab(df=None):
     
     with col_p:
         st.markdown("<div class='section-header'><span class='icon'>🎭</span><span class='title'>Associated Persona Blueprint</span></div>", unsafe_allow_html=True)
-        st.markdown(f"""
-        <div style='background:rgba(30, 41, 59, 0.7); border:1px solid rgba(192, 132, 252, 0.3); padding:16px; border-radius:10px;'>
+        st.markdown(f"""<div style='background:rgba(30, 41, 59, 0.7); border:1px solid rgba(192, 132, 252, 0.3); padding:16px; border-radius:10px;'>
             <strong style='color:#c084fc; font-size:16px;'>🎭 {persona['customer_persona']}</strong><br>
             <span style='font-size:12px; color:#94a3b8;'>Resolution Chain: {assignment_chain['resolution_chain']}</span>
             <hr style='border-color:rgba(255,255,255,0.1); margin:10px 0;'>
-            
             <p style='font-size:13px; color:#cbd5e1;'><b>Description:</b> {persona['persona_description_fr']}</p>
             <p style='font-size:13px; color:#cbd5e1;'><b>Action Recommandée:</b> {persona['recommended_action_fr']}</p>
-            
             <div style='display:flex; gap:10px; margin-top:10px;'>
-                <span style='background:rgba(129,140,248,0.2); color:#818cf8; padding:4px 8px; border-radius:4px; font-size:12px;'>
-                    Canal: {persona['preferred_channel']}
-                </span>
-                <span style='background:rgba(251,191,36,0.2); color:#fbbf24; padding:4px 8px; border-radius:4px; font-size:12px;'>
-                    Priorité: {persona['priority_level']}
-                </span>
+                <span style='background:rgba(129,140,248,0.2); color:#818cf8; padding:4px 8px; border-radius:4px; font-size:12px;'>Canal: {persona['preferred_channel']}</span>
+                <span style='background:rgba(251,191,36,0.2); color:#fbbf24; padding:4px 8px; border-radius:4px; font-size:12px;'>Priorité: {persona['priority_level']}</span>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     with col_e:
         st.markdown("<div class='section-header'><span class='icon'>🧠</span><span class='title'>Deterministic State Explanations</span></div>", unsafe_allow_html=True)
-        st.markdown(f"""
-        <div style='background:rgba(30, 41, 59, 0.7); border:1px solid rgba(52, 211, 153, 0.3); padding:16px; border-radius:10px;'>
+        st.markdown(f"""<div style='background:rgba(30, 41, 59, 0.7); border:1px solid rgba(52, 211, 153, 0.3); padding:16px; border-radius:10px;'>
             <p style='font-size:12px; color:#cbd5e1;'><b>Risque:</b> {deterministic_exp['risk_explanation']['explanation_fr']}</p>
             <p style='font-size:12px; color:#cbd5e1;'><b>Valeur:</b> {deterministic_exp['value_explanation']['explanation_fr']}</p>
             <p style='font-size:12px; color:#cbd5e1;'><b>Engagement:</b> {deterministic_exp['engagement_explanation']['explanation_fr']}</p>
             <p style='font-size:12px; color:#cbd5e1;'><b>Action:</b> {deterministic_exp['action_explanation']['explanation_fr']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
+
 
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 

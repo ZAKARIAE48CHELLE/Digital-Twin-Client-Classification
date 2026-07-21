@@ -20,10 +20,11 @@ def get_persona_for_entity(entity_id):
     """
     snapshot = get_digital_twin_snapshot(entity_id)
     if not snapshot:
-        # Fallback for uninitialized entity
         segment = "Prospect" if str(entity_id).startswith("P") else "Standard Active Clients"
     else:
-        segment = snapshot.get("customer_segment") or snapshot.get("segment") or "Standard Active Clients"
+        segment = snapshot.get("customer_segment") or snapshot.get("segment")
+        if not segment or str(segment).lower() in ["none", "nan"]:
+            segment = "Prospect" if str(entity_id).startswith("P") else "Standard Active Clients"
         
     return match_persona_for_segment(segment)
 
@@ -32,8 +33,15 @@ def explain_persona_assignment(entity_id):
     Provides a deterministic scientific explanation for how the persona was matched.
     """
     snapshot = get_digital_twin_snapshot(entity_id)
-    segment = snapshot.get("customer_segment") if snapshot else "Standard Active Clients"
+    if not snapshot:
+        segment = "Prospect" if str(entity_id).startswith("P") else "Standard Active Clients"
+    else:
+        segment = snapshot.get("customer_segment") or snapshot.get("segment")
+        if not segment or str(segment).lower() in ["none", "nan"]:
+            segment = "Prospect" if str(entity_id).startswith("P") else "Standard Active Clients"
+            
     persona = match_persona_for_segment(segment)
+
     
     explanation = {
         "entity_id": entity_id,
