@@ -49,13 +49,14 @@ def extract_and_parse_json(text, expected_keys=None):
 def create_fallback_dict(expected_keys):
     """Creates a fallback dictionary to prevent UI rendering errors."""
     fallback = {
-        "summary_fr": "Analyse déterministe d'urgence pour le profil client.",
-        "summary_en": "Deterministic emergency customer profile analysis.",
+        "summary_fr": "Impossible de charger la recommandation LLM automatique. Analyse déterministe activée.",
+        "summary_en": "Unable to load automatic LLM recommendation. Deterministic analysis active.",
         "risk_explanation_fr": "Changement de comportement détecté nécessitant une prise de contact.",
         "risk_explanation_en": "Behavioral change detected requiring direct account follow-up.",
         "priority": "Medium",
         "recommended_action_fr": "Contacter le client pour faire un suivi personnalisé et réévaluer ses besoins.",
         "recommended_action_en": "Follow up directly with customer to review account status and needs.",
+
         "suggested_channel": "Email / Direct Call",
         "message_draft_fr": "Bonjour, nous aimerions faire le point avec vous sur votre compte et vos besoins actuels.",
         "message_draft_en": "Hello, we would like to follow up on your account and discuss your current needs.",
