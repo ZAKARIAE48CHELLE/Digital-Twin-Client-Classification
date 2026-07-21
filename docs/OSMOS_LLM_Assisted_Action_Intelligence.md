@@ -8,7 +8,8 @@ OSMOS integrates an on-demand, local Large Language Model (LLM) advisory layer p
 flowchart TD
     Alert["Critical Action Alert / Digital Twin Profile"] --> Payload["Structured JSON Context Assembly"]
     Payload --> Client["LLM Client Interface (llm/llm_client.py)"]
-    Client -->|HTTP POST :1111434| Ollama["Local Ollama Service"]
+    Client -->|HTTP POST http://localhost:11434/api/generate| Ollama["Local Ollama Service"]
+
     Ollama --> Model["Qwen3-8B / Llama 3.1 8B"]
     Model --> JSON["Structured JSON Advisory Output"]
     JSON --> Parser["Robust JSON Parser (llm_json_utils.py)"]
@@ -35,4 +36,4 @@ To ensure operational reliability and performance stability, OSMOS enforces stri
 1. **Button-Triggered Only**: LLM generation is NEVER auto-triggered on page load or background startup. It executes solely when the admin clicks `🤖 Generate Recommendation` or `🤖 Generate Digital Twin Summary`.
 2. **Deterministic Primacy**: System decisions, CLV predictions, RFM scores, and alert flags are 100% computed by python ML modules prior to invoking the LLM.
 3. **Structured JSON Enforcement**: LLM prompts require valid JSON outputs containing executive summaries, action steps, channel suggestions, and message drafts in both French (FR) and English (EN).
-4. **Graceful Fallbacks**: If Ollama is offline or times out (30s limit), the system renders structured deterministic recommendations without crashing the app.
+4. **Graceful Fallbacks**: If Ollama is offline or times out (120s configurable timeout), the system renders structured deterministic recommendations without crashing the app.

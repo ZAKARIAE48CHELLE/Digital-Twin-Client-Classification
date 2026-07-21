@@ -3,11 +3,13 @@
 ## 1. Why PostgreSQL Was Integrated
 
 Initial prototypes relied exclusively on flat Excel spreadsheets (`osmos_crm_dataset.xlsx`). While simple, flat files present critical limitations for enterprise CRM operations:
+
 - **No Historical Versioning**: Overwriting rows destroys historical track records of predictions and score changes.
 - **Race Conditions**: Concurrent simulation updates cause file lock failures and data corruption.
 - **Query Performance**: In-memory full dataframe recalculations scale poorly beyond thousands of rows.
 
 **PostgreSQL Foundation Benefits**:
+
 1. **Full Historical Versioning**: Every prediction, segment assignment, and event is timestamped and stored immutably.
 2. **Audit Traceability**: Complete audit log of admin actions, simulations, and LLM advice generations.
 3. **Optimized Query Performance**: Indexed time-series queries for transition matrices and drift detection.
@@ -29,12 +31,13 @@ erDiagram
     entities ||--o{ clv_predictions : estimates
     entities ||--o{ customer_segments : assigns
     entities ||--o{ llm_action_recommendations : advises
-    
+  
     customer_segments }|--|| persona_library : matches
     classification_predictions }|--|| model_registry : generated_by
 ```
 
 ### Table Dictionary Summary:
+
 - `entities`: Primary registry of customers (`Client`) and prospects (`Prospect`).
 - `customer_profiles`: Extended demographic and contact attributes.
 - `digital_twin_snapshots`: Time-series store of raw behavioral feature vectors.

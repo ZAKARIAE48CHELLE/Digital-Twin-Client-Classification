@@ -7,17 +7,17 @@ OSMOS is built using a modular Python architecture designed for scalability, low
 ```mermaid
 flowchart TD
     UI["Streamlit Application<br/>(app.py)"] --> SM["Storage Manager<br/>(storage_manager.py)"]
-    
+  
     SM -->|Primary Backend| PG["PostgreSQL Backend<br/>(database/repositories.py)"]
     SM -->|Fallback Backend| EX["Excel Local File<br/>(osmos_crm_dataset.xlsx)"]
-    
+  
     PG --> DB[(PostgreSQL Database<br/>osmos_db)]
-    
+  
     UI --> DT["Digital Twin Module<br/>(digital_twin/)"]
     UI --> P["Persona Module<br/>(personas/)"]
     UI --> A["Analytics Module<br/>(analytics/)"]
     UI --> LLM["Local LLM Assistant<br/>(llm/)"]
-    
+  
     A --> PG
     DT --> PG
     P --> PG
@@ -38,7 +38,7 @@ PFA-Summer/
 │   └── excel_storage.py            # Local Excel dataframe reader/writer
 │
 ├── database/                       # PostgreSQL Persistence Engine
-│   ├── db_connection.py            # Connection pool & lifecycle manager
+│   ├── db.py                       # Connection pool & lifecycle manager
 │   ├── repositories.py             # SQL Repositories for entities, predictions, snapshots
 │   └── schema.sql                  # DDL SQL Schema definitions
 │
@@ -54,14 +54,15 @@ PFA-Summer/
 │   └── persona_dashboard.py       # Streamlit UI Catalog for Personas
 │
 ├── analytics/                      # Advanced Historical Intelligence
-│   ├── clv_trends.py               # CLV trend & anomaly alert engine
-│   ├── segment_transition.py       # Markov segment transition matrix generator
+│   ├── clv_trend_alerts.py         # CLV trend & anomaly alert engine
+│   ├── segment_transitions.py      # Markov segment transition matrix generator
 │   └── prediction_drift.py         # Dynamic classification drift detector
 │
 ├── llm/                            # Local LLM Advisory Layer
 │   ├── llm_client.py               # Ollama HTTP client interface
 │   ├── llm_config.py               # LLM system prompts & configuration
-│   └── llm_json_utils.py           # Robust JSON parsing & fallback utility
+│   └── json_utils.py               # Robust JSON parsing & fallback utility
+
 │
 ├── admin/                          # Database Intelligence & Monitoring
 │   ├── database_dashboard.py       # Health, metrics, & table management UI

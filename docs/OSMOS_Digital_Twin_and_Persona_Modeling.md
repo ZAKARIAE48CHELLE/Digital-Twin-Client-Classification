@@ -14,7 +14,7 @@ A fundamental design principle of OSMOS is the strict separation between individ
 ## 2. Component Specifications
 
 ### A. The Individual Digital Twin
-The Digital Twin is a dynamic computational mirror of a single entity (`entity_id` e.g., `C00001`, `P01501`).
+The Digital Twin is a dynamic computational mirror of a single entity (`entity_id` e.g., `C00001` for Client, `P00001` for Prospect, or `P01501` for Converted Prospect).
 
 It encapsulates:
 1. **Core Identity**: Entity ID, Entity Type (Client vs. Prospect), Creation Date, Conversion Timestamp.
@@ -36,7 +36,7 @@ To prevent arbitrary persona assignment, OSMOS enforces a strict, single-directi
 
 ```mermaid
 flowchart TD
-    A["Client / Prospect Entity<br/>(e.g., C00001)"] --> B["Individual Digital Twin State"]
+    A["Client / Prospect Entity<br/>(e.g., C00001, P00001)"] --> B["Individual Digital Twin State"]
     B --> C["Deterministic Scoring & ML Models"]
     C --> D["RFM-ES, CLV, Churn Risk, Engagement & Dynamic Class"]
     D --> E["Customer Segment Assignment<br/>(e.g., High-Value Loyalists)"]
@@ -51,9 +51,10 @@ flowchart TD
 
 | Entity ID | Entity Type | Resolved Segment | Persona Blueprint | Primary Marketing Channel | Priority |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `P01501` | Client | High-Value Loyalists | Premium Loyalist | Direct Phone / Email VIP | High |
-| `C00002` | Client | Standard Active Clients | Regular Buyer | Standard Email Newsletter | Low |
+| `C00001` | Client | High-Value Loyalists | Premium Loyalist | Direct Phone / Email VIP | High |
 | `P00001` | Prospect | Prospect | New Explorer | Email / Web Popup | Medium |
+| `P01501` | Client (Converted Prospect) | High-Value Loyalists | Premium Loyalist | Direct Phone / Email VIP | High |
+
 
 ---
 
