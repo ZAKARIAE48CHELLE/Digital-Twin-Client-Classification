@@ -3149,8 +3149,9 @@ if __name__ == "__main__":
             c_metrics = get_campaign_metrics()
             st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
                 <span style='font-size: 13px; font-weight: 700; color: #38bdf8;'>🚀 Closed-Loop Campaign Simulation:</span>
-                <span style='font-size: 12.5px; color: #cbd5e1;'>Drafts: <b style='color:#facc15;'>{c_metrics['draft_campaigns']}</b> \| Dispatches: <b style='color:#38bdf8;'>{c_metrics['simulated_dispatches']}</b> \| Responses: <b style='color:#34d399;'>{c_metrics['total_responses']}</b></span>
+                <span style='font-size: 12.5px; color: #cbd5e1;'>Drafts: <b style='color:#facc15;'>{c_metrics['draft_campaigns']}</b> | Dispatches: <b style='color:#38bdf8;'>{c_metrics['simulated_dispatches']}</b> | Responses: <b style='color:#34d399;'>{c_metrics['total_responses']}</b></span>
             </div>""", unsafe_allow_html=True)
+
         except Exception:
             pass
 
