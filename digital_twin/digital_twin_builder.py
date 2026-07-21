@@ -56,9 +56,20 @@ def get_digital_twin_scores(entity_id):
     """Calculates/retrieves normalized score vectors for the digital twin."""
     state = get_current_digital_twin_state(entity_id)
     
-    rfm_score = float(state.get("rfm_score") or 0.5)
-    clv_score = float(state.get("clv_score") or 0.5)
-    clv_amount = float(state.get("predicted_clv_amount_mad") or 0.0)
+    rfm_score = float(state.get("rfm_score") if state.get("rfm_score") is not None and not pd.isna(state.get("rfm_score")) else 0.5)
+    
+    # Resolve CLV Score from predicted_clv_score or clv_score
+    raw_clv_score = state.get("predicted_clv_score")
+    if raw_clv_score is None or pd.isna(raw_clv_score):
+        raw_clv_score = state.get("clv_score")
+        
+    if raw_clv_score is not None and not pd.isna(raw_clv_score):
+        clv_score = float(raw_clv_score)
+    else:
+        clv_score = 50.0
+        
+    clv_amount = float(state.get("predicted_clv_amount_mad") if state.get("predicted_clv_amount_mad") is not None and not pd.isna(state.get("predicted_clv_amount_mad")) else 0.0)
+
     
     # Calculate churn risk level
     recency = int(state.get("recency_days") or 0)
