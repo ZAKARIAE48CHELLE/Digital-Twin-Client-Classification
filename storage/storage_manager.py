@@ -154,15 +154,19 @@ def save_entity_snapshot(df, entity_id, history_df=None):
 
     if is_postgres_enabled():
         try:
+            from storage.postgres_storage import save_postgres_data
+            single_row_df = entity_rows.copy()
             entity_history = None
             if history_df is not None and not history_df.empty and "entity_id" in history_df.columns:
                 entity_history = history_df[history_df["entity_id"] == entity_id]
             save_postgres_data(single_row_df, history_df=entity_history)
+
             # Also update Excel for backup consistency
             from storage.excel_storage import save_excel_data
             save_excel_data(df, history_df)
 
             return True, None
+
         except Exception as e:
             logger.error(f"Error in save_entity_snapshot for '{entity_id}', falling back to full save: {e}")
             global _fallback_active, _fallback_reason
