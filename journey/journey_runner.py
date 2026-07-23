@@ -129,6 +129,7 @@ def apply_journey_stage_events(entity_id, stage):
     """
     Applies trigger events for a stage to the demo entity via app.simulate_event.
     Updates ONLY single entity (< 1s execution).
+    Returns (primary_event_id, generated_event_ids).
     """
     from app import simulate_event
     df, history = load_data()
@@ -136,15 +137,16 @@ def apply_journey_stage_events(entity_id, stage):
     events = stage.get("trigger_events", [])
     values = stage.get("event_values", [])
     
-    last_event_id = None
+    generated_event_ids = []
     for evt_type, val in zip(events, values):
         df, history, _, _, _, _, _, _, new_ev_id = simulate_event(
             df, history, entity_id, evt_type, val
         )
         if new_ev_id:
-            last_event_id = new_ev_id
+            generated_event_ids.append(new_ev_id)
             
-    return last_event_id
+    primary_event_id = generated_event_ids[0] if generated_event_ids else None
+    return primary_event_id, generated_event_ids
 
 def run_next_journey_step(scenario_id):
     """
@@ -174,12 +176,31 @@ def run_next_journey_step(scenario_id):
     before_state = capture_entity_state(entity_id)
     
     # 3. Apply stage events
-    trigger_ev_id = apply_journey_stage_events(entity_id, stage)
+    trigger_ev_id, generated_ev_ids = apply_journey_stage_events(entity_id, stage)
     
-    # 4. Capture after state
+    # 4. FK & Persistence Integrity Check: Verify trigger_event_id exists in event_history
+    if not trigger_ev_id:
+        logger.error("Journey step could not be saved because the trigger event was not persisted.")
+        return None
+        
+    from admin.database_metrics import is_postgres_available
+    if is_postgres_available():
+        from database.db import get_cursor
+        try:
+            with get_cursor(commit=False) as cur:
+                cur.execute("SELECT 1 FROM event_history WHERE event_id = %s;", (trigger_ev_id,))
+                exists = cur.fetchone()
+        except Exception:
+            exists = None
+            
+        if not exists:
+            logger.error(f"Journey step could not be saved because the trigger event '{trigger_ev_id}' was not persisted in event_history.")
+            return None
+
+    # 5. Capture after state
     after_state = capture_entity_state(entity_id)
     
-    # 5. Build step record
+    # 6. Build step record
     step_dict = {
         "scenario_id": scenario_id,
         "step_order": next_order,
@@ -207,6 +228,11 @@ def run_next_journey_step(scenario_id):
     }
     
     step_id = insert_journey_step(step_dict)
+    if not step_id:
+        logger.error(f"Journey step could not be saved because insert_journey_step failed for stage '{stage['stage_name']}'.")
+        return None
+        
+    step_dict["step_id"] = step_id
     
     # If final stage, mark scenario completed
     if next_order == len(DEFAULT_STAGES):
@@ -219,16 +245,19 @@ def run_full_journey(scenario_id, use_llm=False):
     """
     Runs all remaining steps of a scenario in sequence.
     Optionally calls LLM for each step if use_llm=True.
+    Stops immediately if a step fails.
     """
     results = []
-    while True:
+    for _ in range(len(DEFAULT_STAGES)):
         step = run_next_journey_step(scenario_id)
-        if not step:
+        if not step or not step.get("step_id"):
+            logger.error("Run Full Journey stopped due to a failed or missing journey step.")
             break
         if use_llm:
             generate_llm_journey_explanation(step)
         results.append(step)
     return results
+
 
 def generate_llm_journey_explanation(step_dict):
     """

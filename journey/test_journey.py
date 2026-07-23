@@ -78,7 +78,8 @@ class TestJourneySimulator(unittest.TestCase):
         """Test executing next journey step without LLM calls."""
         mock_get_scen.return_value = {"scenario_id": 10, "entity_id": "P_DEMO_001", "status": "Draft"}
         mock_get_steps.return_value = []
-        mock_apply_ev.return_value = "E0000001"
+        mock_apply_ev.return_value = ("E0000001", ["E0000001"])
+
         mock_ins_step.return_value = 101
         
         mock_capture.side_effect = [
@@ -130,5 +131,54 @@ class TestJourneySimulator(unittest.TestCase):
         res = generate_llm_journey_explanation(step)
         self.assertEqual(res, step)
 
+    @patch("journey.journey_runner.apply_journey_stage_events")
+    @patch("journey.journey_runner.get_journey_scenario_by_id")
+    @patch("journey.journey_runner.get_journey_steps")
+    def test_trigger_event_id_exists_before_step_insert(self, mock_get_steps, mock_get_scen, mock_apply_ev):
+        """Test that step execution returns None if trigger event is missing or not persisted."""
+        mock_get_scen.return_value = {"scenario_id": 10, "entity_id": "P_DEMO_001", "status": "Draft"}
+        mock_get_steps.return_value = []
+        mock_apply_ev.return_value = (None, [])
+        
+        step = run_next_journey_step(10)
+        self.assertIsNone(step)
+
+    @patch("journey.journey_runner.run_next_journey_step")
+    def test_run_full_journey_stops_on_failed_step(self, mock_run_next):
+        """Test that run_full_journey stops immediately if a step fails instead of looping infinitely."""
+        mock_run_next.return_value = None
+        results = run_full_journey(scenario_id=10, use_llm=False)
+        self.assertEqual(len(results), 0)
+        mock_run_next.assert_called_once_with(10)
+
+    @patch("journey.journey_runner.run_next_journey_step")
+    def test_run_full_journey_progresses_once_per_stage(self, mock_run_next):
+        """Test that run_full_journey executes exactly 5 stages when all succeed."""
+        mock_run_next.side_effect = [
+            {"step_id": 1, "step_order": 1},
+            {"step_id": 2, "step_order": 2},
+            {"step_id": 3, "step_order": 3},
+            {"step_id": 4, "step_order": 4},
+            {"step_id": 5, "step_order": 5}
+        ]
+        results = run_full_journey(scenario_id=10, use_llm=False)
+        self.assertEqual(len(results), 5)
+        self.assertEqual(mock_run_next.call_count, 5)
+
+    @patch("journey.journey_runner.insert_journey_step", return_value=None)
+    @patch("journey.journey_runner.apply_journey_stage_events", return_value=("E0000001", ["E0000001"]))
+    @patch("journey.journey_runner.get_journey_scenario_by_id", return_value={"scenario_id": 10, "entity_id": "P_DEMO_001", "status": "Draft"})
+    @patch("journey.journey_runner.get_journey_steps", return_value=[])
+    @patch("journey.journey_runner.capture_entity_state", return_value={
+        "entity_id": "P_DEMO_001", "entity_type": "Prospect", "dynamic_class": "Cold Prospect",
+        "customer_segment": "Prospect", "customer_persona": "New Explorer", "clv_amount": 0.0,
+        "rfm_score": 0.15, "churn_risk": 0.10
+    })
+    def test_journey_step_event_fk_integrity(self, mock_cap, mock_steps, mock_scen, mock_apply, mock_ins):
+        """Test that step execution fails gracefully when step insert fails or FK is invalid."""
+        step = run_next_journey_step(10)
+        self.assertIsNone(step)
+
 if __name__ == "__main__":
     unittest.main()
+

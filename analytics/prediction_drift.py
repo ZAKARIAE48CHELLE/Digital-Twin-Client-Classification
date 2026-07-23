@@ -69,8 +69,9 @@ def compare_class_distribution(current_days=30, baseline_days=90):
         
         # Merge datasets
         df = pd.merge(baseline_df, current_df, on="dynamic_class", how="outer")
-        df["baseline_count"] = df["baseline_count"].fillna(0)
-        df["current_count"] = df["current_count"].fillna(0)
+        df["baseline_count"] = pd.to_numeric(df["baseline_count"].fillna(0), errors="coerce").fillna(0).astype(int)
+        df["current_count"] = pd.to_numeric(df["current_count"].fillna(0), errors="coerce").fillna(0).astype(int)
+
 
         
         total_baseline = df["baseline_count"].sum()

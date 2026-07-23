@@ -79,11 +79,15 @@ def render_journey_dashboard(df_data=None, df_history=None):
                 scenario_id = reset_demo_journey(DEMO_ENTITY_ID)
             with st.spinner("Executing next journey stage..."):
                 step = run_next_journey_step(scenario_id)
-                if step:
+                if step and step.get("step_id"):
                     st.success(f"Executed Step {step['step_order']}: {step['stage_name']}!")
                     st.rerun()
                 else:
-                    st.info("Journey scenario is already complete!")
+                    existing = get_journey_steps(scenario_id)
+                    if len(existing) >= 5:
+                        st.info("Journey scenario is already complete (all 5 stages executed)!")
+                    else:
+                        st.error("Journey step could not be saved because the trigger event was not persisted.")
 
     with c3:
         if st.button("🚀 Run Full Journey", type="primary", key="btn_full_journey", help="Runs all 5 stages in sequence."):
@@ -91,8 +95,12 @@ def render_journey_dashboard(df_data=None, df_history=None):
                 scenario_id = reset_demo_journey(DEMO_ENTITY_ID)
             with st.spinner("Executing full 5-stage lifecycle journey..."):
                 steps = run_full_journey(scenario_id, use_llm=False)
-                st.success(f"Successfully executed {len(steps)} journey stages!")
-                st.rerun()
+                if steps:
+                    st.success(f"Successfully executed {len(steps)} journey stages!")
+                    st.rerun()
+                else:
+                    st.error("Journey step could not be saved because the trigger event was not persisted.")
+
 
     with c4:
         if st.button("🤖 Generate LLM Explanations", key="btn_llm_journey", help="Optional button-triggered local LLM cognitive explanations for all steps."):
