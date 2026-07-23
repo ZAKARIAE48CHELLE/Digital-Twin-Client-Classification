@@ -3,7 +3,8 @@ import pandas as pd
 from datetime import datetime
 from storage.storage_manager import load_data, save_entity_snapshot
 from digital_twin.digital_twin_builder import build_digital_twin_profile
-from personas.persona_matcher import match_persona_by_entity
+from personas.persona_matcher import get_persona_for_entity
+
 from journey.journey_scenarios import DEFAULT_STAGES, get_default_scenario_definition
 from journey.journey_repository import (
     create_journey_scenario,
