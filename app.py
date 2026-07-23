@@ -1428,7 +1428,7 @@ def run_customer_clustering(df, n_clusters=5):
     client_df = df[client_mask].copy()
     
     if len(client_df) < n_clusters:
-        return df, None
+        return df, None, [0.0, 0.0, 0.0]
         
     features = [
         "rfm_score", "predicted_clv_score", "churn_risk_score",
@@ -1452,7 +1452,8 @@ def run_customer_clustering(df, n_clusters=5):
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     cluster_labels = kmeans.fit_predict(X_scaled)
     
-    pca = PCA(n_components=2)
+    n_comp = min(3, X_scaled.shape[1])
+    pca = PCA(n_components=n_comp)
     pca_coords = pca.fit_transform(X_scaled)
     
     if "ml_cluster_id" not in df.columns:
@@ -1480,11 +1481,23 @@ def run_customer_clustering(df, n_clusters=5):
         else:
             df.at[idx, "cluster_persona"] = "Cluster Standard Active"
             
-    pca_df = pd.DataFrame(pca_coords, columns=["PCA1", "PCA2"])
-    pca_df["cluster"] = cluster_labels
+    pca_cols = [f"PCA{i+1}" for i in range(n_comp)]
+    pca_df = pd.DataFrame(pca_coords, columns=pca_cols)
+    pca_df["cluster"] = [f"Cluster {c}" for c in cluster_labels]
+    pca_df["cluster_id"] = cluster_labels
     pca_df["entity_id"] = client_df["entity_id"].values
+    pca_df["dynamic_class"] = client_df["dynamic_class"].values if "dynamic_class" in client_df.columns else "Client"
+    pca_df["customer_segment"] = client_df["customer_segment"].values if "customer_segment" in client_df.columns else "Standard Active"
+    pca_df["cluster_persona"] = df.loc[client_indices, "cluster_persona"].values
+    pca_df["rfm_score"] = client_df["rfm_score"].values if "rfm_score" in client_df.columns else 0.5
+    pca_df["predicted_clv_score"] = client_df["predicted_clv_score"].values if "predicted_clv_score" in client_df.columns else 50.0
+    pca_df["total_spent_90d_mad"] = client_df["total_spent_90d_mad"].values if "total_spent_90d_mad" in client_df.columns else 0.0
+    pca_df["churn_risk_score"] = client_df["churn_risk_score"].values if "churn_risk_score" in client_df.columns else 0.0
     
-    return df, pca_df
+    explained_var = pca.explained_variance_ratio_
+    
+    return df, pca_df, explained_var
+
 
 def log_clv_before_after(event_record, old_row, new_row):
     """
@@ -3843,28 +3856,169 @@ if __name__ == "__main__":
                     st.rerun()
 
             # G. ML Clustering
-            with st.expander("🧠 Complementary ML Clustering Analytics"):
+            with st.expander("🧠 Complementary ML Clustering Analytics", expanded=True):
                 st.markdown("""
                 This module runs a **KMeans Clustering** model over 16 behavioral, predictive, and engagement features
-                to discover hidden cohorts. It applies **PCA** to project clusters into a 2D space.
+                to discover hidden cohorts. It applies **PCA (Principal Component Analysis)** to project clusters into a 2D or 3D space.
                 """)
+                
                 clust_col1, clust_col2 = st.columns([1, 2])
                 with clust_col1:
                     n_clusters = st.slider("Select Number of Clusters", min_value=2, max_value=8, value=5, step=1, key="clust_n_clusters")
-                    run_clust_btn = st.button("🤖 Run KMeans Clustering", type="primary", width="stretch")
-                with clust_col2:
-                    if run_clust_btn:
-                        with st.spinner("Fitting KMeans and projecting PCA coordinates..."):
-                            df_data, pca_df = run_customer_clustering(df_data, n_clusters=n_clusters)
-                        if pca_df is not None:
-                            st.success(f"✅ Grouped clients into {n_clusters} behavioral clusters!")
-                            st.markdown("<div style='font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:8px;'>PCA 2D Cluster Space</div>", unsafe_allow_html=True)
-                            st.scatter_chart(pca_df.set_index("entity_id"), x="PCA1", y="PCA2", color="cluster", size=60, height=250)
-                            clients_clustered = df_data[df_data["entity_type"].astype(str).str.lower().isin(["client", "1"])].copy()
-                            st.markdown("<div style='font-size:12px;font-weight:700;color:#cbd5e1;margin-top:14px;margin-bottom:6px;'>ML Cluster Persona Assignments (Sample)</div>", unsafe_allow_html=True)
-                            st.dataframe(clients_clustered[["entity_id", "dynamic_class", "ml_cluster_label", "cluster_persona"]].head(10), width="stretch", hide_index=True)
-                        else:
-                            st.error("Insufficient client data to run KMeans clustering.")
+                    pca_dim = st.radio("PCA Visualization Dimensions:", ["2D Scatter Plot", "3D Spatial Projection"], horizontal=True, key="rad_pca_dim")
+                    run_clust_btn = st.button("🤖 Run KMeans Clustering", type="primary", width="stretch", key="btn_run_kmeans")
+                    
+                # Auto-run clustering if not in session state or if button clicked or if cluster count changed
+                if run_clust_btn or "pca_df" not in st.session_state or st.session_state.get("last_n_clusters") != n_clusters:
+                    with st.spinner("Fitting KMeans and projecting PCA coordinates..."):
+                        df_data, pca_df_res, exp_var_res = run_customer_clustering(df_data, n_clusters=n_clusters)
+                        st.session_state["df"] = df_data
+                        st.session_state["pca_df"] = pca_df_res
+                        st.session_state["exp_var"] = exp_var_res
+                        st.session_state["last_n_clusters"] = n_clusters
+
+                pca_df = st.session_state.get("pca_df")
+                exp_var = st.session_state.get("exp_var", [0.0, 0.0, 0.0])
+
+                if pca_df is not None and not pca_df.empty:
+                    st.success(f"✅ Grouped {len(pca_df)} clients into {n_clusters} behavioral clusters!")
+                    
+                    import plotly.express as px
+                    import plotly.graph_objects as go
+                    
+                    tot_var = sum(exp_var[:2]) * 100
+                    
+                    if "2D" in pca_dim:
+                        fig = px.scatter(
+                            pca_df,
+                            x="PCA1",
+                            y="PCA2",
+                            color="cluster",
+                            symbol="cluster",
+                            hover_name="entity_id",
+                            hover_data={
+                                "PCA1": ":.2f",
+                                "PCA2": ":.2f",
+                                "dynamic_class": True,
+                                "customer_segment": True,
+                                "cluster_persona": True,
+                                "rfm_score": ":.2f",
+                                "predicted_clv_score": ":.1f",
+                                "total_spent_90d_mad": ":.2f"
+                            },
+                            title=f"KMeans Cluster Map (PCA 2D Space — {tot_var:.1f}% Variance Explained)",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+                        
+                        # Compute centroids in 2D
+                        centroids = pca_df.groupby("cluster")[["PCA1", "PCA2"]].mean().reset_index()
+                        fig.add_trace(
+                            go.Scatter(
+                                x=centroids["PCA1"],
+                                y=centroids["PCA2"],
+                                mode="markers+text",
+                                marker=dict(size=14, symbol="diamond", color="#ffffff", line=dict(width=2, color="#000000")),
+                                text=centroids["cluster"],
+                                textposition="top center",
+                                name="Cluster Centroids"
+                            )
+                        )
+                        
+                        fig.update_layout(
+                            template="plotly_dark",
+                            height=480,
+                            paper_bgcolor="rgba(15, 23, 42, 0.6)",
+                            plot_bgcolor="rgba(15, 23, 42, 0.6)",
+                            margin=dict(l=20, r=20, t=40, b=20),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                    else:
+                        tot_var_3d = sum(exp_var[:3]) * 100
+                        fig3d = px.scatter_3d(
+                            pca_df,
+                            x="PCA1",
+                            y="PCA2",
+                            z="PCA3",
+                            color="cluster",
+                            hover_name="entity_id",
+                            hover_data={
+                                "dynamic_class": True,
+                                "customer_segment": True,
+                                "cluster_persona": True,
+                                "rfm_score": ":.2f",
+                                "predicted_clv_score": ":.1f"
+                            },
+                            title=f"KMeans 3D Spatial Cluster Projection ({tot_var_3d:.1f}% Variance Explained)",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+                        fig3d.update_layout(
+                            template="plotly_dark",
+                            height=540,
+                            paper_bgcolor="rgba(15, 23, 42, 0.6)",
+                            margin=dict(l=10, r=10, t=40, b=10)
+                        )
+                        st.plotly_chart(fig3d, use_container_width=True)
+
+                    st.markdown("---")
+                    
+                    # 2. Cluster Profiles Summary & Metrics Breakdown
+                    st.markdown("<div class='section-header'><span class='icon'>📊</span><span class='title'>Cluster Cohort Characteristics & Profiles</span></div>", unsafe_allow_html=True)
+                    
+                    col_m1, col_m2 = st.columns([1, 1])
+                    with col_m1:
+                        st.markdown("<strong style='font-size:13px; color:#38bdf8;'>Entity Distribution across Clusters</strong>", unsafe_allow_html=True)
+                        counts_df = pca_df["cluster"].value_counts().reset_index()
+                        counts_df.columns = ["Cluster", "Count"]
+                        
+                        fig_bar = px.bar(
+                            counts_df,
+                            x="Cluster",
+                            y="Count",
+                            color="Cluster",
+                            text="Count",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+                        fig_bar.update_layout(
+                            template="plotly_dark",
+                            height=260,
+                            paper_bgcolor="rgba(15, 23, 42, 0.6)",
+                            plot_bgcolor="rgba(15, 23, 42, 0.6)",
+                            showlegend=False,
+                            margin=dict(l=10, r=10, t=20, b=10)
+                        )
+                        st.plotly_chart(fig_bar, use_container_width=True)
+
+                    with col_m2:
+                        st.markdown("<strong style='font-size:13px; color:#34d399;'>Mean Metric Comparison by Cluster</strong>", unsafe_allow_html=True)
+                        cluster_means = pca_df.groupby("cluster")[["rfm_score", "predicted_clv_score", "churn_risk_score", "total_spent_90d_mad"]].mean().reset_index()
+                        cluster_means.columns = ["Cluster", "Avg RFM", "Avg CLV", "Avg Churn Risk", "Avg Spend (MAD)"]
+                        
+                        st.dataframe(
+                            cluster_means.style.format({
+                                "Avg RFM": "{:.2f}",
+                                "Avg CLV": "{:.1f}",
+                                "Avg Churn Risk": "{:.2f}",
+                                "Avg Spend (MAD)": "{:.2f}"
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                    # 3. Cluster Entity Inspector
+                    st.markdown("<div class='section-header'><span class='icon'>🔎</span><span class='title'>Cluster Entity Inspector</span></div>", unsafe_allow_html=True)
+                    sel_clust_inspect = st.selectbox("Select Cluster to inspect entities:", sorted(pca_df["cluster"].unique()), key="sb_clust_inspect")
+                    
+                    clust_entities = pca_df[pca_df["cluster"] == sel_clust_inspect]
+                    st.dataframe(
+                        clust_entities[["entity_id", "dynamic_class", "customer_segment", "cluster_persona", "rfm_score", "predicted_clv_score", "total_spent_90d_mad"]],
+                        use_container_width=True,
+                        hide_index=True
+                    )
+                else:
+                    st.error("Insufficient client data to run KMeans clustering.")
+
 
         # ── TAB 2: PERSONAS EXPLORER ──────────────────────────────────
         with tab_personas:
