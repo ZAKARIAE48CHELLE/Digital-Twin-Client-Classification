@@ -15,6 +15,7 @@ gantt
     Phase 6 Digital Twin & Persona          :done, p6, 2026-07-19, 2026-07-20
     Phase 6.5 Documentation & Science       :done, p65, 2026-07-21, 2026-07-21
     Phase 7 Closed-Loop Campaign Sim        :done, p7, 2026-07-21, 2026-07-21
+    Phase 7.5 Journey Tree Simulator        :done, p75, 2026-07-23, 2026-07-23
     section Future Phases
     Phase 8 Production Hardening            :future, p8, 2026-08-01, 2026-08-15
     Phase 9 Real CRM Integration            :future, p9, 2026-08-16, 2026-09-01
@@ -34,9 +35,9 @@ gantt
 - **Phase 6: Explicit Digital Twin & Persona Modeling Layer**: Decoupled individual Digital Twin state builder and 10-blueprint `persona_library`.
 - **Phase 6.5: Documentation & Scientific Explanation Package**: Complete documentation suite, architectural diagrams, scientific frameworks, and demo guides.
 - **Phase 7: Closed-Loop Campaign Simulation**: Campaign draft dispatcher, probabilistic response simulator, single-entity event generator, and closed-loop CLV impact tracking.
+- **Phase 7.5: Digital Twin Journey Tree Simulator**: 5-stage customer lifecycle scenario engine, Mermaid tree visualization, timeline tracking, and Presentation Mode.
 
 ### Planned Future Phases:
 
 - **Phase 8: Production Hardening**: API rate limiting, OAuth2 authentication, distributed Celery task queues, Docker containerization.
 - **Phase 9: Real CRM & Marketing API Integration**: Webhook integrations for Salesforce, Hubspot, Twilio SMS, and SendGrid email automation.
-

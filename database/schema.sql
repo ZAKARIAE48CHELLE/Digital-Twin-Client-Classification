@@ -327,5 +327,54 @@ CREATE INDEX IF NOT EXISTS idx_camp_resp_entity_id ON campaign_responses(entity_
 CREATE INDEX IF NOT EXISTS idx_camp_resp_type ON campaign_responses(response_type);
 CREATE INDEX IF NOT EXISTS idx_camp_resp_simulated_at ON campaign_responses(simulated_at);
 
+-- O. Digital Twin Journey Scenarios
+CREATE TABLE IF NOT EXISTS journey_scenarios (
+    scenario_id SERIAL PRIMARY KEY,
+    scenario_name TEXT NOT NULL,
+    description TEXT,
+    entity_id TEXT,
+    status TEXT DEFAULT 'Draft' CHECK (status IN ('Draft', 'Running', 'Completed', 'Failed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_j_scen_entity_id ON journey_scenarios(entity_id);
+CREATE INDEX IF NOT EXISTS idx_j_scen_status ON journey_scenarios(status);
+
+-- P. Digital Twin Journey Steps
+CREATE TABLE IF NOT EXISTS journey_steps (
+    step_id SERIAL PRIMARY KEY,
+    scenario_id INTEGER REFERENCES journey_scenarios(scenario_id) ON DELETE CASCADE,
+    step_order INTEGER NOT NULL,
+    entity_id TEXT REFERENCES entities(entity_id) ON DELETE CASCADE,
+    stage_name TEXT,
+    trigger_event_type TEXT,
+    trigger_event_id TEXT NULL REFERENCES event_history(event_id) ON DELETE SET NULL,
+    before_dynamic_class TEXT,
+    after_dynamic_class TEXT,
+    before_segment TEXT,
+    after_segment TEXT,
+    before_persona TEXT,
+    after_persona TEXT,
+    before_clv_amount NUMERIC(12, 2),
+    after_clv_amount NUMERIC(12, 2),
+    before_rfm_score NUMERIC(5, 4),
+    after_rfm_score NUMERIC(5, 4),
+    before_churn_risk NUMERIC(5, 4),
+    after_churn_risk NUMERIC(5, 4),
+    llm_explanation_fr TEXT,
+    llm_explanation_en TEXT,
+    llm_recommendation_fr TEXT,
+    llm_recommendation_en TEXT,
+    node_status TEXT DEFAULT 'Completed',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_j_steps_scenario_id ON journey_steps(scenario_id);
+CREATE INDEX IF NOT EXISTS idx_j_steps_entity_id ON journey_steps(entity_id);
+CREATE INDEX IF NOT EXISTS idx_j_steps_stage_name ON journey_steps(stage_name);
+CREATE INDEX IF NOT EXISTS idx_j_steps_step_order ON journey_steps(step_order);
+
+
 
 

@@ -69,9 +69,12 @@ def get_table_counts():
         ("llm_action_recommendations", "LLM-generated action advisory logs & feedback"),
         ("campaign_dispatches", "Simulated marketing campaign dispatches and metadata"),
         ("campaign_responses", "Simulated customer campaign responses and event mapping"),
+        ("journey_scenarios", "Digital Twin customer lifecycle simulation scenarios"),
+        ("journey_steps", "Step-by-step Digital Twin lifecycle progression logs"),
         ("model_registry", "Metadata of trained machine learning model artifacts"),
         ("audit_logs", "Platform security and maintenance audit log trail")
     ]
+
 
     
     if not is_postgres_available():

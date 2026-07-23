@@ -2644,10 +2644,12 @@ if __name__ == "__main__":
         ("Customer Segments & Personas", "🎯"),
         ("Digital Twin & Persona", "🧬"),
         ("Campaign Simulation", "🚀"),
+        ("Journey Simulator", "🗺️"),
         ("Simulate Event",     "⚡"),
         ("Create New Entity",  "➕"),
         ("Database Intelligence", "🧠"),
     ]
+
 
 
     _active = st.session_state["active_page"]
@@ -4565,9 +4567,14 @@ if __name__ == "__main__":
         from campaigns.campaign_dashboard import render_campaign_dashboard
         render_campaign_dashboard(df_data)
 
+    elif page == "Journey Simulator":
+        from journey.journey_dashboard import render_journey_dashboard
+        render_journey_dashboard(df_data, df_history)
+
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard
         render_database_dashboard(df_data, df_history)
+
 
 
 
