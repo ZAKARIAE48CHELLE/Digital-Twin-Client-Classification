@@ -25,6 +25,21 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
     Creates or resets the demo entity P_DEMO_001 in memory and database.
     Uses single-entity snapshot save optimization (< 1s execution).
     """
+    from admin.database_metrics import is_postgres_available
+    if is_postgres_available():
+        from database.db import get_cursor
+        try:
+            with get_cursor(commit=True) as cur:
+                cur.execute("DELETE FROM classification_predictions WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM customer_segments WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM clv_predictions WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM rfm_es_scores WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM event_history WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM journey_steps WHERE entity_id = %s;", (entity_id,))
+                cur.execute("DELETE FROM journey_scenarios WHERE entity_id = %s;", (entity_id,))
+        except Exception as e:
+            logger.warning(f"Cleanup of old prediction history for [{entity_id}] failed: {e}")
+
     df, history = load_data()
     
     demo_row = {
@@ -107,23 +122,34 @@ def reset_demo_journey(entity_id=DEMO_ENTITY_ID):
 
 def capture_entity_state(entity_id=DEMO_ENTITY_ID):
     """Captures current entity metrics and segment-first persona for journey step recording."""
+    from digital_twin.digital_twin_builder import get_current_digital_twin_state
     profile = build_digital_twin_profile(entity_id)
-    identity = profile.get("identity", {})
+    state = get_current_digital_twin_state(entity_id)
+    
+    identity = profile.get("core_identity", {})
     scores = profile.get("scores", {})
     predictions = profile.get("predictions", {})
-    behavior = profile.get("behavioral_state", {})
     persona_ctx = profile.get("persona_context", {})
     
+    rfm_val = state.get("rfm_score")
+    if rfm_val is None or pd.isna(rfm_val):
+        rfm_val = scores.get("rfm_score", 0.15)
+        
+    churn_val = state.get("churn_risk_score")
+    if churn_val is None or pd.isna(churn_val):
+        churn_val = 0.10
+        
     return {
         "entity_id": entity_id,
-        "entity_type": identity.get("entity_type"),
-        "dynamic_class": predictions.get("dynamic_class"),
-        "customer_segment": persona_ctx.get("customer_segment"),
-        "customer_persona": persona_ctx.get("customer_persona"),
-        "clv_amount": float(predictions.get("predicted_clv_amount_mad") or 0.0),
-        "rfm_score": float(scores.get("rfm_score_raw") or 0.15),
-        "churn_risk": float(scores.get("churn_risk_raw") or 0.10)
+        "entity_type": identity.get("entity_type") or state.get("entity_type"),
+        "dynamic_class": predictions.get("dynamic_class") or state.get("dynamic_class"),
+        "customer_segment": persona_ctx.get("customer_segment") or state.get("customer_segment"),
+        "customer_persona": persona_ctx.get("customer_persona") or state.get("customer_persona"),
+        "clv_amount": float(predictions.get("predicted_clv_amount_mad") or state.get("predicted_clv_amount_mad") or 0.0),
+        "rfm_score": float(rfm_val),
+        "churn_risk": float(churn_val)
     }
+
 
 def apply_journey_stage_events(entity_id, stage):
     """
