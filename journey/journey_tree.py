@@ -1,5 +1,7 @@
 import pandas as pd
+import textwrap
 from journey.journey_repository import get_journey_steps, get_journey_scenario_by_id
+
 
 STAGE_ICONS = {
     "1. New Prospect": "🔍",
