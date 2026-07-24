@@ -19,10 +19,13 @@ import shutil
 import re
 import json
 from pathlib import Path
-from datetime import datetime
+import logging
 import storage.storage_manager as storage_manager
 
+logger = logging.getLogger("OSMOS_APP")
+
 # Set page config
+
 st.set_page_config(
     page_title="OSMOS Digital Twin Dashboard",
     page_icon="🔮",
