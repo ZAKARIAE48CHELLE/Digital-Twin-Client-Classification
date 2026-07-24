@@ -1347,11 +1347,12 @@ def assign_customer_segment(row):
         description = "Recently acquired client with limited purchase history."
         action = "Encourage second purchase using onboarding offers."
     # B. High-Value Loyalists
-    elif rfm_score >= 0.75 and predicted_clv_score >= 75 and churn_risk_score < 0.35:
+    elif (rfm_score >= 0.70 or total_spent_90d_mad >= 15000.0 or predicted_clv_amount_mad >= 8000.0 or (rfm_score >= 0.65 and predicted_clv_score >= 50)) and churn_risk_score < 0.35:
         segment = "High-Value Loyalists"
         persona = "Premium Loyalist"
         description = "High-value customer with strong purchase history and low churn risk."
         action = "Reward loyalty with VIP offers, early access, and premium service."
+
     # C. At-Risk Premium Clients
     elif predicted_clv_score >= 70 and churn_risk_score >= 0.50:
         segment = "At-Risk Premium Clients"
@@ -2232,8 +2233,36 @@ def simulate_event(df, history, entity_id, event_type, event_value=None):
         
     # Update customer segmentation/persona
     df = update_customer_segmentation(df, entity_id)
+
+    # Dynamic Class refinement logic for Prospects and Clients
+    entity_type_str = str(df.loc[idx, "entity_type"]).lower()
+    if entity_type_str == "prospect":
+        conv_p = float(df.loc[idx, "conversion_probability"])
+        carts_p = float(df.loc[idx, "cart_additions_30d"])
+        clicks_p = float(df.loc[idx, "email_click_rate"])
+        views_p = float(df.loc[idx, "product_views_30d"])
+        if conv_p >= 0.25 or carts_p >= 1 or clicks_p >= 0.05 or views_p >= 4:
+            new_class = "Warm Prospect"
+        else:
+            new_class = "Cold Prospect"
+    elif entity_type_str == "client":
+        spent_c = float(df.loc[idx, "total_spent_90d_mad"])
+        clv_c = float(df.loc[idx, "predicted_clv_amount_mad"]) if not pd.isna(df.loc[idx, "predicted_clv_amount_mad"]) else 0.0
+        purch_c = float(df.loc[idx, "purchases_90d"])
+        churn_c = float(df.loc[idx, "churn_risk_score"])
+        if churn_c >= 0.50 or float(df.loc[idx, "complaint_count_90d"]) >= 1:
+            new_class = "Churn Risk Client"
+        elif spent_c >= 15000.0 or clv_c >= 8000.0 or (purch_c >= 3 and churn_c < 0.35):
+            new_class = "VIP Client"
+        elif purch_c >= 2:
+            new_class = "Loyal Client"
+        else:
+            new_class = "Active Client"
+            
+    df.at[idx, "dynamic_class"] = new_class
         
     class_changed = bool(old_class != new_class)
+
     event_date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     changed_vars_list = []
