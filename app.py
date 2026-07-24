@@ -1179,8 +1179,9 @@ def predict_clv(row_df, clv_artifact, ref_distribution=None):
                 segment_confidence = 1.0
                 segment_top_3 = [(segment, 1.0)]
         except Exception as e:
-            print("EXCEPTION IN SEGMENT CLASSIFIER:", e)
+            logger.debug(f"Segment classifier fallback to score thresholds: {e}")
             segment = None
+
             
     if segment is None:
         segment_prediction_source = "Score Thresholds"
@@ -1323,17 +1324,20 @@ def assign_customer_segment(row):
         }
         
     # It is a Client.
-    purchases_90d = float(row.get("purchases_90d", 0))
+    purchases_90d = float(row.get("purchases_90d", 0) if not pd.isna(row.get("purchases_90d")) else 0)
+    total_spent_90d_mad = float(row.get("total_spent_90d_mad", 0.0) if not pd.isna(row.get("total_spent_90d_mad")) else 0.0)
+    predicted_clv_amount_mad = float(row.get("predicted_clv_amount_mad", 0.0) if not pd.isna(row.get("predicted_clv_amount_mad")) else 0.0)
     predicted_clv_segment = str(row.get("predicted_clv_segment", ""))
-    rfm_score = float(row.get("rfm_score", 0))
-    predicted_clv_score = float(row.get("predicted_clv_score", 0))
-    churn_risk_score = float(row.get("churn_risk_score", 0))
-    behavioral_engagement_score = float(row.get("behavioral_engagement_score", 0))
-    price_sensitivity = float(row.get("price_sensitivity", 0))
-    complaint_count_90d = float(row.get("complaint_count_90d", 0))
-    social_sentiment_avg = float(row.get("social_sentiment_avg", 0.5))
-    recency_days = float(row.get("recency_days", 0))
-    email_click_rate = float(row.get("email_click_rate", 0))
+    rfm_score = float(row.get("rfm_score", 0) if not pd.isna(row.get("rfm_score")) else 0)
+    predicted_clv_score = float(row.get("predicted_clv_score", 0) if not pd.isna(row.get("predicted_clv_score")) else 0)
+    churn_risk_score = float(row.get("churn_risk_score", 0) if not pd.isna(row.get("churn_risk_score")) else 0)
+    behavioral_engagement_score = float(row.get("behavioral_engagement_score", 0) if not pd.isna(row.get("behavioral_engagement_score")) else 0)
+    price_sensitivity = float(row.get("price_sensitivity", 0) if not pd.isna(row.get("price_sensitivity")) else 0)
+    complaint_count_90d = float(row.get("complaint_count_90d", 0) if not pd.isna(row.get("complaint_count_90d")) else 0)
+    social_sentiment_avg = float(row.get("social_sentiment_avg", 0.5) if not pd.isna(row.get("social_sentiment_avg")) else 0.5)
+    recency_days = float(row.get("recency_days", 0) if not pd.isna(row.get("recency_days")) else 0)
+    email_click_rate = float(row.get("email_click_rate", 0) if not pd.isna(row.get("email_click_rate")) else 0)
+
     
     segment = None
     persona = None
