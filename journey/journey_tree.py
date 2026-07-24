@@ -77,15 +77,25 @@ def build_step_card(step):
     b_per = step.get("before_persona", "N/A")
     a_per = step.get("after_persona", "N/A")
     
-    b_clv = float(step.get("before_clv_amount") or 0.0)
-    a_clv = float(step.get("after_clv_amount") or 0.0)
+    def safe_num(val, default=0.0):
+        if val is None or pd.isna(val):
+            return default
+        try:
+            f = float(val)
+            return default if pd.isna(f) else f
+        except Exception:
+            return default
+
+    b_clv = safe_num(step.get("before_clv_amount"), 0.0)
+    a_clv = safe_num(step.get("after_clv_amount"), 0.0)
     clv_diff = a_clv - b_clv
     
-    b_rfm = float(step.get("before_rfm_score") or 0.0)
-    a_rfm = float(step.get("after_rfm_score") or 0.0)
+    b_rfm = safe_num(step.get("before_rfm_score"), 0.0)
+    a_rfm = safe_num(step.get("after_rfm_score"), 0.0)
     
-    b_churn = float(step.get("before_churn_risk") or 0.0)
-    a_churn = float(step.get("after_churn_risk") or 0.0)
+    b_churn = safe_num(step.get("before_churn_risk"), 0.0)
+    a_churn = safe_num(step.get("after_churn_risk"), 0.0)
+
     
     exp_fr = step.get("llm_explanation_fr", "")
     rec_fr = step.get("llm_recommendation_fr", "")

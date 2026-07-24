@@ -131,13 +131,23 @@ def capture_entity_state(entity_id=DEMO_ENTITY_ID):
     predictions = profile.get("predictions", {})
     persona_ctx = profile.get("persona_context", {})
     
-    rfm_val = state.get("rfm_score")
-    if rfm_val is None or pd.isna(rfm_val):
-        rfm_val = scores.get("rfm_score", 0.15)
-        
-    churn_val = state.get("churn_risk_score")
-    if churn_val is None or pd.isna(churn_val):
-        churn_val = 0.10
+    def safe_num(val, default=0.0):
+        if val is None or pd.isna(val):
+            return default
+        try:
+            f = float(val)
+            return default if pd.isna(f) else f
+        except Exception:
+            return default
+
+    rfm_val = safe_num(state.get("rfm_score"), safe_num(scores.get("rfm_score"), 0.15))
+    churn_val = safe_num(state.get("churn_risk_score"), 0.10)
+    
+    clv_val = safe_num(predictions.get("predicted_clv_amount_mad"))
+    if clv_val == 0.0:
+        clv_val = safe_num(state.get("predicted_clv_amount_mad"))
+    if clv_val == 0.0:
+        clv_val = safe_num(state.get("total_spent_90d_mad"))
         
     return {
         "entity_id": entity_id,
@@ -145,10 +155,11 @@ def capture_entity_state(entity_id=DEMO_ENTITY_ID):
         "dynamic_class": predictions.get("dynamic_class") or state.get("dynamic_class"),
         "customer_segment": persona_ctx.get("customer_segment") or state.get("customer_segment"),
         "customer_persona": persona_ctx.get("customer_persona") or state.get("customer_persona"),
-        "clv_amount": float(predictions.get("predicted_clv_amount_mad") or state.get("predicted_clv_amount_mad") or 0.0),
-        "rfm_score": float(rfm_val),
-        "churn_risk": float(churn_val)
+        "clv_amount": clv_val,
+        "rfm_score": rfm_val,
+        "churn_risk": churn_val
     }
+
 
 
 def apply_journey_stage_events(entity_id, stage):
