@@ -22,9 +22,10 @@ from pathlib import Path
 from datetime import datetime
 import logging
 import storage.storage_manager as storage_manager
-from ui.sidebar_help import render_sidebar_help
+from ui.contextual_help import render_floating_help_widget
 
 logger = logging.getLogger("OSMOS_APP")
+
 
 
 
@@ -2732,9 +2733,7 @@ if __name__ == "__main__":
 
     page = st.session_state["active_page"]
     st.sidebar.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    
-    # ── Contextual Sidebar Page Guide ──
-    render_sidebar_help(page)
+
 
 
     # Sidebar model panels
@@ -4618,6 +4617,10 @@ if __name__ == "__main__":
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard
         render_database_dashboard(df_data, df_history)
+
+    # ── Contextual Right-Side Floating Page Guide ──
+    render_floating_help_widget(page)
+
 
 
 
