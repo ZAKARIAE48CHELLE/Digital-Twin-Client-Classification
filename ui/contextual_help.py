@@ -5,6 +5,7 @@ Renders a non-intrusive floating right-side help widget and overlay panel in Str
 Allows users and presenters to toggle in-depth page explanations without crowding the left sidebar.
 """
 import streamlit as st
+import textwrap
 import logging
 from ui.help_content import get_page_help_content, PAGE_HELP
 
@@ -14,12 +15,37 @@ def inject_floating_help_css():
     """Injects custom CSS for fixed floating positioning on the right side of the screen."""
     css = """
     <style>
-    /* Floating Right Trigger Container */
-    .osmos-float-trigger-container {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 999990;
+    /* Fixed Bottom-Right Trigger Button Positioning */
+    .st-key-btn_open_page_guide,
+    .st-key-btn_close_page_guide,
+    div[data-testid="stButton"]:has(button[key="btn_open_page_guide"]),
+    div[data-testid="stButton"]:has(button[key="btn_close_page_guide"]) {
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        z-index: 999998 !important;
+        width: auto !important;
+    }
+    
+    .st-key-btn_open_page_guide button,
+    .st-key-btn_close_page_guide button,
+    div[data-testid="stButton"]:has(button[key="btn_open_page_guide"]) button,
+    div[data-testid="stButton"]:has(button[key="btn_close_page_guide"]) button {
+        border-radius: 24px !important;
+        padding: 8px 18px !important;
+        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    .st-key-btn_open_page_guide button:hover,
+    .st-key-btn_close_page_guide button:hover {
+        transform: translateY(-2px) scale(1.03) !important;
+        box-shadow: 0 12px 30px rgba(2, 132, 199, 0.6) !important;
     }
     
     /* Overlay Floating Right Panel */
@@ -39,7 +65,7 @@ def inject_floating_help_css():
         padding: 20px;
         z-index: 999999;
         color: #f8fafc;
-        font-family: inherit;
+        font-family: system-ui, -apple-system, sans-serif;
     }
     
     .osmos-panel-header {
@@ -97,74 +123,58 @@ def inject_floating_help_css():
     }
     </style>
     """
-    st.markdown(css, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(css)
+    else:
+        st.markdown(css, unsafe_allow_html=True)
 
 def render_help_panel(page_name, help_data):
     """
-    Renders the right-side overlay help panel.
+    Renders the right-side overlay help panel cleanly compiled without raw text formatting issues.
     """
-    inject_floating_help_css()
-    
-    # Check Postgres status note
     db_warning_html = ""
     if help_data.get("requires_postgres", False):
         try:
             from storage.storage_manager import is_postgres_enabled
             if not is_postgres_enabled():
-                db_warning_html = """
-                <div style='background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #fda4af; margin-bottom: 12px;'>
-                    ⚠️ <b>Excel Mode Active</b>: Full historical tracking requires PostgreSQL. In Excel mode, this page has read-only or fallback behavior.
-                </div>
-                """
+                db_warning_html = (
+                    "<div style='background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); "
+                    "padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #fda4af; margin-bottom: 12px;'>"
+                    "⚠️ <b>Excel Mode Active</b>: Full historical tracking requires PostgreSQL. In Excel mode, this page has read-only or fallback behavior."
+                    "</div>"
+                )
         except Exception:
             pass
 
     actions_html = "".join([f"<li style='margin-bottom:4px;'>{a}</li>" for a in help_data["actions"]])
     outputs_html = "".join([f"<li style='margin-bottom:4px;'>{o}</li>" for o in help_data["outputs"]])
 
-    panel_html = f"""
-    <div class='osmos-floating-panel'>
-        <div class='osmos-panel-header'>
-            <span class='osmos-panel-title'>📘 OSMOS Page Guide</span>
-        </div>
-        <div style='font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;'>
-            {help_data['title']}
-        </div>
-        
-        {db_warning_html}
+    panel_html = f"""<div class='osmos-floating-panel'>
+<div class='osmos-panel-header'>
+<span class='osmos-panel-title'>📘 OSMOS Page Guide</span>
+</div>
+<div style='font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;'>{help_data['title']}</div>
+{db_warning_html}
+<div class='osmos-flow-badge'>🧭 <b>{help_data['workflow_position']}</b></div>
+<div class='osmos-panel-section-title'>🎯 Purpose</div>
+<p class='osmos-panel-text'>{help_data['purpose']}</p>
+<div class='osmos-panel-section-title'>🔄 Pipeline Flow</div>
+<div style='background: rgba(15, 23, 42, 0.6); padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #38bdf8; font-family: monospace; margin-bottom: 10px;'>{help_data['mini_workflow']}</div>
+<div class='osmos-panel-section-title'>⚡ What You Can Do Here</div>
+<ul style='font-size: 12px; color: #cbd5e1; padding-left: 18px; margin: 0 0 10px 0;'>{actions_html}</ul>
+<div class='osmos-panel-section-title'>📊 Key Outputs</div>
+<ul style='font-size: 12px; color: #cbd5e1; padding-left: 18px; margin: 0 0 10px 0;'>{outputs_html}</ul>
+<div class='osmos-tip-box'>💡 <b>Demo Tip:</b> {help_data['demo_tip']}</div>
+</div>"""
 
-        <div class='osmos-flow-badge'>
-            🧭 <b>{help_data['workflow_position']}</b>
-        </div>
-
-        <div class='osmos-panel-section-title'>🎯 Purpose</div>
-        <p class='osmos-panel-text'>{help_data['purpose']}</p>
-
-        <div class='osmos-panel-section-title'>🔄 Pipeline Flow</div>
-        <div style='background: rgba(15, 23, 42, 0.6); padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #38bdf8; font-family: monospace; margin-bottom: 10px;'>
-            {help_data['mini_workflow']}
-        </div>
-
-        <div class='osmos-panel-section-title'>⚡ What You Can Do Here</div>
-        <ul style='font-size: 12px; color: #cbd5e1; padding-left: 18px; margin: 0 0 10px 0;'>
-            {actions_html}
-        </ul>
-
-        <div class='osmos-panel-section-title'>📊 Key Outputs</div>
-        <ul style='font-size: 12px; color: #cbd5e1; padding-left: 18px; margin: 0 0 10px 0;'>
-            {outputs_html}
-        </ul>
-
-        <div class='osmos-tip-box'>
-            💡 <b>Demo Tip:</b> {help_data['demo_tip']}
-        </div>
-    </div>
-    """
-    st.markdown(panel_html, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(panel_html)
+    else:
+        st.markdown(panel_html, unsafe_allow_html=True)
 
 def render_floating_help_widget(page_name):
     """
-    Renders the floating right-side Page Guide widget on screen.
+    Renders the fixed bottom-right Page Guide button and floating overlay panel.
     Uses st.session_state["osmos_help_open"] to toggle visibility cleanly.
     Does NOT auto-trigger LLM calls or DB logic. UI-only component.
     """
@@ -173,18 +183,15 @@ def render_floating_help_widget(page_name):
         
     help_data = get_page_help_content(page_name)
     
-    # Floating right container for toggle button
-    col_l, col_r = st.columns([0.85, 0.15])
-    with col_r:
-        if st.session_state["osmos_help_open"]:
-            if st.button("❌ Close Guide", key="btn_close_page_guide", help="Close the Page Guide panel"):
-                st.session_state["osmos_help_open"] = False
-                st.rerun()
-        else:
-            if st.button("📘 Page Guide", key="btn_open_page_guide", help=f"Open Page Guide for {help_data['title']}"):
-                st.session_state["osmos_help_open"] = True
-                st.rerun()
-                
-    # If open, render the overlay panel
+    # Always inject floating CSS so button is anchored fixed at bottom right
+    inject_floating_help_css()
+    
     if st.session_state["osmos_help_open"]:
+        if st.button("❌ Close Guide", key="btn_close_page_guide", help="Close the Page Guide panel"):
+            st.session_state["osmos_help_open"] = False
+            st.rerun()
         render_help_panel(page_name, help_data)
+    else:
+        if st.button("📘 Page Guide", key="btn_open_page_guide", help=f"Open Page Guide for {help_data['title']}"):
+            st.session_state["osmos_help_open"] = True
+            st.rerun()
