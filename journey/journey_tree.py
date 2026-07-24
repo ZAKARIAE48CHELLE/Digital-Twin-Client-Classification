@@ -112,7 +112,6 @@ def build_step_card(step):
             <span style='background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;'>Triggers: {events}</span>
         </div>
         <hr style='border-color: rgba(255,255,255,0.1); margin: 12px 0;'>
-        
         <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;'>
             <div style='background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px;'>
                 <span style='font-size: 11px; color: #94a3b8; text-transform: uppercase;'>Dynamic Class Transition</span>
@@ -127,7 +126,6 @@ def build_step_card(step):
                 <p style='margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;'>🎭 <b>{b_per}</b> ➔ <b style='color: #fbbf24;'>{a_per}</b></p>
             </div>
         </div>
-        
         <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px;'>
             <div style='background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 6px; font-size: 12px;'>
                 <span style='color: #94a3b8;'>CLV Amount:</span> <b>{b_clv:.2f} MAD</b> ➔ <b style='color: #38bdf8;'>{a_clv:.2f} MAD</b> <span style='color: {clv_color};'>({clv_diff:+.2f})</span>
@@ -139,11 +137,12 @@ def build_step_card(step):
                 <span style='color: #94a3b8;'>Churn Risk:</span> <b>{b_churn:.2f}</b> ➔ <b style='color: {churn_color};'>{a_churn:.2f}</b>
             </div>
         </div>
-        
         <div style='margin-top: 12px; background: rgba(30, 41, 59, 0.5); padding: 12px; border-radius: 8px;'>
             <p style='margin: 0; font-size: 13px; color: #cbd5e1;'><b>🧠 Analytical Explanation (FR):</b> {exp_fr}</p>
             <p style='margin: 6px 0 0 0; font-size: 13px; color: #34d399;'><b>💡 Recommandation Stratégique:</b> {rec_fr}</p>
         </div>
     </div>
     """).strip()
+    return card_html
+
     return card_html

@@ -196,7 +196,11 @@ def render_journey_dashboard(df_data=None, df_history=None):
     if steps:
         for step in steps:
             card_html = build_step_card(step)
-            st.markdown(card_html, unsafe_allow_html=True)
+            if hasattr(st, "html"):
+                st.html(card_html)
+            else:
+                st.markdown(card_html, unsafe_allow_html=True)
+
     else:
         st.info("No journey steps executed yet. Click **'▶️ Run Next Step'** or **'🚀 Run Full Journey'** above to start the demo.")
 
