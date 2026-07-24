@@ -100,7 +100,10 @@ def build_step_card(step):
     exp_fr = step.get("llm_explanation_fr", "")
     rec_fr = step.get("llm_recommendation_fr", "")
     
-    card_html = f"""
+    clv_color = "#34d399" if clv_diff >= 0 else "#f87171"
+    churn_color = "#f87171" if a_churn > 0.35 else "#34d399"
+
+    card_html = textwrap.dedent(f"""\
     <div style='background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1.5px solid rgba(56, 189, 248, 0.3); border-left: 5px solid #38bdf8; border-radius: 12px; padding: 18px; margin-bottom: 16px;'>
         <div style='display: flex; justify-content: space-between; align-items: center;'>
             <h3 style='margin: 0; font-size: 18px; color: #38bdf8;'>{icon} Step {step_order}: {stage_title}</h3>
@@ -125,13 +128,13 @@ def build_step_card(step):
         
         <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px;'>
             <div style='background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 6px; font-size: 12px;'>
-                <span style='color: #94a3b8;'>CLV Amount:</span> <b>{b_clv:.2f} MAD</b> ➔ <b style='color: #38bdf8;'>{a_clv:.2f} MAD</b> <span style='color: {"#34d399" if clv_diff>=0 else "#f87171"};'>({clv_diff:+.2f})</span>
+                <span style='color: #94a3b8;'>CLV Amount:</span> <b>{b_clv:.2f} MAD</b> ➔ <b style='color: #38bdf8;'>{a_clv:.2f} MAD</b> <span style='color: {clv_color};'>({clv_diff:+.2f})</span>
             </div>
             <div style='background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 6px; font-size: 12px;'>
                 <span style='color: #94a3b8;'>RFM-ES Score:</span> <b>{b_rfm:.2f}</b> ➔ <b style='color: #34d399;'>{a_rfm:.2f}</b>
             </div>
             <div style='background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 6px; font-size: 12px;'>
-                <span style='color: #94a3b8;'>Churn Risk:</span> <b>{b_churn:.2f}</b> ➔ <b style='color: {"#f87171" if a_churn>0.35 else "#34d399"};'>{a_churn:.2f}</b>
+                <span style='color: #94a3b8;'>Churn Risk:</span> <b>{b_churn:.2f}</b> ➔ <b style='color: {churn_color};'>{a_churn:.2f}</b>
             </div>
         </div>
         
@@ -140,5 +143,5 @@ def build_step_card(step):
             <p style='margin: 6px 0 0 0; font-size: 13px; color: #34d399;'><b>💡 Recommandation Stratégique:</b> {rec_fr}</p>
         </div>
     </div>
-    """
+    """).strip()
     return card_html
