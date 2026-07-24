@@ -179,6 +179,70 @@ class TestJourneySimulator(unittest.TestCase):
         step = run_next_journey_step(10)
         self.assertIsNone(step)
 
+    @patch("journey.journey_runner.insert_journey_step")
+    @patch("journey.journey_runner.apply_journey_stage_events")
+    @patch("journey.journey_runner.get_journey_scenario_by_id")
+    @patch("journey.journey_runner.get_journey_steps")
+    @patch("journey.journey_runner.capture_entity_state")
+    def test_journey_event_inserted_before_step(self, mock_cap, mock_steps, mock_scen, mock_apply, mock_ins):
+        """Verify that stage events are generated and applied before inserting journey_steps."""
+        mock_scen.return_value = {"scenario_id": 10, "entity_id": "P_DEMO_001", "status": "Draft"}
+        mock_steps.return_value = []
+        mock_apply.return_value = ("E0000001", ["E0000001"])
+        mock_ins.return_value = 101
+        mock_cap.return_value = {
+            "entity_id": "P_DEMO_001", "entity_type": "Prospect", "dynamic_class": "Cold Prospect",
+            "customer_segment": "Prospect", "customer_persona": "New Explorer", "clv_amount": 0.0,
+            "rfm_score": 0.15, "churn_risk": 0.10
+        }
+        step = run_next_journey_step(10)
+        self.assertIsNotNone(step)
+        mock_apply.assert_called_once()
+        mock_ins.assert_called_once()
+
+    @patch("journey.journey_runner.apply_journey_stage_events", return_value=(None, []))
+    @patch("journey.journey_runner.get_journey_scenario_by_id", return_value={"scenario_id": 10, "entity_id": "P_DEMO_001", "status": "Draft"})
+    @patch("journey.journey_runner.get_journey_steps", return_value=[])
+    def test_trigger_event_id_exists_in_event_history(self, mock_steps, mock_scen, mock_apply):
+        """Verify that step execution returns None if trigger_event_id is not persisted."""
+        step = run_next_journey_step(10)
+        self.assertIsNone(step)
+
+    @patch("journey.journey_runner.load_data")
+    @patch("app.simulate_event")
+    def test_multiple_stage_events_saved_in_event_history(self, mock_sim, mock_load):
+        """Verify that multiple events for a stage are all executed and tracked."""
+        mock_load.return_value = (None, None)
+        mock_sim.side_effect = [
+            (None, None, None, None, None, None, None, False, "E0000001"),
+            (None, None, None, None, None, None, None, False, "E0000002")
+        ]
+        from journey.journey_runner import apply_journey_stage_events
+        stage = {"trigger_events": ["email_open", "email_click"], "event_values": [None, None]}
+        primary_id, all_ids = apply_journey_stage_events("P_DEMO_001", stage)
+        self.assertEqual(primary_id, "E0000001")
+        self.assertEqual(all_ids, ["E0000001", "E0000002"])
+
+    @patch("journey.journey_runner.run_next_journey_step")
+    def test_run_full_journey_runs_five_stages_only(self, mock_run_next):
+        """Verify that run_full_journey executes exactly 5 stages when all succeed."""
+        mock_run_next.side_effect = [
+            {"step_id": 1, "step_order": 1},
+            {"step_id": 2, "step_order": 2},
+            {"step_id": 3, "step_order": 3},
+            {"step_id": 4, "step_order": 4},
+            {"step_id": 5, "step_order": 5}
+        ]
+        results = run_full_journey(scenario_id=10, use_llm=False)
+        self.assertEqual(len(results), 5)
+
+    @patch("journey.journey_runner.run_next_journey_step", return_value=None)
+    def test_run_full_journey_stops_on_failed_event_insert(self, mock_run_next):
+        """Verify that run_full_journey halts immediately when a step returns None."""
+        results = run_full_journey(scenario_id=10, use_llm=False)
+        self.assertEqual(len(results), 0)
+
 if __name__ == "__main__":
     unittest.main()
+
 

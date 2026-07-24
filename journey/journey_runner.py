@@ -243,6 +243,7 @@ def run_next_journey_step(scenario_id):
         "stage_name": stage["stage_name"],
         "trigger_event_type": ", ".join(stage["trigger_events"]),
         "trigger_event_id": trigger_ev_id,
+        "trigger_event_ids": generated_ev_ids,
         "before_dynamic_class": before_state["dynamic_class"],
         "after_dynamic_class": after_state["dynamic_class"],
         "before_segment": before_state["customer_segment"],
@@ -261,6 +262,7 @@ def run_next_journey_step(scenario_id):
         "llm_recommendation_en": stage["recommendation_en"],
         "node_status": "Completed"
     }
+
     
     step_id = insert_journey_step(step_dict)
     if not step_id:

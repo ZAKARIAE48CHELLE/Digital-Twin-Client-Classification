@@ -71,15 +71,14 @@ def compare_class_distribution(current_days=30, baseline_days=90):
         df = pd.merge(baseline_df, current_df, on="dynamic_class", how="outer")
         df["baseline_count"] = pd.to_numeric(df["baseline_count"].fillna(0), errors="coerce").fillna(0).astype(int)
         df["current_count"] = pd.to_numeric(df["current_count"].fillna(0), errors="coerce").fillna(0).astype(int)
-
-
         
         total_baseline = df["baseline_count"].sum()
         total_current = df["current_count"].sum()
         
-        df["baseline_percent"] = df["baseline_count"] / total_baseline if total_baseline > 0 else 0.0
-        df["current_percent"] = df["current_count"] / total_current if total_current > 0 else 0.0
-        df["change_percent"] = df["current_percent"] - df["baseline_percent"]
+        df["baseline_percent"] = (df["baseline_count"] / total_baseline if total_baseline > 0 else 0.0).astype(float)
+        df["current_percent"] = (df["current_count"] / total_current if total_current > 0 else 0.0).astype(float)
+        df["change_percent"] = (df["current_percent"] - df["baseline_percent"]).astype(float)
+
         
         return df
     except Exception:

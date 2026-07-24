@@ -339,27 +339,32 @@ def save_postgres_data(df, history_df=None):
             "decision_priority_score": row_dict.get("decision_priority_score")
         }
         upsert_digital_twin_snapshot(snapshot_data)
-        
-        # 4. Save RFM score with duplication guard
-        save_postgres_rfm_score(entity_id, row_dict)
-        
-        # 5. Save Classification prediction with duplication guard
-        save_postgres_classification_prediction(entity_id, row_dict)
-        
-        # 6. Save CLV prediction with duplication guard
-        save_postgres_clv_prediction(entity_id, row_dict)
-        
-        # 7. Save Customer segment with duplication guard
-        save_postgres_customer_segment(entity_id, row_dict)
-    if history_df is not None:
+
+    ev_id = None
+    if history_df is not None and not history_df.empty:
         for idx, row in history_df.iterrows():
             event_id = row.get("event_id")
             if not event_id or pd.isna(event_id):
                 continue
             event_dict = clean_dict_values(row.to_dict())
             save_postgres_event(event_dict)
+            if not ev_id:
+                ev_id = event_id
+
+    if not df.empty:
+        for idx, row in df.iterrows():
+            entity_id = row.get("entity_id")
+            if not entity_id:
+                continue
+            row_dict = clean_dict_values(row.to_dict())
+            row_ev_id = ev_id or row_dict.get("conversion_event_id")
+            save_postgres_rfm_score(entity_id, row_dict, row_ev_id)
+            save_postgres_classification_prediction(entity_id, row_dict, row_ev_id)
+            save_postgres_clv_prediction(entity_id, row_dict, row_ev_id)
+            save_postgres_customer_segment(entity_id, row_dict, row_ev_id)
             
     return True, None
+
 
 # --------------------------------------------------------
 # 3. PostgreSQL Specific Persistence / Duplication Guards
