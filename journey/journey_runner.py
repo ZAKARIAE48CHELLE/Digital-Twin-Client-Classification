@@ -34,11 +34,9 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
                 cur.execute("DELETE FROM customer_segments WHERE entity_id = %s;", (entity_id,))
                 cur.execute("DELETE FROM clv_predictions WHERE entity_id = %s;", (entity_id,))
                 cur.execute("DELETE FROM rfm_es_scores WHERE entity_id = %s;", (entity_id,))
-                cur.execute("DELETE FROM event_history WHERE entity_id = %s;", (entity_id,))
-                cur.execute("DELETE FROM journey_steps WHERE entity_id = %s;", (entity_id,))
-                cur.execute("DELETE FROM journey_scenarios WHERE entity_id = %s;", (entity_id,))
         except Exception as e:
             logger.warning(f"Cleanup of old prediction history for [{entity_id}] failed: {e}")
+
 
     df, history = load_data()
     
