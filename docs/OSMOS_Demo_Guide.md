@@ -2,7 +2,10 @@
 
 This guide provides a step-by-step script and speaker notes for presenting the OSMOS platform to stakeholders, executives, and technical committees.
 
+The platform includes contextual sidebar guidance for every major page (`📘 Page Guide`). This helps new users understand the purpose, actions, outputs, and workflow position of each OSMOS space during live demonstrations.
+
 ---
+
 
 ## 1. Demonstration Script (15-Minute Flow)
 

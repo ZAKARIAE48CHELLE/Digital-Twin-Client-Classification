@@ -22,8 +22,10 @@ from pathlib import Path
 from datetime import datetime
 import logging
 import storage.storage_manager as storage_manager
+from ui.sidebar_help import render_sidebar_help
 
 logger = logging.getLogger("OSMOS_APP")
+
 
 
 # Set page config
@@ -2730,6 +2732,10 @@ if __name__ == "__main__":
 
     page = st.session_state["active_page"]
     st.sidebar.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    
+    # ── Contextual Sidebar Page Guide ──
+    render_sidebar_help(page)
+
 
     # Sidebar model panels
     
