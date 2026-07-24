@@ -49,20 +49,71 @@ def render_journey_dashboard(df_data=None, df_history=None):
     with top_col2:
         presentation_mode = st.checkbox("🎭 Presentation Mode", value=False, key="chk_pres_mode", help="Hides debug metadata and displays large clean presentation cards suitable for demo video recordings.")
 
-    # 3. Scenario & Demo Entity Retrieval
-    latest_scen = get_latest_scenario_for_entity(DEMO_ENTITY_ID)
-    scenario_id = latest_scen["scenario_id"] if latest_scen else None
+    # 3. Historical Scenario Selection & Retrieval
+    all_scenarios = get_journey_scenarios(limit=50)
+    selected_scenario_id = None
+    
+    if all_scenarios:
+        scen_options = {}
+        for s in all_scenarios:
+            s_id = s["scenario_id"]
+            created = s.get("created_at")
+            created_str = created.strftime("%Y-%m-%d %H:%M:%S") if hasattr(created, "strftime") else str(created)[:19]
+            status_badge = s.get("status", "Draft")
+            label = f"Scenario #{s_id} — {s.get('scenario_name', 'Journey Scenario')} | Entity [{s.get('entity_id', 'P_DEMO_001')}] | Status: {status_badge} | {created_str}"
+            scen_options[label] = s_id
+
+        sel_col1, sel_col2 = st.columns([3, 1])
+        with sel_col1:
+            selected_label = st.selectbox(
+                "📂 Select Active or Historical Journey Scenario to Display:",
+                options=list(scen_options.keys()),
+                index=0,
+                key="sb_journey_scenario_select",
+                help="Select any past scenario run to view its saved 5-stage lifecycle tree, dynamic metrics, and historical steps."
+            )
+            selected_scenario_id = scen_options[selected_label]
+        with sel_col2:
+            st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+            if st.button("🗑️ Delete Selected", key="btn_del_selected_scen", help="Deletes the currently selected historical scenario."):
+                if selected_scenario_id:
+                    delete_journey_scenario(selected_scenario_id)
+                    st.success(f"Scenario #{selected_scenario_id} deleted!")
+                    st.rerun()
+
+    scenario_id = selected_scenario_id
+    current_scen = None
+    if all_scenarios and scenario_id:
+        current_scen = next((s for s in all_scenarios if s["scenario_id"] == scenario_id), None)
 
     # ── A. Scenario Overview ──
     if not presentation_mode:
-        st.markdown("<div class='section-header'><span class='icon'>📋</span><span class='title'>Scenario Overview</span></div>", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'><span class='icon'>📋</span><span class='title'>Scenario Overview & Historical Selection</span></div>", unsafe_allow_html=True)
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Demo Entity ID", DEMO_ENTITY_ID)
-        m2.metric("Scenario Name", "Prospect to VIP to Churn Risk")
-        m3.metric("Scenario ID", f"#{scenario_id}" if scenario_id else "None")
-        m4.metric("Status", latest_scen["status"] if latest_scen else "Not Started")
+        m1.metric("Demo Entity ID", current_scen.get("entity_id", DEMO_ENTITY_ID) if current_scen else DEMO_ENTITY_ID)
+        m2.metric("Scenario Name", current_scen.get("scenario_name", "Prospect to VIP to Churn Risk") if current_scen else "Prospect to VIP to Churn Risk")
+        m3.metric("Selected Scenario ID", f"#{scenario_id}" if scenario_id else "None")
+        m4.metric("Status", current_scen.get("status", "Not Started") if current_scen else "Not Started")
+
+    # Collapsible Historical Scenarios Archive Table
+    with st.expander("📚 View All Saved Historical Scenarios Archive (50 Max)", expanded=False):
+        if all_scenarios:
+            scen_list = []
+            for s in all_scenarios:
+                scen_list.append({
+                    "Scenario ID": s.get("scenario_id"),
+                    "Scenario Name": s.get("scenario_name"),
+                    "Entity ID": s.get("entity_id"),
+                    "Status": s.get("status"),
+                    "Description": s.get("description"),
+                    "Created At": s.get("created_at")
+                })
+            st.dataframe(pd.DataFrame(scen_list), use_container_width=True)
+        else:
+            st.info("No saved historical scenarios found in PostgreSQL database.")
 
     st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
+
 
     # ── B. Control Actions ──
     c1, c2, c3, c4, c5 = st.columns(5)
