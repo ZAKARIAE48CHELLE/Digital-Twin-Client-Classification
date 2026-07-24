@@ -44,9 +44,10 @@ class TestSidebarHelp(unittest.TestCase):
         """Verify that get_page_help_content returns a safe fallback for unknown pages."""
         fallback = get_page_help_content("Unknown Custom Space")
         self.assertEqual(fallback["title"], "Unknown Custom Space")
-        self.assertIn("Overview and management workspace", fallback["purpose"])
+        self.assertIn("contributes to the customer intelligence workflow", fallback["purpose"])
         for key in REQUIRED_KEYS:
             self.assertIn(key, fallback)
+
 
     @patch("streamlit.sidebar")
     def test_render_sidebar_help_does_not_crash(self, mock_sidebar):
