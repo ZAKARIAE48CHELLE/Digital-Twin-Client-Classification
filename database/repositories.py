@@ -280,6 +280,12 @@ def get_all_digital_twins():
 
 def insert_event_history(event_dict):
     """Inserts a new event record into history log."""
+    from storage.postgres_storage import clean_dict_values
+    params = clean_dict_values(dict(event_dict))
+    params['changed_variables'] = safe_json(params.get('changed_variables'))
+    params['before_values'] = safe_json(params.get('before_values'))
+    params['after_values'] = safe_json(params.get('after_values'))
+    
     query = """
         INSERT INTO event_history (
             event_id, entity_id, event_type, event_date, old_class, new_class, 
@@ -296,15 +302,15 @@ def insert_event_history(event_dict):
         )
         RETURNING event_id;
     """
-    params = dict(event_dict)
-    params['changed_variables'] = safe_json(params.get('changed_variables'))
-    params['before_values'] = safe_json(params.get('before_values'))
-    params['after_values'] = safe_json(params.get('after_values'))
-    
-    with get_cursor() as cur:
-        cur.execute(query, params)
-        res = cur.fetchone()
-        return res['event_id'] if res else None
+    try:
+        with get_cursor(commit=True) as cur:
+            cur.execute(query, params)
+            res = cur.fetchone()
+            return res['event_id'] if res else None
+    except Exception as e:
+        logger.error(f"Failed to insert event_history [{params.get('event_id')}]: {e}")
+        return None
+
 
 def get_event_history(entity_id=None):
     """Retrieves event history for one or all entities."""
