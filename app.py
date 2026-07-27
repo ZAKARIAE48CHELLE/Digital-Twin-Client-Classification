@@ -3791,7 +3791,13 @@ if __name__ == "__main__":
         dormant_cnt = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
 
         # ── Tabs ──────────────────────────────────────────────────────
-        tab_overview, tab_personas = st.tabs(["📊 Overview", "🎭 Personas"])
+        tab_overview, tab_personas, tab_dynamic, tab_comparison = st.tabs([
+            "📊 Cohort Overview", 
+            "🎭 Stable Persona Library", 
+            "⚡ Dynamic Personas", 
+            "⚖️ Comparison"
+        ])
+
 
         # ── TAB 1: OVERVIEW ───────────────────────────────────────────
         with tab_overview:
@@ -4296,7 +4302,18 @@ if __name__ == "__main__":
                                     hide_index=True, width="stretch"
                                 )
 
+        # ── TAB 3: DYNAMIC PERSONAS ──────────────────────────────────
+        with tab_dynamic:
+            from personas.persona_dashboard import render_dynamic_personas_tab
+            render_dynamic_personas_tab(df_data)
+
+        # ── TAB 4: COMPARISON ─────────────────────────────────────────
+        with tab_comparison:
+            from personas.persona_dashboard import render_persona_comparison_tab
+            render_persona_comparison_tab()
+
     # ── Page 3: Simulate Event ────────────────────────────────────
+
     elif page == "Simulate Event":
         st.markdown("""
         <div class='page-hero'>

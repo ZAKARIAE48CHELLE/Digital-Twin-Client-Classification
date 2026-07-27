@@ -44,3 +44,6 @@ Each page includes a floating right-side Page Guide widget (`📘 Page Guide`). 
   * **Answer**: *"No. All calculations (CLV, RFM-ES, Churn Risk) are 100% deterministic and computed by Python machine learning models. The LLM acts purely as an advisory synthesis layer."*
 - **Q: Why separate Digital Twin from Persona?**
   * **Answer**: *"A Digital Twin belongs to an individual customer and changes constantly with real-time data. A Persona belongs to a segment and defines standard marketing strategy. Conflating the two leads to inaccurate marketing."*
+- **Q: How do Stable Personas differ from Dynamic Personas?**
+  * **Answer**: *"OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9)."*
+

@@ -55,6 +55,13 @@ graph LR
 - **Segment Transition Matrix**: Computes Markov transition probabilities across customer segments.
 - **Prediction Drift Monitoring**: Evaluates distribution shifts between baseline predictions and current window predictions using Population Stability Index (PSI) concepts.
 
+### E. Exploratory Dynamic Personas Generator (KMeans)
+
+- **Methodology**: Unsupervised KMeans Clustering combined with PCA projection ($k = 2 \dots 9$).
+- **Role**: Computes temporary, data-driven dynamic persona profiles (`personas/dynamic_persona_generator.py`).
+- **Separation Rule**:
+  > *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
+
 ---
 
 ## 3. Strict Guardrails & LLM Role Boundary
@@ -65,3 +72,4 @@ graph LR
 > - The **Local LLM does NOT calculate** CLV amounts, RFM scores, churn risks, or alert thresholds.
 > - All numeric predictions and alert triggers are computed **100% deterministically** by python ML modules.
 > - The LLM is used **strictly for natural language synthesis**, explaining alerts, drafting customer messages, and suggesting tactical actions upon explicit admin button clicks.
+

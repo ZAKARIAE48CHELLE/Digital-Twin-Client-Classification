@@ -1,11 +1,13 @@
 # OSMOS UI Package — Contextual Right-Side Floating Page Guide
 
 ## 1. Overview & Purpose
+
 The `ui/` package provides contextual, in-app documentation displayed as a **non-intrusive floating right-side help widget** on the screen.
 
 This leaves the left Streamlit sidebar clean and dedicated exclusively to navigation and essential model controls.
 
 The floating Page Guide widget helps new users, executives, and presenters understand:
+
 1. **Page Purpose**: What the selected section accomplishes.
 2. **User Actions**: Executable operations available to the admin.
 3. **Key Outputs**: Primary KPIs, charts, data tables, and records generated.
@@ -16,6 +18,7 @@ The floating Page Guide widget helps new users, executives, and presenters under
 ---
 
 ## 2. Architecture & File Layout
+
 ```
 ui/
 ├── __init__.py            # Package exports (render_floating_help_widget, get_page_help_content)

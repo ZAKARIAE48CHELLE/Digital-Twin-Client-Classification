@@ -62,3 +62,15 @@ flowchart TD
 1. Every entity has exactly **one active Digital Twin**.
 2. Every Digital Twin maps to exactly **one active Segment** based on deterministic feature thresholds.
 3. Every Segment maps to exactly **one active Persona Blueprint** defined in the system's `persona_library`.
+
+---
+
+## 6. Stable vs. Dynamic Personas Distinction
+
+OSMOS distinguishes between **stable personas** and **dynamic personas**:
+
+> *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
+
+- **Stable Personas**: Fixed at 9 strategic profiles (`persona_library`). Powers official marketing resolution and the Digital Twin resolution chain.
+- **Dynamic Personas**: Generated dynamically based on KMeans clustering outputs ($k = 2 \dots 9$). Provides exploratory cohort discovery without overwriting stable persona mappings.
+
