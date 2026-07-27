@@ -143,27 +143,31 @@ def render_dynamic_personas_tab(df_data):
     st.markdown("<div class='section-header' style='margin-top:16px;'><span class='icon'>📊</span><span class='title'>Dynamic Cohort Metrics Breakdown</span></div>", unsafe_allow_html=True)
 
     dyn_df = pd.DataFrame(dynamic_personas)
+    dyn_df["chart_label"] = dyn_df.apply(
+        lambda r: f"Cluster {r['cluster_id']} — {r['persona_name'].split('—')[-1].strip()[:20]}", axis=1
+    )
 
     chart_col1, chart_col2 = st.columns(2)
     with chart_col1:
         fig_size = px.bar(
-            dyn_df, x="persona_name", y="entity_count",
-            color="persona_name", text="entity_count",
+            dyn_df, x="chart_label", y="entity_count",
+            color="chart_label", text="entity_count",
             title="Entity Count per Dynamic Persona",
             color_discrete_sequence=px.colors.qualitative.Plotly
         )
-        fig_size.update_layout(template="plotly_dark", height=280, showlegend=False, margin=dict(l=10, r=10, t=35, b=10))
+        fig_size.update_layout(template="plotly_dark", height=280, showlegend=False, xaxis_title="", margin=dict(l=10, r=10, t=35, b=10))
         st.plotly_chart(fig_size, use_container_width=True)
 
     with chart_col2:
         fig_clv = px.bar(
-            dyn_df, x="persona_name", y="avg_clv",
-            color="persona_name", text_auto=".0f",
+            dyn_df, x="chart_label", y="avg_clv",
+            color="chart_label", text_auto=".0f",
             title="Average Predicted CLV (MAD) by Dynamic Persona",
             color_discrete_sequence=px.colors.qualitative.Bold
         )
-        fig_clv.update_layout(template="plotly_dark", height=280, showlegend=False, margin=dict(l=10, r=10, t=35, b=10))
+        fig_clv.update_layout(template="plotly_dark", height=280, showlegend=False, xaxis_title="", margin=dict(l=10, r=10, t=35, b=10))
         st.plotly_chart(fig_clv, use_container_width=True)
+
 
     # Optional LLM Enhancement Button
     st.markdown("---")

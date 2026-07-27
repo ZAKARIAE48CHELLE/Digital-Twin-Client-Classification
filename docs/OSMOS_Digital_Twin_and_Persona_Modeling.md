@@ -70,7 +70,10 @@ flowchart TD
 OSMOS distinguishes between **stable personas** and **dynamic personas**:
 
 > *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
+>
+> *Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas.*
 
 - **Stable Personas**: Fixed at 9 strategic profiles (`persona_library`). Powers official marketing resolution and the Digital Twin resolution chain.
 - **Dynamic Personas**: Generated dynamically based on KMeans clustering outputs ($k = 2 \dots 9$). Provides exploratory cohort discovery without overwriting stable persona mappings.
+
 
