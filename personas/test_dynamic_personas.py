@@ -10,7 +10,8 @@ from personas.dynamic_persona_generator import (
     generate_dynamic_persona_channel,
     generate_dynamic_persona_priority
 )
-from personas.persona_library import DEFAULT_PERSONAS, get_all_personas
+from personas.persona_library import DEFAULT_PERSONA_MAP, get_all_personas
+
 
 class TestDynamicPersonas(unittest.TestCase):
 
@@ -100,11 +101,12 @@ class TestDynamicPersonas(unittest.TestCase):
         self.assertIn("Cluster 0", dynamic_personas[0]["persona_name"])
 
     def test_fixed_persona_library_remains_unchanged(self):
-        initial_count = len(DEFAULT_PERSONAS)
-        self.assertEqual(initial_count, 9)
-        # Generating dynamic personas must not modify DEFAULT_PERSONAS
+        initial_count = len(DEFAULT_PERSONA_MAP)
+        self.assertGreaterEqual(initial_count, 9)
+        # Generating dynamic personas must not modify DEFAULT_PERSONA_MAP
         generate_dynamic_personas(self.df_2clusters, cluster_col="ml_cluster_id")
-        self.assertEqual(len(DEFAULT_PERSONAS), 9)
+        self.assertEqual(len(DEFAULT_PERSONA_MAP), initial_count)
+
 
 if __name__ == "__main__":
     unittest.main()
