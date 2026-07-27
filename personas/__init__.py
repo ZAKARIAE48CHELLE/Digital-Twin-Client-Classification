@@ -1,6 +1,6 @@
 # OSMOS Persona Management & Library Package
 from personas.persona_library import get_all_personas, get_persona_by_segment
-from personas.persona_matcher import match_entity_to_persona
+from personas.persona_matcher import match_persona_for_segment, get_persona_for_entity, explain_persona_assignment
 from personas.dynamic_persona_generator import (
     generate_dynamic_personas,
     summarize_cluster_profile,
@@ -13,7 +13,9 @@ from personas.dynamic_persona_generator import (
 __all__ = [
     "get_all_personas",
     "get_persona_by_segment",
-    "match_entity_to_persona",
+    "match_persona_for_segment",
+    "get_persona_for_entity",
+    "explain_persona_assignment",
     "generate_dynamic_personas",
     "summarize_cluster_profile",
     "assign_dynamic_persona_name",
