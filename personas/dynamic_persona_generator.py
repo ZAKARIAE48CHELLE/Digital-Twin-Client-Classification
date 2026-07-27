@@ -251,6 +251,7 @@ def generate_dynamic_personas(df, cluster_col="ml_cluster_id"):
 def build_dynamic_persona_cards(dynamic_personas):
     """
     Renders visual Streamlit UI cards for a list of dynamic personas.
+    Uses dedented HTML templates without blank lines to guarantee native DOM compilation.
     """
     import streamlit as st
 
@@ -268,47 +269,47 @@ def build_dynamic_persona_cards(dynamic_personas):
         
         prio_color = "#f87171" if prio == "High" else ("#facc15" if prio == "Medium" else "#34d399")
 
-        st.markdown(f"""
-        <div style='background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9)); 
-                    border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 14px;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
-                <div>
-                    <span style='font-size: 18px; font-weight: 700; color: #38bdf8;'>⚡ {p_name}</span>
-                    <span style='font-size: 12px; color: #94a3b8; margin-left: 8px;'>(Cluster ID: {c_id} | {cnt} entities, {pct}%)</span>
-                </div>
-                <div>
-                    <span style='background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px;'>Channel: {chan}</span>
-                    <span style='background: rgba(255, 255, 255, 0.05); color: {prio_color}; border: 1px solid {prio_color}; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-left: 6px;'>Priority: {prio}</span>
-                </div>
-            </div>
-            
-            <p style='color: #cbd5e1; font-size: 13px; margin-bottom: 12px;'>{p["description"]}</p>
-            
-            <div style='display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px;'>
-                <div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
-                    <span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Dominant Class</span>
-                    <div style='font-size: 12px; font-weight: 700; color: #2dd4bf;'>{p["dominant_dynamic_class"]}</div>
-                </div>
-                <div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
-                    <span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Average CLV</span>
-                    <div style='font-size: 12px; font-weight: 700; color: #38bdf8;'>{p["avg_clv"]:,.0f} MAD</div>
-                </div>
-                <div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
-                    <span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Avg RFM-ES</span>
-                    <div style='font-size: 12px; font-weight: 700; color: #818cf8;'>{p["avg_rfm"]:.2f}</div>
-                </div>
-                <div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
-                    <span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Avg Churn Risk</span>
-                    <div style='font-size: 12px; font-weight: 700; color: #f87171;'>{p["avg_churn_risk"]:.2f}</div>
-                </div>
-            </div>
+        card_html = f"""<div style='background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9)); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 14px;'>
+<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
+<div>
+<span style='font-size: 18px; font-weight: 700; color: #38bdf8;'>⚡ {p_name}</span>
+<span style='font-size: 12px; color: #94a3b8; margin-left: 8px;'>(Cluster ID: {c_id} | {cnt} entities, {pct}%)</span>
+</div>
+<div>
+<span style='background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px;'>Channel: {chan}</span>
+<span style='background: rgba(255, 255, 255, 0.05); color: {prio_color}; border: 1px solid {prio_color}; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-left: 6px;'>Priority: {prio}</span>
+</div>
+</div>
+<p style='color: #cbd5e1; font-size: 13px; margin-bottom: 12px;'>{p["description"]}</p>
+<div style='display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px;'>
+<div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
+<span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Dominant Class</span>
+<div style='font-size: 12px; font-weight: 700; color: #2dd4bf;'>{p["dominant_dynamic_class"]}</div>
+</div>
+<div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
+<span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Average CLV</span>
+<div style='font-size: 12px; font-weight: 700; color: #38bdf8;'>{p["avg_clv"]:,.0f} MAD</div>
+</div>
+<div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
+<span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Avg RFM-ES</span>
+<div style='font-size: 12px; font-weight: 700; color: #818cf8;'>{p["avg_rfm"]:.2f}</div>
+</div>
+<div style='background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px;'>
+<span style='font-size: 10px; color: #94a3b8; text-transform: uppercase;'>Avg Churn Risk</span>
+<div style='font-size: 12px; font-weight: 700; color: #f87171;'>{p["avg_churn_risk"]:.2f}</div>
+</div>
+</div>
+<div style='background: rgba(56, 189, 248, 0.08); padding: 10px 14px; border-radius: 8px; border-left: 3.5px solid #38bdf8;'>
+<strong style='color: #c084fc; font-size: 12px;'>🚀 Recommended Action</strong>
+<p style='font-size: 12px; color: #f8fafc; margin: 2px 0 0 0;'>{p["recommended_action"]}</p>
+</div>
+</div>"""
 
-            <div style='background: rgba(56, 189, 248, 0.08); padding: 10px 14px; border-radius: 8px; border-left: 3.5px solid #38bdf8;'>
-                <strong style='color: #c084fc; font-size: 12px;'>🚀 Recommended Action</strong>
-                <p style='font-size: 12px; color: #f8fafc; margin: 2px 0 0 0;'>{p["recommended_action"]}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        if hasattr(st, "html"):
+            st.html(card_html)
+        else:
+            st.markdown(card_html, unsafe_allow_html=True)
+
 
 def generate_dynamic_persona_with_llm(cluster_summary):
     """
