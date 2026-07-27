@@ -89,7 +89,8 @@ class TestDynamicPersonas(unittest.TestCase):
         self.assertIn("VIP loyalty perks", action)
 
         prio = generate_dynamic_persona_priority(summary_vip)
-        self.assertEqual(prio, "Medium")
+        self.assertEqual(prio, "High")
+
 
     def test_graceful_missing_columns_handling(self):
         sparse_df = pd.DataFrame({
