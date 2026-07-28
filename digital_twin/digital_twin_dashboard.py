@@ -5,7 +5,8 @@ from digital_twin.digital_twin_explainer import (
     explain_digital_twin_state,
     generate_llm_digital_twin_summary
 )
-from personas.persona_dashboard import render_persona_library_dashboard
+from personas.persona_dashboard import render_stable_persona_library as render_persona_library_dashboard
+
 from personas.persona_matcher import explain_persona_assignment
 from admin.database_metrics import is_postgres_available
 

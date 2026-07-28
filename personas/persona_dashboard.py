@@ -20,6 +20,10 @@ from admin.database_metrics import is_postgres_available
 def render_stable_persona_library():
     """Renders the official, fixed 9-persona strategic catalog."""
     st.markdown("<div class='section-header'><span class='icon'>🎭</span><span class='title'>OSMOS Official Stable Persona Library</span></div>", unsafe_allow_html=True)
+
+# Backward compatibility alias
+render_persona_library_dashboard = render_stable_persona_library
+
     
     st.info(
         "ℹ️ **Stable Personas**: These 9 predefined strategic profiles are used for official marketing interpretation "
@@ -196,7 +200,8 @@ def render_dynamic_personas_tab(df_data):
                 "predicted_clv_amount_mad", "churn_risk_score"
             ]
             avail_inspect = [c for c in inspect_cols if c in df_data.columns]
-            st.dataframe(df_data[avail_inspect].dropna(subset=["ml_cluster_id"]), use_container_width=True, hide_index=True)
+            st.dataframe(df_data[avail_inspect].dropna(subset=["ml_cluster_id"]), width="stretch", hide_index=True)
+
 
 def render_persona_comparison_tab():
     """Renders the Comparison view explaining Stable vs Dynamic Personas."""
@@ -235,7 +240,8 @@ def render_persona_comparison_tab():
     }
 
     comp_df = pd.DataFrame(comparison_data)
-    st.dataframe(comp_df, use_container_width=True, hide_index=True)
+    st.dataframe(comp_df, width="stretch", hide_index=True)
+
 
     st.markdown("""
     <div style='background: rgba(129, 140, 248, 0.1); border-left: 4px solid #818cf8; padding: 14px; border-radius: 8px; margin-top: 16px;'>
