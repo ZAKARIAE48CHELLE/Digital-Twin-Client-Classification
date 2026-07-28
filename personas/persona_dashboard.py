@@ -20,15 +20,12 @@ from admin.database_metrics import is_postgres_available
 def render_stable_persona_library():
     """Renders the official, fixed 9-persona strategic catalog."""
     st.markdown("<div class='section-header'><span class='icon'>🎭</span><span class='title'>OSMOS Official Stable Persona Library</span></div>", unsafe_allow_html=True)
-
-# Backward compatibility alias
-render_persona_library_dashboard = render_stable_persona_library
-
     
     st.info(
         "ℹ️ **Stable Personas**: These 9 predefined strategic profiles are used for official marketing interpretation "
         "and Digital Twin persona resolution (`entity_id → Digital Twin → segment → persona`). They remain fixed regardless of ML cluster settings."
     )
+
 
     if not is_postgres_available():
         st.caption("PostgreSQL inactive — displaying default local persona blueprints.")
@@ -103,7 +100,11 @@ render_persona_library_dashboard = render_stable_persona_library
     else:
         st.warning("No personas registered in catalog.")
 
+# Backward compatibility alias
+render_persona_library_dashboard = render_stable_persona_library
+
 def render_dynamic_personas_tab(df_data):
+
     """Renders the exploratory Dynamic Personas tab with cluster selection (2-9), cards, and charts."""
     st.markdown("<div class='section-header'><span class='icon'>⚡</span><span class='title'>Dynamic Data-Driven Persona Generator</span></div>", unsafe_allow_html=True)
 
