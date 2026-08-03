@@ -342,75 +342,54 @@ st.markdown("""
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
 
-    /* DataFrames & Tables Theme Adapters (Light & Dark Modes) */
-    [data-testid="stDataFrame"],
-    [data-testid="stDataFrame"] > div,
-    [data-testid="stDataFrame"] [data-testid="stDataFrameResizable"],
-    [data-testid="stDataFrame"] [role="grid"],
-    [data-testid="stDataFrame"] .dgd-grid,
-    [data-testid="stDataFrame"] header,
-    [data-testid="stDataFrame"] thead th,
-    [data-testid="stDataFrame"] [role="columnheader"] {
-        background: var(--panel-3, #F1F5F9) !important;
-        background-color: var(--panel-3, #F1F5F9) !important;
-        color: var(--text-main, #0F172A) !important;
-        border-bottom: 1px solid var(--line, #E5E7EB) !important;
-        font-weight: 800 !important;
+    /* Clean stDataFrame Wrapper - Allow Canvas & Grid to Render Native Data */
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--line, rgba(255, 255, 255, 0.12)) !important;
+        border-radius: var(--radius, 12px) !important;
+        overflow: hidden !important;
+        box-shadow: var(--shadow-sm) !important;
     }
-    [data-testid="stDataFrame"] div,
-    [data-testid="stDataFrame"] span,
-    [data-testid="stDataFrame"] p,
-    [data-testid="stDataFrame"] button,
-    [data-testid="stDataFrame"] input,
-    [data-testid="stDataFrame"] [role="gridcell"],
-    [data-testid="stDataFrame"] [data-testid="StyledDataFrameDataCell"] {
-        color: var(--text-main, #0F172A) !important;
-        border-color: var(--line, #E5E7EB) !important;
-    }
-    [data-testid="stDataFrame"] canvas {
-        background: var(--panel, #FFFFFF) !important;
-        background-color: var(--panel, #FFFFFF) !important;
-        filter: none !important;
-    }
-    [data-testid="stTable"],
+
+    /* Standard HTML Tables (st.table, table.dataframe) */
     [data-testid="stTable"] table,
-    [data-testid="stTable"] thead,
-    [data-testid="stTable"] tbody,
-    [data-testid="stTable"] tr,
     [data-testid="stTable"] td,
     [data-testid="stTable"] th,
     table.dataframe,
-    table.dataframe th,
     table.dataframe td,
+    table.dataframe th,
     .osmos-table,
     table {
-        background: var(--panel, #FFFFFF) !important;
-        background-color: var(--panel, #FFFFFF) !important;
-        color: var(--text-main, #0F172A) !important;
-        border-color: var(--line, #E5E7EB) !important;
+        background: var(--panel, #111827) !important;
+        background-color: var(--panel, #111827) !important;
+        color: var(--text-main, #F8FAFC) !important;
+        border-color: var(--line, rgba(255, 255, 255, 0.1)) !important;
     }
+
     [data-testid="stTable"] thead th,
     table.dataframe thead th,
     .osmos-table thead th,
     table thead th {
-        background: var(--panel-3, #F1F5F9) !important;
-        background-color: var(--panel-3, #F1F5F9) !important;
-        color: var(--text-main, #0F172A) !important;
-        font-weight: 800 !important;
-        border-bottom: 2px solid var(--line, #E5E7EB) !important;
+        background: var(--panel-3, #020617) !important;
+        background-color: var(--panel-3, #020617) !important;
+        color: var(--text-main, #F8FAFC) !important;
+        font-weight: 700 !important;
+        border-bottom: 2px solid var(--line, rgba(255, 255, 255, 0.15)) !important;
     }
+
     [data-testid="stTable"] tbody tr:nth-child(even) td,
     table.dataframe tbody tr:nth-child(even) td,
     table tbody tr:nth-child(even) td {
-        background: var(--osmos-table-row-alt, #F8FAFC) !important;
-        background-color: var(--osmos-table-row-alt, #F8FAFC) !important;
+        background: var(--osmos-table-row-alt, rgba(255, 255, 255, 0.02)) !important;
+        background-color: var(--osmos-table-row-alt, rgba(255, 255, 255, 0.02)) !important;
     }
+
     [data-testid="stTable"] tbody tr:hover td,
     table.dataframe tbody tr:hover td,
     table tbody tr:hover td {
         background: var(--panel-hover, rgba(37, 99, 235, 0.08)) !important;
         background-color: var(--panel-hover, rgba(37, 99, 235, 0.08)) !important;
     }
+
 
     .glass-card, .glass-card-accent, .persona-card { padding: 22px !important; }
     .glass-card-accent {
