@@ -241,6 +241,7 @@ st.markdown("""
     }
 
     /* Custom Nav Buttons in Sidebar */
+    [data-testid="stSidebar"] button,
     [data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         min-height: 44px !important;
@@ -254,41 +255,65 @@ st.markdown("""
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
+    /* Primary Active Button */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] button[kind="primary"],
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"],
     [data-testid="stSidebar"] .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(99, 102, 241, 0.18)) !important;
-        color: #22d3ee !important;
-        border: 1px solid rgba(34, 211, 238, 0.45) !important;
-        border-left: 4px solid #22d3ee !important;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: 1px solid #60a5fa !important;
+        border-left: 5px solid #60a5fa !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 16px rgba(34, 211, 238, 0.25) !important;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45) !important;
     }
 
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stSidebar"] button[kind="primary"]:hover,
+    [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+        background-color: #1d4ed8 !important;
+        color: #ffffff !important;
+        transform: translateX(2px) !important;
+    }
+
+    /* Secondary Inactive Buttons */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"],
+    [data-testid="stSidebar"] button[kind="secondary"],
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-secondary"],
-    [data-testid="stSidebar"] .stButton > button[kind="secondary"] {
-        background: rgba(255, 255, 255, 0.025) !important;
-        color: var(--text-muted, #94a3b8) !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    [data-testid="stSidebar"] .stButton > button[kind="secondary"],
+    [data-testid="stSidebar"] button:not([data-testid="stBaseButton-primary"]):not([kind="primary"]) {
+        background: rgba(255, 255, 255, 0.04) !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
+        color: #cbd5e1 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
     }
 
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"]:hover,
+    [data-testid="stSidebar"] button[kind="secondary"]:hover,
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-secondary"]:hover,
-    [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
+    [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover,
+    [data-testid="stSidebar"] button:not([data-testid="stBaseButton-primary"]):not([kind="primary"]):hover {
         transform: translateX(4px) !important;
-        background: rgba(34, 211, 238, 0.08) !important;
-        border-color: rgba(34, 211, 238, 0.3) !important;
+        background: rgba(34, 211, 238, 0.12) !important;
+        background-color: rgba(34, 211, 238, 0.12) !important;
+        border-color: rgba(34, 211, 238, 0.35) !important;
         color: #ffffff !important;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
     }
 
-    [data-testid="stSidebar"] .stButton > button span,
-    [data-testid="stSidebar"] .stButton > button p {
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] button div,
+    [data-testid="stSidebar"] button [data-testid="stIconMaterial"] {
         color: inherit !important;
         font-weight: inherit !important;
     }
 
-    [data-testid="stSidebar"] .stButton > button [data-testid="stIconMaterial"] {
-        color: inherit !important;
-    }
 
 
     [data-testid="stSidebar"] button[title] {

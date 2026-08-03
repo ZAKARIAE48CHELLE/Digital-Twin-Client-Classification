@@ -314,6 +314,7 @@ def build_design_system_css(theme="Light"):
         max-width: 100%;
     }}
 
+    [data-testid="stSidebar"] button,
     [data-testid="stSidebar"] .stButton > button {{
         width: 100% !important;
         min-height: 42px !important;
@@ -330,50 +331,63 @@ def build_design_system_css(theme="Light"):
     }}
 
     /* Active Navigation Button (Primary State) */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] button[kind="primary"],
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"],
     [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
-        background: linear-gradient(135deg, color-mix(in srgb, var(--osmos-primary-accent) 24%, transparent), color-mix(in srgb, var(--osmos-teal) 18%, transparent)) !important;
-        color: var(--osmos-primary-accent) !important;
-        border: 1px solid color-mix(in srgb, var(--osmos-primary-accent) 45%, transparent) !important;
-        border-left: 4px solid var(--osmos-primary-accent) !important;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: 1px solid #60a5fa !important;
+        border-left: 5px solid #60a5fa !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 16px color-mix(in srgb, var(--osmos-primary-accent) 22%, transparent) !important;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45) !important;
     }}
 
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stSidebar"] button[kind="primary"]:hover,
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"]:hover,
     [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
-        background: linear-gradient(135deg, color-mix(in srgb, var(--osmos-primary-accent) 32%, transparent), color-mix(in srgb, var(--osmos-teal) 26%, transparent)) !important;
-        color: var(--osmos-text) !important;
+        background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+        background-color: #1d4ed8 !important;
+        color: #ffffff !important;
         transform: translateX(2px) !important;
     }}
 
     /* Inactive Navigation Buttons (Secondary State) */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"],
+    [data-testid="stSidebar"] button[kind="secondary"],
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-secondary"],
-    [data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
-        background: transparent !important;
-        color: var(--osmos-secondary) !important;
-        border: 1px solid transparent !important;
+    [data-testid="stSidebar"] .stButton > button[kind="secondary"],
+    [data-testid="stSidebar"] button:not([data-testid="stBaseButton-primary"]):not([kind="primary"]) {{
+        background: var(--osmos-sidebar-muted, rgba(255, 255, 255, 0.04)) !important;
+        background-color: var(--osmos-sidebar-muted, rgba(255, 255, 255, 0.04)) !important;
+        color: var(--osmos-secondary, #cbd5e1) !important;
+        border: 1px solid var(--osmos-border, rgba(255, 255, 255, 0.08)) !important;
         font-weight: 600 !important;
+        box-shadow: none !important;
     }}
 
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"]:hover,
+    [data-testid="stSidebar"] button[kind="secondary"]:hover,
     [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-secondary"]:hover,
-    [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {{
-        background: var(--osmos-primary-soft) !important;
-        color: var(--osmos-text) !important;
-        border-color: color-mix(in srgb, var(--osmos-primary-accent) 28%, transparent) !important;
+    [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover,
+    [data-testid="stSidebar"] button:not([data-testid="stBaseButton-primary"]):not([kind="primary"]):hover {{
+        background: var(--osmos-primary-soft, rgba(56, 189, 248, 0.14)) !important;
+        background-color: var(--osmos-primary-soft, rgba(56, 189, 248, 0.14)) !important;
+        color: var(--osmos-text, #ffffff) !important;
+        border-color: color-mix(in srgb, var(--osmos-primary-accent, #38bdf8) 35%, transparent) !important;
         transform: translateX(3px) !important;
     }}
 
-    [data-testid="stSidebar"] .stButton > button span,
-    [data-testid="stSidebar"] .stButton > button p {{
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] button div,
+    [data-testid="stSidebar"] button [data-testid="stIconMaterial"] {{
         color: inherit !important;
         font-weight: inherit !important;
     }}
 
-    [data-testid="stSidebar"] .stButton > button [data-testid="stIconMaterial"] {{
-        color: inherit !important;
-        flex: 0 0 auto;
-    }}
 
 
     .glass-card,
