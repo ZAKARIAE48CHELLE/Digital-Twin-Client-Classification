@@ -342,7 +342,7 @@ st.markdown("""
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
 
-    /* Clean stDataFrame Wrapper - Allow Canvas & Grid to Render Native Data */
+    /* Clean stDataFrame Wrapper */
     [data-testid="stDataFrame"] {
         border: 1px solid var(--line, rgba(255, 255, 255, 0.12)) !important;
         border-radius: var(--radius, 12px) !important;
@@ -375,6 +375,7 @@ st.markdown("""
         font-weight: 700 !important;
         border-bottom: 2px solid var(--line, rgba(255, 255, 255, 0.15)) !important;
     }
+
 
 
     [data-testid="stTable"] tbody tr:nth-child(even) td,
@@ -617,37 +618,6 @@ st.markdown("""
         color: var(--text-main) !important;
     }
 
-    /* DataFrames */
-    [data-testid="stDataFrame"],
-    [data-testid="stDataFrame"] > div {
-        border: 1px solid var(--line) !important;
-        border-radius: var(--radius) !important;
-        overflow: hidden;
-        box-shadow: var(--shadow-md) !important;
-        background: var(--panel) !important;
-        color: var(--text-main) !important;
-    }
-    [data-testid="stDataFrame"] thead th,
-    [data-testid="stDataFrame"] [role="columnheader"] {
-        background: var(--panel-3) !important;
-        color: var(--text-main) !important;
-        border-color: var(--line) !important;
-        font-weight: 800 !important;
-    }
-    [data-testid="stDataFrame"] div,
-    [data-testid="stDataFrame"] span,
-    [data-testid="stDataFrame"] button,
-    table.dataframe th,
-    table.dataframe td {
-        background: var(--panel) !important;
-        color: var(--text-main) !important;
-        border-color: var(--line) !important;
-    }
-    [data-testid="stTable"] thead th,
-    table.dataframe thead th {
-        background: var(--panel-3) !important;
-        color: var(--text-main) !important;
-    }
     /* Tabs */
     [data-testid="stTabs"] { margin-top: 6px; }
     [data-testid="stTabs"] button {
