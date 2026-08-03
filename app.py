@@ -376,6 +376,7 @@ st.markdown("""
         border-bottom: 2px solid var(--line, rgba(255, 255, 255, 0.15)) !important;
     }
 
+
     [data-testid="stTable"] tbody tr:nth-child(even) td,
     table.dataframe tbody tr:nth-child(even) td,
     table tbody tr:nth-child(even) td {
