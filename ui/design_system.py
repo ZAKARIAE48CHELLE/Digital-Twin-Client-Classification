@@ -754,23 +754,24 @@ def build_design_system_css(theme="Light"):
         background: var(--osmos-primary-accent) !important;
         border-color: var(--osmos-primary-accent) !important;
         box-shadow: var(--osmos-shadow) !important;
-    }
+    }}
 
     [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-secondary"],
-    section.main .stButton > button[data-testid="stBaseButton-secondary"] {
+    section.main .stButton > button[data-testid="stBaseButton-secondary"] {{
         background: var(--osmos-card-bg) !important;
         color: var(--osmos-primary) !important;
         border-color: var(--osmos-border) !important;
         box-shadow: none !important;
-    }
+    }}
+
 
     /* Clean stDataFrame Wrapper */
-    [data-testid="stDataFrame"] {
+    [data-testid="stDataFrame"] {{
         border: 1px solid var(--osmos-border) !important;
         border-radius: var(--osmos-radius) !important;
         overflow: hidden !important;
         box-shadow: var(--osmos-shadow-sm) !important;
-    }
+    }}
 
     /* Standard HTML Tables (st.table, table.dataframe) */
     [data-testid="stTable"] table,
@@ -780,37 +781,38 @@ def build_design_system_css(theme="Light"):
     table.dataframe td,
     table.dataframe th,
     .osmos-table,
-    table {
+    table {{
         background: var(--osmos-card-bg) !important;
         background-color: var(--osmos-card-bg) !important;
         color: var(--osmos-text) !important;
         border-color: var(--osmos-border) !important;
-    }
+    }}
 
     [data-testid="stTable"] thead th,
     table.dataframe thead th,
     .osmos-table thead th,
-    table thead th {
+    table thead th {{
         background: var(--osmos-bg-soft) !important;
         background-color: var(--osmos-bg-soft) !important;
         color: var(--osmos-text) !important;
         font-weight: 800 !important;
         border-bottom: 2px solid var(--osmos-border) !important;
-    }
+    }}
 
     [data-testid="stTable"] tbody tr:nth-child(even) td,
     table.dataframe tbody tr:nth-child(even) td,
-    table tbody tr:nth-child(even) td {
+    table tbody tr:nth-child(even) td {{
         background: var(--osmos-table-row-alt) !important;
         background-color: var(--osmos-table-row-alt) !important;
-    }
+    }}
 
     [data-testid="stTable"] tbody tr:hover td,
     table.dataframe tbody tr:hover td,
-    table tbody tr:hover td {
+    table tbody tr:hover td {{
         background: var(--osmos-primary-soft) !important;
         background-color: var(--osmos-primary-soft) !important;
-    }
+    }}
+
 
     [data-testid="stTabs"] button {
         border-radius: 10px 10px 0 0 !important;
