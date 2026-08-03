@@ -569,6 +569,7 @@ def build_dynamic_persona_cards(dynamic_personas):
     Uses dedented HTML templates without blank lines to guarantee native DOM compilation.
     """
     import streamlit as st
+    from ui.icons import icon_html
 
     if not dynamic_personas:
         st.warning("No dynamic persona profiles available. Run clustering first.")
@@ -590,12 +591,12 @@ def build_dynamic_persona_cards(dynamic_personas):
         
         prio_color = "#f87171" if prio == "High" else ("#facc15" if prio == "Medium" else "#34d399")
         
-        warning_badge = "<span style='background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-left: 8px;'>⚠️ Micro-cluster: interpret carefully</span>" if is_outlier else f"<span style='background: rgba(56, 189, 248, 0.12); color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-size: 11px; margin-left: 8px;'>ℹ️ {rel_label}</span>"
+        warning_badge = "<span style='background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-left: 8px;'>Micro-cluster: interpret carefully</span>" if is_outlier else f"<span style='background: rgba(56, 189, 248, 0.12); color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-size: 11px; margin-left: 8px;'>{rel_label}</span>"
 
         card_html = f"""<div style='background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9)); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 14px;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
 <div>
-<span style='font-size: 18px; font-weight: 700; color: #38bdf8;'>⚡ {p_name}</span>
+<span style='font-size: 18px; font-weight: 700; color: #38bdf8;'>{icon_html("Persona")} {p_name}</span>
 <span style='font-size: 12px; color: #94a3b8; margin-left: 8px;'>(Cluster ID: {c_id} | {cnt} entities, {pct}%)</span>
 {warning_badge}
 </div>
@@ -624,11 +625,11 @@ def build_dynamic_persona_cards(dynamic_personas):
 </div>
 </div>
 <div style='background: rgba(129, 140, 248, 0.08); padding: 8px 12px; border-radius: 8px; border-left: 3.5px solid #818cf8; margin-bottom: 8px;'>
-<strong style='color: #a78bfa; font-size: 11px;'>🎯 Priority Rationale</strong>
+<strong style='color: #a78bfa; font-size: 11px;'>{icon_html("Priority")} Priority Rationale</strong>
 <p style='font-size: 11.5px; color: #e2e8f0; margin: 2px 0 0 0;'>{prio_reason}</p>
 </div>
 <div style='background: rgba(56, 189, 248, 0.08); padding: 10px 14px; border-radius: 8px; border-left: 3.5px solid #38bdf8;'>
-<strong style='color: #c084fc; font-size: 12px;'>🚀 Recommended Action</strong>
+<strong style='color: #c084fc; font-size: 12px;'>{icon_html("Campaign")} Recommended Action</strong>
 <p style='font-size: 12px; color: #f8fafc; margin: 2px 0 0 0;'>{p["recommended_action"]}</p>
 </div>
 </div>"""

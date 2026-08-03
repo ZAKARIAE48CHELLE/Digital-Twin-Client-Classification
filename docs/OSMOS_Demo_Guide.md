@@ -1,12 +1,12 @@
-# OSMOS — Live Demonstration Guide & Speaker Notes
+# OSMOS - Live Demonstration Guide & Speaker Notes
 
 This guide provides a step-by-step script and speaker notes for presenting the OSMOS platform to stakeholders, executives, and technical committees.
 
-Each page includes a floating right-side Page Guide widget (`📘 Page Guide`). During demonstrations, the presenter can open it to explain the purpose, actions, outputs, and workflow position of the current page without leaving the interface or crowding navigation.
+Each page includes a floating right-side Page Guide widget (`Page Guide`). During demonstrations, the presenter can open it to explain the purpose, actions, outputs, and workflow position of the current page without leaving the interface or crowding navigation.
+
+The interface includes a custom OSMOS visual design system with Light/Dark mode switching and professional iconography. The goal is to provide a distinctive enterprise-grade UI rather than a generic Streamlit dashboard.
 
 ---
-
-
 
 ## 1. Demonstration Script (15-Minute Flow)
 
@@ -14,25 +14,25 @@ Each page includes a floating right-side Page Guide widget (`📘 Page Guide`). 
 * **Action**: Run `streamlit run app.py`.
 * **Screen**: Main Executive Dashboard.
 * **Speaker Script**:
-  > *"Welcome to OSMOS — Optimal Smart Marketing Operation System. OSMOS is an enterprise AI platform that unifies customer behavioral scoring, CLV estimation, historical audit tracking, and local LLM action recommendations."*
+  > *"Welcome to OSMOS - Optimal Smart Marketing Operation System. OSMOS is an enterprise AI platform that unifies customer behavioral scoring, CLV estimation, historical audit tracking, and local LLM action recommendations."*
 
 ### Step 2: Critical Action Alerts & LLM Guidance
-* **Action**: Scroll to **Critical Action Alerts** widget. Click `🤖 Generate LLM Guidance` on an active alert.
+* **Action**: Scroll to **Critical Action Alerts**. Click `Generate LLM Guidance` on an active alert.
 * **Speaker Script**:
   > *"Notice how the system surfaces real-time deterministic alerts, such as Prediction Drift or CLV drops. When we click 'Generate LLM Guidance', our local, private LLM analyzes the feature context and generates a bilingual executive recommendation without any external API calls."*
 
 ### Step 3: Digital Twin & Persona Intelligence
-* **Action**: Navigate to **🧬 Digital Twin & Persona** in the sidebar. Select entity `P01501`.
+* **Action**: Navigate to **Digital Twin Explorer** in the sidebar. Select entity `P01501`.
 * **Speaker Script**:
-  > *"Here is the core scientific distinction of OSMOS. On the left, we see the individual Digital Twin of entity P01501 — showing its exact recency, spend, churn risk, and predicted CLV of 17,507 MAD. Through our strict resolution chain, P01501 is assigned to the 'High-Value Loyalists' segment, which automatically maps to the 'Premium Loyalist' Persona Blueprint."*
+  > *"Here is the core scientific distinction of OSMOS. On the left, we see the individual Digital Twin of entity P01501 - showing its exact recency, spend, churn risk, and predicted CLV of 17,507 MAD. Through our strict resolution chain, P01501 is assigned to the 'High-Value Loyalists' segment, which automatically maps to the 'Premium Loyalist' Persona Blueprint."*
 
 ### Step 4: Event Simulation & Sub-Second Optimization
-* **Action**: Return to Entity Profile, select `P00001` (Prospect), and click `⚡ Simulate Event` (e.g., *Record Purchase*).
+* **Action**: Return to Entity Profile, select `P00001` (Prospect), and run an event simulation such as *Record Purchase*.
 * **Speaker Script**:
   > *"Watch as we simulate a customer transaction. In under 1 second, OSMOS updates only the affected entity snapshot in PostgreSQL, recalculates its scores, and converts the prospect to a client instantly."*
 
 ### Step 5: Database Intelligence & Historical Drift
-* **Action**: Navigate to **🗄️ Database Intelligence** page.
+* **Action**: Navigate to **Database Intelligence**.
 * **Speaker Script**:
   > *"Unlike traditional spreadsheets, OSMOS maintains full historical versioning in PostgreSQL. Here we can audit time-series CLV evolution, segment transition matrices, and system health metrics in real time."*
 
@@ -46,5 +46,3 @@ Each page includes a floating right-side Page Guide widget (`📘 Page Guide`). 
   * **Answer**: *"A Digital Twin belongs to an individual customer and changes constantly with real-time data. A Persona belongs to a segment and defines standard marketing strategy. Conflating the two leads to inaccurate marketing."*
 - **Q: How do Stable Personas differ from Dynamic Personas?**
   * **Answer**: *"OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9). Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas."*
-
-

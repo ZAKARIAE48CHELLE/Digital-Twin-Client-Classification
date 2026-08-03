@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from ui.icons import icon_html
+from ui.layout import render_page_header, section_header_html
 from admin.database_metrics import is_postgres_available
 from database.action_recommendations_repository import get_llm_action_recommendations
 
@@ -30,24 +32,27 @@ def render_campaign_dashboard(df_data=None):
     """
     Renders the Closed-Loop Campaign Simulation Dashboard.
     """
-    st.markdown("<h1 style='margin:0; font-size: 32px;'>🚀 Closed-Loop <span style='background: linear-gradient(135deg,#38bdf8,#818cf8,#c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Campaign Simulation</span></h1>", unsafe_allow_html=True)
-    st.markdown("Convert LLM Action Recommendations and Digital Twin states into simulated campaign dispatches, simulate customer responses, and audit closed-loop CRM feedback.")
-    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+    render_page_header(
+        "Closed-Loop Campaign Simulation",
+        "Convert LLM action recommendations and Digital Twin states into simulated campaign dispatches, simulated responses, and auditable CRM feedback.",
+        icon="Campaign",
+        badge="Simulated Only",
+    )
 
     # 1. PostgreSQL Backend Availability Guard
     if not is_postgres_available():
-        st.warning("⚠️ **Campaign simulation with dispatch tracking requires PostgreSQL.**")
+        st.warning("**Campaign simulation with dispatch tracking requires PostgreSQL.**")
         st.info("The application is currently running in **Excel Fallback Mode**. Please start PostgreSQL (`OSMOS_STORAGE_BACKEND=postgres`) to enable full campaign creation, response simulation, and historical feedback loops.")
         return
 
     # 2. Section Tabs
     t_overview, t_rec, t_twin, t_dispatch, t_history, t_impact = st.tabs([
-        "📊 Campaign Overview",
-        "💡 Create from Recommendation",
-        "👤 Create from Digital Twin",
-        "⚡ Simulate Customer Response",
-        "📋 Campaign History & Audit",
-        "📈 Campaign Impact Analysis"
+        "Campaign Overview",
+        "Create from Recommendation",
+        "Create from Digital Twin",
+        "Simulate Customer Response",
+        "Campaign History & Audit",
+        "Campaign Impact Analysis"
     ])
 
     # ── A. Campaign Overview ──
@@ -66,7 +71,7 @@ def render_campaign_dashboard(df_data=None):
         
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
-            st.markdown("<div class='section-header'><span class='icon'>📩</span><span class='title'>Response Distribution</span></div>", unsafe_allow_html=True)
+            st.markdown(section_header_html("Response Distribution", "Campaign"), unsafe_allow_html=True)
             dist_df = get_campaign_response_distribution()
             if not dist_df.empty:
                 st.dataframe(dist_df, width="stretch", hide_index=True)
@@ -74,7 +79,7 @@ def render_campaign_dashboard(df_data=None):
                 st.info("No campaign responses recorded yet.")
 
         with col_c2:
-            st.markdown("<div class='section-header'><span class='icon'>🎯</span><span class='title'>Campaign Types</span></div>", unsafe_allow_html=True)
+            st.markdown(section_header_html("Campaign Types", "Segment"), unsafe_allow_html=True)
             type_df = get_campaign_success_by_type()
             if not type_df.empty:
                 st.dataframe(type_df, width="stretch", hide_index=True)
@@ -82,7 +87,7 @@ def render_campaign_dashboard(df_data=None):
                 st.info("No campaign dispatches recorded.")
 
         with col_c3:
-            st.markdown("<div class='section-header'><span class='icon'>📱</span><span class='title'>Marketing Channels</span></div>", unsafe_allow_html=True)
+            st.markdown(section_header_html("Marketing Channels", "Channel"), unsafe_allow_html=True)
             chan_df = get_campaign_success_by_channel()
             if not chan_df.empty:
                 st.dataframe(chan_df, width="stretch", hide_index=True)
@@ -91,7 +96,7 @@ def render_campaign_dashboard(df_data=None):
 
     # ── B. Create Campaign from LLM Recommendation ──
     with t_rec:
-        st.markdown("<div class='section-header'><span class='icon'>💡</span><span class='title'>Convert LLM Action Recommendation into Campaign</span></div>", unsafe_allow_html=True)
+        st.markdown(section_header_html("Convert LLM Action Recommendation into Campaign", "LLM"), unsafe_allow_html=True)
         recs = get_llm_action_recommendations(limit=50)
         
         if recs:
@@ -112,13 +117,13 @@ def render_campaign_dashboard(df_data=None):
             
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("📝 Create Campaign Draft", key="btn_create_draft_rec"):
+                if st.button("Create Campaign Draft", key="btn_create_draft_rec"):
                     cid = create_campaign_from_recommendation(selected_rec_id)
                     if cid:
                         st.success(f"Successfully created Campaign Draft #{cid}!")
                         st.rerun()
             with col_b2:
-                if st.button("🚀 Create & Approve Immediately", key="btn_create_approve_rec"):
+                if st.button("Create and Approve Immediately", key="btn_create_approve_rec"):
                     cid = create_campaign_from_recommendation(selected_rec_id)
                     if cid:
                         approve_campaign(cid)
@@ -129,7 +134,7 @@ def render_campaign_dashboard(df_data=None):
 
     # ── C. Create Campaign from Digital Twin ──
     with t_twin:
-        st.markdown("<div class='section-header'><span class='icon'>👤</span><span class='title'>Create Campaign Directly from Digital Twin Profile</span></div>", unsafe_allow_html=True)
+        st.markdown(section_header_html("Create Campaign Directly from Digital Twin Profile", "Entity"), unsafe_allow_html=True)
         
         if df_data is not None and not df_data.empty and "entity_id" in df_data.columns:
             entity_list = sorted(df_data["entity_id"].dropna().unique())
@@ -143,7 +148,7 @@ def render_campaign_dashboard(df_data=None):
         
         st.markdown(f"""<div style='background:rgba(30,41,59,0.7); border:1px solid #34d399; padding:16px; border-radius:10px;'>
             <strong style='color:#34d399;'>Digital Twin State: [{selected_dt_entity}]</strong> | Class: <b>{profile['predictions']['dynamic_class']}</b> | Segment: <b>{persona.get('customer_segment')}</b><br>
-            <p style='font-size:13px; color:#cbd5e1; margin-top:6px;'><b>Persona Blueprint:</b> 🎭 {persona.get('customer_persona')}</p>
+            <p style='font-size:13px; color:#cbd5e1; margin-top:6px;'><b>Persona Blueprint:</b> {persona.get('customer_persona')}</p>
             <p style='font-size:13px; color:#cbd5e1;'><b>Action Recommandée:</b> {persona.get('recommended_action_fr')}</p>
         </div>""", unsafe_allow_html=True)
         
@@ -153,7 +158,7 @@ def render_campaign_dashboard(df_data=None):
         c_type = st.selectbox("Campaign Type", ["Retention Campaign", "Reactivation Campaign", "VIP Loyalty Campaign", "Service Recovery Campaign", "Cross-sell Campaign"], key="sb_camp_type")
         c_channel = st.selectbox("Channel", [persona.get('preferred_channel', 'Email'), "Email", "SMS", "Phone", "Dashboard Follow-up"], key="sb_camp_channel")
         
-        if st.button("📝 Create Digital Twin Campaign Draft", key="btn_create_dt_camp"):
+        if st.button("Create Digital Twin Campaign Draft", key="btn_create_dt_camp"):
             ctx = {
                 "campaign_type": c_type,
                 "campaign_channel": c_channel,
@@ -169,7 +174,7 @@ def render_campaign_dashboard(df_data=None):
 
     # ── D. Simulate Customer Response ──
     with t_dispatch:
-        st.markdown("<div class='section-header'><span class='icon'>⚡</span><span class='title'>Simulate Campaign Dispatch & Customer Response</span></div>", unsafe_allow_html=True)
+        st.markdown(section_header_html("Simulate Campaign Dispatch & Customer Response", "Run"), unsafe_allow_html=True)
         
         pending_camps = get_pending_campaigns(limit=50)
         dispatched_camps = get_campaign_dispatches(status="Simulated Dispatch", limit=50)
@@ -182,12 +187,12 @@ def render_campaign_dashboard(df_data=None):
             
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("✅ Approve Campaign", key="btn_approve_camp"):
+                if st.button("Approve Campaign", key="btn_approve_camp"):
                     approve_campaign(selected_p_id)
                     st.success(f"Campaign #{selected_p_id} Approved.")
                     st.rerun()
             with c2:
-                if st.button("🚀 Simulate Dispatch (Zero Real Messages)", key="btn_sim_dispatch"):
+                if st.button("Simulate Dispatch (Zero Real Messages)", key="btn_sim_dispatch"):
                     approve_campaign(selected_p_id)
                     simulate_dispatch(selected_p_id)
                     st.success(f"Simulated dispatch executed for Campaign #{selected_p_id}!")
@@ -214,7 +219,7 @@ def render_campaign_dashboard(df_data=None):
                     "Opened", "Clicked", "Purchased", "Ignored", "Unsubscribed", "Complained", "Positive Feedback", "Negative Feedback"
                 ], key="sb_forced_resp")
                 
-            if st.button("⚡ Simulate Customer Response & Update Digital Twin", key="btn_exec_sim_resp"):
+            if st.button("Simulate Customer Response & Update Digital Twin", key="btn_exec_sim_resp"):
                 with st.spinner("Simulating customer response, generating event, and updating Digital Twin..."):
                     res = simulate_campaign_response(selected_r_id, forced_response_type=forced_resp)
                     if res:
@@ -225,7 +230,7 @@ def render_campaign_dashboard(df_data=None):
 
     # ── E. Campaign History ──
     with t_history:
-        st.markdown("<div class='section-header'><span class='icon'>📋</span><span class='title'>Campaign Audit Log & Responses Table</span></div>", unsafe_allow_html=True)
+        st.markdown(section_header_html("Campaign Audit Log & Responses Table", "Table"), unsafe_allow_html=True)
         
         st.subheader("Campaign Dispatches")
         dispatches = get_campaign_dispatches(limit=100)
@@ -244,7 +249,7 @@ def render_campaign_dashboard(df_data=None):
 
     # ── F. Campaign Impact ──
     with t_impact:
-        st.markdown("<div class='section-header'><span class='icon'>📈</span><span class='title'>Closed-Loop Campaign Impact Analysis</span></div>", unsafe_allow_html=True)
+        st.markdown(section_header_html("Closed-Loop Campaign Impact Analysis", "Chart"), unsafe_allow_html=True)
         
         dispatches = get_campaign_dispatches(limit=100)
         if dispatches:

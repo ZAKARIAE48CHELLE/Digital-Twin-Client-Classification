@@ -8,6 +8,10 @@ Renders:
 """
 import streamlit as st
 import pandas as pd
+from ui.icons import icon_html
+from ui.layout import section_header_html
+from ui.theme_manager import get_theme
+from ui.charts import apply_plotly_theme
 import plotly.express as px
 from personas.persona_library import get_all_personas, seed_default_personas
 from personas.dynamic_persona_generator import (
@@ -19,10 +23,10 @@ from admin.database_metrics import is_postgres_available
 
 def render_stable_persona_library():
     """Renders the official, fixed 9-persona strategic catalog."""
-    st.markdown("<div class='section-header'><span class='icon'>🎭</span><span class='title'>OSMOS Official Stable Persona Library</span></div>", unsafe_allow_html=True)
+    st.markdown(section_header_html("OSMOS Official Stable Persona Library", "Persona"), unsafe_allow_html=True)
     
     st.info(
-        "ℹ️ **Stable Personas**: These 9 predefined strategic profiles are used for official marketing interpretation "
+        "**Stable Personas**: These 9 predefined strategic profiles are used for official marketing interpretation "
         "and Digital Twin persona resolution (`entity_id → Digital Twin → segment → persona`). They remain fixed regardless of ML cluster settings."
     )
 
@@ -32,9 +36,9 @@ def render_stable_persona_library():
         
     col_act1, col_act2 = st.columns([1, 4])
     with col_act1:
-        if st.button("🌱 Sync Default Personas", key="btn_seed_personas"):
+        if st.button("Sync Default Personas", key="btn_seed_personas"):
             count = seed_default_personas()
-            st.success(f"✅ Seeding complete: {count} personas synced!")
+            st.success(f"Seeding complete: {count} personas synced.")
             st.rerun()
             
     personas = get_all_personas()
@@ -62,7 +66,7 @@ def render_stable_persona_library():
         card_html = f"""<div style='background: rgba(30, 41, 59, 0.7); border: 1.5px solid rgba(129, 140, 248, 0.3); border-radius: 12px; padding: 20px; margin-top: 10px;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;'>
 <div>
-<span style='font-size: 20px; font-weight: 700; color: #818cf8;'>🎭 {p_row.get("persona_name")}</span>
+<span style='font-size: 20px; font-weight: 700; color: #818cf8;'>{icon_html("Persona")} {p_row.get("persona_name")}</span>
 <span style='font-size: 13px; color: #94a3b8; margin-left: 10px;'>[Segment: {p_row.get("segment_name")}]</span>
 </div>
 <div>
@@ -74,20 +78,20 @@ def render_stable_persona_library():
 <p style='color: #94a3b8; font-size: 13px;'><b>Description (EN):</b> {p_row.get("description_en")}</p>
 <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px;'>
 <div style='background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;'>
-<strong style='color: #60a5fa;'>📊 Behavior Profile</strong>
+<strong style='color: #60a5fa;'>{icon_html("Chart")} Behavior Profile</strong>
 <p style='font-size: 12px; color: #cbd5e1; margin-top: 4px;'>{p_row.get("behavior_profile_fr")}</p>
 </div>
 <div style='background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;'>
-<strong style='color: #34d399;'>💎 Value Profile</strong>
+<strong style='color: #34d399;'>{icon_html("Value")} Value Profile</strong>
 <p style='font-size: 12px; color: #cbd5e1; margin-top: 4px;'>{p_row.get("value_profile_fr")}</p>
 </div>
 <div style='background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;'>
-<strong style='color: #f87171;'>⚠️ Risk Profile</strong>
+<strong style='color: #f87171;'>{icon_html("Warning")} Risk Profile</strong>
 <p style='font-size: 12px; color: #cbd5e1; margin-top: 4px;'>{p_row.get("risk_profile_fr")}</p>
 </div>
 </div>
 <div style='margin-top: 16px; background: rgba(129, 140, 248, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #818cf8;'>
-<strong style='color: #c084fc;'>🚀 Recommended Marketing Action</strong>
+<strong style='color: #c084fc;'>{icon_html("Campaign")} Recommended Marketing Action</strong>
 <p style='font-size: 13px; color: #f8fafc; margin-top: 4px;'>{p_row.get("recommended_action_fr")}</p>
 </div>
 </div>"""
@@ -106,11 +110,11 @@ render_persona_library_dashboard = render_stable_persona_library
 def render_dynamic_personas_tab(df_data):
 
     """Renders the exploratory Dynamic Personas tab with cluster selection (2-9), cards, and charts."""
-    st.markdown("<div class='section-header'><span class='icon'>⚡</span><span class='title'>Dynamic Data-Driven Persona Generator</span></div>", unsafe_allow_html=True)
+    st.markdown(section_header_html("Dynamic Data-Driven Persona Generator", "Persona"), unsafe_allow_html=True)
 
     # Explanation Box
     st.info(
-        "💡 **Fixed vs. Dynamic Personas**: Fixed personas are stable business profiles used for official marketing interpretation "
+        "**Fixed vs. Dynamic Personas**: Fixed personas are stable business profiles used for official marketing interpretation "
         "and Digital Twin resolution. **Dynamic personas** are temporary, data-driven profiles generated directly from the current "
         "clustering result. Their number follows the selected number of clusters (2 to 9)."
     )
@@ -123,7 +127,7 @@ def render_dynamic_personas_tab(df_data):
             key="dyn_n_clusters_slider"
         )
     with col_ctrl2:
-        recluster_btn = st.button("🤖 Re-Cluster & Generate Dynamic Personas", key="btn_recluster_dyn", width="stretch", type="primary")
+        recluster_btn = st.button("Re-Cluster and Generate Dynamic Personas", key="btn_recluster_dyn", width="stretch", type="primary")
 
     # Run clustering if required or requested
     if recluster_btn or "df" not in st.session_state or st.session_state.get("dyn_last_n_clusters") != n_clusters:
@@ -139,13 +143,13 @@ def render_dynamic_personas_tab(df_data):
     dynamic_personas = generate_dynamic_personas(df_data, cluster_col="ml_cluster_id")
 
     if not dynamic_personas:
-        st.warning("⚠️ No clusters found. Please run clustering or select a client dataset.")
+        st.warning("No clusters found. Please run clustering or select a client dataset.")
         return
 
-    st.success(f"✅ Generated **{len(dynamic_personas)} Dynamic Persona Profiles** based on {n_clusters} clusters!")
+    st.success(f"Generated **{len(dynamic_personas)} Dynamic Persona Profiles** based on {n_clusters} clusters.")
 
     # Render Visual Charts
-    st.markdown("<div class='section-header' style='margin-top:16px;'><span class='icon'>📊</span><span class='title'>Dynamic Cohort Metrics Breakdown</span></div>", unsafe_allow_html=True)
+    st.markdown(section_header_html("Dynamic Cohort Metrics Breakdown", "Chart"), unsafe_allow_html=True)
 
     dyn_df = pd.DataFrame(dynamic_personas)
     dyn_df["chart_label"] = dyn_df.apply(
@@ -160,7 +164,8 @@ def render_dynamic_personas_tab(df_data):
             title="Entity Count per Dynamic Persona",
             color_discrete_sequence=px.colors.qualitative.Plotly
         )
-        fig_size.update_layout(template="plotly_dark", height=280, showlegend=False, xaxis_title="", margin=dict(l=10, r=10, t=35, b=10))
+        apply_plotly_theme(fig_size, get_theme(), height=280, showlegend=False, margin=dict(l=10, r=10, t=35, b=10))
+        fig_size.update_layout(xaxis_title="")
         st.plotly_chart(fig_size, use_container_width=True)
 
     with chart_col2:
@@ -170,7 +175,8 @@ def render_dynamic_personas_tab(df_data):
             title="Average Predicted CLV (MAD) by Dynamic Persona",
             color_discrete_sequence=px.colors.qualitative.Bold
         )
-        fig_clv.update_layout(template="plotly_dark", height=280, showlegend=False, xaxis_title="", margin=dict(l=10, r=10, t=35, b=10))
+        apply_plotly_theme(fig_clv, get_theme(), height=280, showlegend=False, margin=dict(l=10, r=10, t=35, b=10))
+        fig_clv.update_layout(xaxis_title="")
         st.plotly_chart(fig_clv, use_container_width=True)
 
 
@@ -178,7 +184,7 @@ def render_dynamic_personas_tab(df_data):
     st.markdown("---")
     col_llm1, col_llm2 = st.columns([1, 2])
     with col_llm1:
-        if st.button("🤖 Generate LLM Persona Narratives", key="btn_llm_dyn_narrative", help="Enhance dynamic persona descriptions using Ollama (Button-triggered only, zero PII)"):
+        if st.button("Generate LLM Persona Narratives", key="btn_llm_dyn_narrative", help="Enhance dynamic persona descriptions using Ollama (Button-triggered only, zero PII)"):
             with st.spinner("Generating LLM narrative enhancements for dynamic personas..."):
                 for p in dynamic_personas:
                     llm_res = generate_dynamic_persona_with_llm(p)
@@ -186,14 +192,14 @@ def render_dynamic_personas_tab(df_data):
                         p["persona_name"] = f"Cluster {p['cluster_id']} — {llm_res.get('persona_name')}"
                         p["description"] = llm_res.get("description", p["description"])
                         p["recommended_action"] = llm_res.get("recommended_action", p["recommended_action"])
-            st.success("✅ LLM Persona Narratives updated!")
+            st.success("LLM Persona Narratives updated.")
 
     # Render Dynamic Persona Cards
-    st.markdown("<div class='section-header'><span class='icon'>🎴</span><span class='title'>Dynamic Persona Profile Cards</span></div>", unsafe_allow_html=True)
+    st.markdown(section_header_html("Dynamic Persona Profile Cards", "Persona"), unsafe_allow_html=True)
     build_dynamic_persona_cards(dynamic_personas)
 
     # Expandable Dataframe Inspector
-    with st.expander("🔎 View Entities in Dynamic Personas Dataframe", expanded=False):
+    with st.expander("View Entities in Dynamic Personas Dataframe", expanded=False):
         if "ml_cluster_id" in df_data.columns:
             inspect_cols = [
                 "entity_id", "entity_type", "ml_cluster_id", "dynamic_class",
@@ -206,7 +212,7 @@ def render_dynamic_personas_tab(df_data):
 
 def render_persona_comparison_tab():
     """Renders the Comparison view explaining Stable vs Dynamic Personas."""
-    st.markdown("<div class='section-header'><span class='icon'>⚖️</span><span class='title'>Stable vs. Dynamic Personas Comparison</span></div>", unsafe_allow_html=True)
+    st.markdown(section_header_html("Stable vs. Dynamic Personas Comparison", "Persona"), unsafe_allow_html=True)
 
     st.markdown(
         "OSMOS clearly distinguishes between **Stable Strategic Personas** and **Dynamic Data-Driven Personas**. "
@@ -246,7 +252,7 @@ def render_persona_comparison_tab():
 
     st.markdown("""
     <div style='background: rgba(129, 140, 248, 0.1); border-left: 4px solid #818cf8; padding: 14px; border-radius: 8px; margin-top: 16px;'>
-        <strong style='color: #c084fc; font-size: 14px;'>💡 Architectural Rule:</strong>
+        <strong style='color: #c084fc; font-size: 14px;'>{icon_html("Info")} Architectural Rule:</strong>
         <p style='color: #f8fafc; font-size: 13px; margin: 4px 0 0 0;'>
             Stable personas ensure <b>decision consistency</b> across the platform and power the Digital Twin resolution chain
             (<code>entity_id → Digital Twin → segment → persona</code>). Dynamic personas allow analysts and marketers to explore
@@ -254,3 +260,5 @@ def render_persona_comparison_tab():
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+
