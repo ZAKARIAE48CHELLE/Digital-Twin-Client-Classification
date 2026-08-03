@@ -342,6 +342,76 @@ st.markdown("""
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
 
+    /* DataFrames & Tables Theme Adapters (Light & Dark Modes) */
+    [data-testid="stDataFrame"],
+    [data-testid="stDataFrame"] > div,
+    [data-testid="stDataFrame"] [data-testid="stDataFrameResizable"],
+    [data-testid="stDataFrame"] [role="grid"],
+    [data-testid="stDataFrame"] .dgd-grid,
+    [data-testid="stDataFrame"] header,
+    [data-testid="stDataFrame"] thead th,
+    [data-testid="stDataFrame"] [role="columnheader"] {
+        background: var(--panel-3, #F1F5F9) !important;
+        background-color: var(--panel-3, #F1F5F9) !important;
+        color: var(--text-main, #0F172A) !important;
+        border-bottom: 1px solid var(--line, #E5E7EB) !important;
+        font-weight: 800 !important;
+    }
+    [data-testid="stDataFrame"] div,
+    [data-testid="stDataFrame"] span,
+    [data-testid="stDataFrame"] p,
+    [data-testid="stDataFrame"] button,
+    [data-testid="stDataFrame"] input,
+    [data-testid="stDataFrame"] [role="gridcell"],
+    [data-testid="stDataFrame"] [data-testid="StyledDataFrameDataCell"] {
+        color: var(--text-main, #0F172A) !important;
+        border-color: var(--line, #E5E7EB) !important;
+    }
+    [data-testid="stDataFrame"] canvas {
+        background: var(--panel, #FFFFFF) !important;
+        background-color: var(--panel, #FFFFFF) !important;
+        filter: none !important;
+    }
+    [data-testid="stTable"],
+    [data-testid="stTable"] table,
+    [data-testid="stTable"] thead,
+    [data-testid="stTable"] tbody,
+    [data-testid="stTable"] tr,
+    [data-testid="stTable"] td,
+    [data-testid="stTable"] th,
+    table.dataframe,
+    table.dataframe th,
+    table.dataframe td,
+    .osmos-table,
+    table {
+        background: var(--panel, #FFFFFF) !important;
+        background-color: var(--panel, #FFFFFF) !important;
+        color: var(--text-main, #0F172A) !important;
+        border-color: var(--line, #E5E7EB) !important;
+    }
+    [data-testid="stTable"] thead th,
+    table.dataframe thead th,
+    .osmos-table thead th,
+    table thead th {
+        background: var(--panel-3, #F1F5F9) !important;
+        background-color: var(--panel-3, #F1F5F9) !important;
+        color: var(--text-main, #0F172A) !important;
+        font-weight: 800 !important;
+        border-bottom: 2px solid var(--line, #E5E7EB) !important;
+    }
+    [data-testid="stTable"] tbody tr:nth-child(even) td,
+    table.dataframe tbody tr:nth-child(even) td,
+    table tbody tr:nth-child(even) td {
+        background: var(--osmos-table-row-alt, #F8FAFC) !important;
+        background-color: var(--osmos-table-row-alt, #F8FAFC) !important;
+    }
+    [data-testid="stTable"] tbody tr:hover td,
+    table.dataframe tbody tr:hover td,
+    table tbody tr:hover td {
+        background: var(--panel-hover, rgba(37, 99, 235, 0.08)) !important;
+        background-color: var(--panel-hover, rgba(37, 99, 235, 0.08)) !important;
+    }
+
     .glass-card, .glass-card-accent, .persona-card { padding: 22px !important; }
     .glass-card-accent {
         border-left: 4px solid var(--cyan) !important;
@@ -587,18 +657,6 @@ st.markdown("""
     [data-testid="stDataFrame"] div,
     [data-testid="stDataFrame"] span,
     [data-testid="stDataFrame"] button,
-    [data-testid="stDataFrame"] input {
-        color: var(--text-main) !important;
-        border-color: var(--line) !important;
-    }
-    [data-testid="stDataFrame"] canvas {
-        background: var(--panel) !important;
-        filter: var(--osmos-table-canvas-filter, none) !important;
-    }
-    [data-testid="stTable"] table,
-    [data-testid="stTable"] th,
-    [data-testid="stTable"] td,
-    table.dataframe,
     table.dataframe th,
     table.dataframe td {
         background: var(--panel) !important;

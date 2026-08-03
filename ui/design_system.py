@@ -56,7 +56,7 @@ THEME_TOKENS = {
         "--osmos-chart-grid": "rgba(148, 163, 184, 0.20)",
         "--osmos-input-bg": "#0B1120",
         "--osmos-table-row-alt": "#0B1120",
-        "--osmos-table-canvas-filter": "invert(1) hue-rotate(180deg) saturate(0.82)",
+        "--osmos-table-canvas-filter": "none",
     },
 }
 
@@ -400,15 +400,6 @@ def build_design_system_css(theme="Light"):
     .osmos-card,
     .osmos-alert-card,
     .osmos-persona-card,
-    .osmos-timeline-card {{
-        background: var(--osmos-card-bg) !important;
-        color: var(--osmos-text) !important;
-        border: 1px solid var(--osmos-border) !important;
-        border-radius: var(--osmos-radius) !important;
-        box-shadow: var(--osmos-shadow) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }}
 
     .glass-card-accent {{
         border-left: 4px solid var(--osmos-primary-accent) !important;
@@ -771,56 +762,6 @@ def build_design_system_css(theme="Light"):
         color: var(--osmos-primary) !important;
         border-color: var(--osmos-border) !important;
         box-shadow: none !important;
-    }}
-
-    [data-testid="stDataFrame"],
-    [data-testid="stDataFrame"] > div,
-    [data-testid="stDataFrame"] [data-testid="stDataFrameResizable"] {{
-        border-color: var(--osmos-border) !important;
-        border-radius: var(--osmos-radius) !important;
-        overflow: hidden;
-        box-shadow: var(--osmos-shadow-sm) !important;
-        background: var(--osmos-card-bg) !important;
-        color: var(--osmos-text) !important;
-    }}
-
-    [data-testid="stDataFrame"] div,
-    [data-testid="stDataFrame"] span,
-    [data-testid="stDataFrame"] button,
-    [data-testid="stDataFrame"] input {{
-        color: var(--osmos-text) !important;
-        border-color: var(--osmos-border) !important;
-    }}
-
-    [data-testid="stDataFrame"] canvas {{
-        background: var(--osmos-card-bg) !important;
-        filter: var(--osmos-table-canvas-filter) !important;
-    }}
-
-    [data-testid="stDataFrame"] thead th,
-    [data-testid="stDataFrame"] [role="columnheader"],
-    [data-testid="stDataFrame"] [data-testid="StyledDataFrameDataCell"] {{
-        background: var(--osmos-bg-soft) !important;
-        color: var(--osmos-text) !important;
-        border-color: var(--osmos-border) !important;
-        font-weight: 800 !important;
-    }}
-
-    [data-testid="stTable"],
-    [data-testid="stTable"] table,
-    [data-testid="stTable"] thead,
-    [data-testid="stTable"] tbody,
-    [data-testid="stTable"] tr,
-    [data-testid="stTable"] td,
-    [data-testid="stTable"] th,
-    table.dataframe,
-    table.dataframe th,
-    table.dataframe td {{
-        background: var(--osmos-card-bg) !important;
-        color: var(--osmos-text) !important;
-        border-color: var(--osmos-border) !important;
-    }}
-
     [data-testid="stTable"] thead th,
     table.dataframe thead th {{
         background: var(--osmos-bg-soft) !important;
