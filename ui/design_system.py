@@ -814,12 +814,13 @@ def build_design_system_css(theme="Light"):
     }}
 
 
-    [data-testid="stTabs"] button {
+    [data-testid="stTabs"] button {{
         border-radius: 10px 10px 0 0 !important;
         color: var(--osmos-muted) !important;
         font-weight: 800 !important;
         letter-spacing: 0 !important;
     }}
+
 
     [data-testid="stTabs"] button[aria-selected="true"] {{
         color: var(--osmos-primary) !important;
