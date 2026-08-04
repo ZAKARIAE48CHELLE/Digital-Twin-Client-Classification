@@ -155,32 +155,32 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         # Global Status Callout Card
         st.markdown(
             f"""
-            <div style="background: var(--osmos-card-bg, #111827); border: 1px solid var(--osmos-border, #334155); 
-                        border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div style="background: var(--osmos-card-bg); border: 1px solid var(--osmos-border); 
+                        border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: var(--osmos-shadow-sm);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div>
-                        <span style="color: var(--osmos-muted, #94A3B8); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                        <span style="color: var(--osmos-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
                             Multi-Agent Orchestrator Supervision Report
                         </span>
-                        <h3 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800;">Entity [{report.entity_id}]</h3>
+                        <h3 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: var(--osmos-text);">Entity [{report.entity_id}]</h3>
                     </div>
                     <div>
                         {render_agent_status_badge(report.global_status)}
                     </div>
                 </div>
-                <p style="font-size: 14px; margin-bottom: 16px; color: var(--osmos-text, #F8FAFC); line-height: 1.5;">
+                <p style="font-size: 14px; margin-bottom: 16px; color: var(--osmos-text); line-height: 1.5;">
                     {report.final_summary}
                 </p>
-                <div style="background: var(--osmos-bg-soft, #020617); border-left: 4px solid var(--osmos-primary, #60A5FA); 
+                <div style="background: var(--osmos-bg-soft); border-left: 4px solid var(--osmos-primary-accent); 
                             padding: 14px 16px; border-radius: 6px;">
-                    <span style="font-size: 11px; font-weight: 800; color: var(--osmos-primary, #60A5FA); text-transform: uppercase; letter-spacing: 0.5px;">
+                    <span style="font-size: 11px; font-weight: 800; color: var(--osmos-primary-accent); text-transform: uppercase; letter-spacing: 0.5px;">
                         Recommended Next Best Action (Read-Only Advice)
                     </span>
-                    <p style="margin: 4px 0 0 0; font-size: 15px; font-weight: 700; color: var(--osmos-text, #F8FAFC);">
+                    <p style="margin: 4px 0 0 0; font-size: 15px; font-weight: 700; color: var(--osmos-text);">
                         {report.recommended_next_best_action}
                     </p>
                 </div>
-                <div style="margin-top: 12px; font-size: 12px; color: var(--osmos-muted, #94A3B8); text-align: right;">
+                <div style="margin-top: 12px; font-size: 12px; color: var(--osmos-muted); text-align: right;">
                     Global Confidence Score: <strong>{report.confidence_score * 100:.0f}%</strong> | Mode: <strong>Read-Only</strong>
                 </div>
             </div>
@@ -256,18 +256,18 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
             with st.container():
                 st.markdown(
                     f"""
-                    <div style="border: 1px solid var(--osmos-border, #334155); border-radius: 10px; padding: 16px; 
-                                background: var(--osmos-card-bg, #111827); margin-bottom: 12px;">
+                    <div style="border: 1px solid var(--osmos-border); border-radius: 10px; padding: 16px; 
+                                background: var(--osmos-card-bg); margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <h4 style="margin: 0; font-size: 16px; font-weight: 800;">{agent_dict.get('agent_name')}</h4>
-                                <span style="font-size: 12px; color: var(--osmos-muted, #94A3B8);">{agent_dict.get('agent_role')}</span>
+                                <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--osmos-text);">{agent_dict.get('agent_name')}</h4>
+                                <span style="font-size: 12px; color: var(--osmos-muted);">{agent_dict.get('agent_role')}</span>
                             </div>
                             <div>
                                 {render_agent_status_badge(agent_dict.get('status', 'OK'))}
                             </div>
                         </div>
-                        <p style="margin: 10px 0; font-size: 13.5px; color: var(--osmos-text, #F8FAFC);">
+                        <p style="margin: 10px 0; font-size: 13.5px; color: var(--osmos-text);">
                             <strong>Summary:</strong> {agent_dict.get('summary')}
                         </p>
                     </div>

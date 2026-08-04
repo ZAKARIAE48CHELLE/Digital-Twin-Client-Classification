@@ -419,21 +419,20 @@ def build_design_system_css(theme="Light"):
         box-shadow: var(--osmos-shadow) !important;
     }}
 
-    [style*="color:#f8fafc"],
-    [style*="color: #f8fafc"],
-    [style*="color:#f1f5f9"],
-    [style*="color: #f1f5f9"],
-    [style*="color:#e2e8f0"],
-    [style*="color: #e2e8f0"],
-    [style*="color:#cbd5e1"],
-    [style*="color: #cbd5e1"] {{
+    [style*="color:#f8fafc"], [style*="color: #f8fafc"], [style*="color:#F8FAFC"], [style*="color: #F8FAFC"],
+    [style*="color:#f1f5f9"], [style*="color: #f1f5f9"], [style*="color:#F1F5F9"], [style*="color: #F1F5F9"],
+    [style*="color:#e2e8f0"], [style*="color: #e2e8f0"], [style*="color:#E2E8F0"], [style*="color: #E2E8F0"],
+    [style*="color:#cbd5e1"], [style*="color: #cbd5e1"], [style*="color:#CBD5E1"], [style*="color: #CBD5E1"],
+    [style*="color:#0f172a"], [style*="color: #0f172a"], [style*="color:#0F172A"], [style*="color: #0F172A"],
+    [style*="color:#1e293b"], [style*="color: #1e293b"], [style*="color:#1E293B"], [style*="color: #1E293B"],
+    [style*="color:#334155"], [style*="color: #334155"], [style*="color:#334155"], [style*="color: #334155"],
+    [style*="color:white"], [style*="color: white"], [style*="color:black"], [style*="color: black"] {{
         color: var(--osmos-text) !important;
     }}
 
-    [style*="color:#94a3b8"],
-    [style*="color: #94a3b8"],
-    [style*="color:#64748b"],
-    [style*="color: #64748b"] {{
+    [style*="color:#94a3b8"], [style*="color: #94a3b8"], [style*="color:#94A3B8"], [style*="color: #94A3B8"],
+    [style*="color:#64748b"], [style*="color: #64748b"], [style*="color:#64748B"], [style*="color: #64748B"],
+    [style*="color:#475569"], [style*="color: #475569"], [style*="color:#475569"], [style*="color: #475569"] {{
         color: var(--osmos-muted) !important;
     }}
 
