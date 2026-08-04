@@ -42,7 +42,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         f"""
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 10px;">
-                {icon_html('bot', size=28)} Agent Supervision Center
+                {icon_html('bot')} Agent Supervision Center
             </h1>
             <p style="color: var(--osmos-muted, #94A3B8); font-size: 14px;">
                 Multi-Agent Intelligent CRM Supervision Layer & Read-Only Next Best Action Engine

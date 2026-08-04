@@ -48,6 +48,8 @@ PAGE_ICONS = {
 }
 
 ICON_MAP = {
+    "bot": "bi-robot",
+    "Agent": "bi-robot",
     "CLV": "bi-cash-coin",
     "RFM": "bi-bar-chart-line",
     "Churn Risk": "bi-exclamation-triangle",
