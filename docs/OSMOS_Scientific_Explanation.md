@@ -46,7 +46,9 @@ graph TD
 
 ---
 
-## 4. Multi-Agent Supervision Layer (Phase 8)
+## 4. Multi-Agent Supervision Layer (Phase 8.1 & 8.2)
 
-The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, and persona consistency. Each agent produces structured observations, risks, opportunities, and recommendations alongside an Evidence Traceability Matrix. The Orchestrator aggregates these outputs into a final next-best-action recommendation for the administrator. The first implementation is read-only and deterministic, preserving the separation between analytical computation, generative explanation, and human-approved action.
+The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to 8 specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, persona consistency, campaign outcomes, journey step integrity, database auditability, and UI/demo readiness. Each agent produces structured observations, risks, opportunities, and recommendations alongside an Evidence Traceability Matrix. The Orchestrator aggregates these outputs into a final next-best-action recommendation for the administrator.
+
+Phase 8.2 extends the Multi-Agent Supervision Layer with operational agents. In addition to customer intelligence agents, OSMOS now supervises campaign history, journey consistency, database auditability, and demo/UI readiness. These agents remain read-only and deterministic, helping administrators detect issues, verify historical consistency, and prepare reliable customer intelligence demonstrations. Preserving the separation between analytical computation, generative explanation, and human-approved action remains central to the platform's safety architecture.
 

@@ -1,8 +1,9 @@
 """
-OSMOS Multi-Agent Supervision Layer — Orchestrator Agent (Phase 8.1)
+OSMOS Multi-Agent Supervision Layer — Orchestrator Agent (Phase 8.2)
 =====================================================================
-Central orchestrator managing context construction, specialized agent execution,
-result aggregation, Next Best Action selection, and optional on-demand LLM summary generation.
+Central orchestrator managing context construction, 8-agent execution,
+result aggregation, system readiness synthesis, Next Best Action selection,
+and optional on-demand LLM summary generation.
 """
 
 import logging
@@ -11,7 +12,7 @@ import pandas as pd
 
 from agents.agent_schemas import AgentContext, AgentOutput, OrchestratorOutput
 from agents.context_builder import build_entity_agent_context
-from agents.agent_registry import get_active_agents
+from agents.agent_registry import get_active_agents, AGENT_REGISTRY
 from agents.result_aggregator import (
     aggregate_agent_status,
     merge_risks,
@@ -20,6 +21,7 @@ from agents.result_aggregator import (
     compute_global_confidence,
     choose_next_best_action,
     synthesize_orchestrator_summary,
+    compute_system_readiness_summary,
 )
 from llm.llm_client import check_llm_available, generate_text
 from llm.json_utils import extract_and_parse_json
@@ -39,8 +41,7 @@ class OrchestratorAgent:
 
     def detect_required_agents(self, context: AgentContext) -> List[str]:
         """Dynamically identifies relevant agent IDs based on context indicators."""
-        required = ["digital_twin", "clv", "churn", "persona"]
-        return required
+        return list(AGENT_REGISTRY.keys())
 
     def run_agents(
         self,
@@ -104,7 +105,6 @@ class OrchestratorAgent:
             agent_outputs=agent_outputs,
         )
 
-        # Convert agent outputs to dict for JSON serialization
         agent_output_dicts = [out.to_dict() for out in agent_outputs]
 
         return OrchestratorOutput(
@@ -122,7 +122,7 @@ class OrchestratorAgent:
 
     def generate_llm_executive_summary(self, orchestrator_output: OrchestratorOutput) -> Dict[str, Any]:
         """
-        Generates a polished executive supervision summary using the local LLM.
+        Generates a polished executive supervision summary using the local LLM across all active agents.
         STRICTLY BUTTON-TRIGGERED ONLY.
         """
         available, reason = check_llm_available()
@@ -138,11 +138,11 @@ class OrchestratorAgent:
 
         prompt = f"""
 You are the OSMOS Multi-Agent Executive Assistant.
-Synthesize the structured Multi-Agent Supervision report into a bilingual executive summary (French & English).
+Synthesize the structured 8-Agent Supervision report into a bilingual executive summary (French & English).
 
 ENTITIES METADATA:
 - Entity ID: {orchestrator_output.entity_id}
-- Global Status: {orchestrator_output.global_status}
+- Global Supervision Status: {orchestrator_output.global_status}
 - Summary: {orchestrator_output.final_summary}
 - Recommended Next Best Action: {orchestrator_output.recommended_next_best_action}
 - Identified Risks: {', '.join(orchestrator_output.consolidated_risks[:5]) or 'None'}
@@ -151,8 +151,8 @@ ENTITIES METADATA:
 
 Return ONLY valid JSON matching this exact schema:
 {{
-  "executive_summary_fr": "Description concise du statut de l'entité et des priorités stratégiques.",
-  "executive_summary_en": "Concise overview of entity status and strategic priorities.",
+  "executive_summary_fr": "Description concise du statut de l'entité et des priorités opérationnelles.",
+  "executive_summary_en": "Concise overview of entity status and operational priorities.",
   "final_recommendation_fr": "Action recommandee en francais.",
   "final_recommendation_en": "Recommended next best action in English.",
   "suggested_admin_actions_fr": ["Action 1", "Action 2"],

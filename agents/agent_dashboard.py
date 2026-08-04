@@ -1,19 +1,20 @@
 """
-OSMOS Multi-Agent Supervision Layer — Agent Dashboard (Phase 8.1)
+OSMOS Multi-Agent Supervision Layer — Agent Dashboard (Phase 8.2)
 ==================================================================
 Streamlit dashboard page for the Agent Supervision Center.
-Allows administrators to select entities, trigger read-only multi-agent analysis,
-inspect evidence traceability, toggle presentation mode, and generate optional
-LLM executive supervision summaries on demand.
+Allows administrators to inspect core customer intelligence and operational
+supervision across all 8 specialized agents with System Readiness summaries,
+evidence traceability, presentation mode, and button-triggered LLM executive summaries.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import pandas as pd
 import streamlit as st
 
 from agents.orchestrator_agent import OrchestratorAgent, run_orchestrated_analysis
-from agents.agent_registry import list_agents
+from agents.agent_registry import list_agents, CORE_AGENT_IDS, OPERATIONAL_AGENT_IDS
+from agents.result_aggregator import compute_system_readiness_summary
 from ui.icons import icon_html
 
 logger = logging.getLogger("OSMOS_AGENT_DASHBOARD")
@@ -45,7 +46,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                 {icon_html('bot')} Agent Supervision Center
             </h1>
             <p style="color: var(--osmos-muted, #94A3B8); font-size: 14px;">
-                Multi-Agent Intelligent CRM Supervision Layer & Read-Only Next Best Action Engine
+                8-Agent Multi-Agent Intelligent CRM Supervision Layer & Read-Only Next Best Action Engine
             </p>
         </div>
         """,
@@ -55,7 +56,6 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
     # Top Control Bar: Entity Selection & Presentation Mode Toggle
     col_ent, col_mode = st.columns([3, 1])
 
-    # Entity Options list
     available_entities = []
     if df is not None and not df.empty and "entity_id" in df.columns:
         available_entities = sorted(df["entity_id"].dropna().astype(str).unique().tolist())
@@ -80,24 +80,60 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         st.write("")
         presentation_mode = st.checkbox("Presentation Mode", value=False, help="Hide raw evidence tables for executive presentation.")
 
-    # Agent Selection Checkboxes
-    st.markdown("##### Selected Specialized Agents")
-    all_registered = list_agents()
-    c1, c2, c3, c4 = st.columns(4)
+    # Categorized Agent Selection
+    st.markdown("##### Agent Selection & Presets")
+    preset_col1, preset_col2, preset_col3, _ = st.columns([1.5, 1.5, 1.5, 3.5])
 
+    if "selected_agents_set" not in st.session_state:
+        st.session_state["selected_agents_set"] = set(CORE_AGENT_IDS)
+
+    with preset_col1:
+        if st.button("Select All (8 Agents)", use_container_width=True):
+            st.session_state["selected_agents_set"] = {"digital_twin", "clv", "churn", "persona", "campaign", "journey", "database_audit", "ui_ux"}
+
+    with preset_col2:
+        if st.button("Default Core (5 Agents)", use_container_width=True):
+            st.session_state["selected_agents_set"] = set(CORE_AGENT_IDS)
+
+    with preset_col3:
+        if st.button("Clear Selection", use_container_width=True):
+            st.session_state["selected_agents_set"] = set()
+
+    # Category Group 1: Core Customer Intelligence
+    st.markdown("**Core Customer Intelligence Agents:**")
+    c1, c2, c3, c4 = st.columns(4)
     selected_agent_ids = []
+
     with c1:
-        if st.checkbox("Digital Twin Agent", value=True, key="chk_dt"):
+        if st.checkbox("Digital Twin Agent", value="digital_twin" in st.session_state["selected_agents_set"], key="chk_dt"):
             selected_agent_ids.append("digital_twin")
     with c2:
-        if st.checkbox("CLV Agent", value=True, key="chk_clv"):
+        if st.checkbox("CLV Agent", value="clv" in st.session_state["selected_agents_set"], key="chk_clv"):
             selected_agent_ids.append("clv")
     with c3:
-        if st.checkbox("Churn Risk Agent", value=True, key="chk_churn"):
+        if st.checkbox("Churn Risk Agent", value="churn" in st.session_state["selected_agents_set"], key="chk_churn"):
             selected_agent_ids.append("churn")
     with c4:
-        if st.checkbox("Persona Agent", value=True, key="chk_persona"):
+        if st.checkbox("Persona Agent", value="persona" in st.session_state["selected_agents_set"], key="chk_persona"):
             selected_agent_ids.append("persona")
+
+    # Category Group 2: Operational Supervision
+    st.markdown("**Operational Supervision Agents:**")
+    o1, o2, o3, o4 = st.columns(4)
+    with o1:
+        if st.checkbox("Campaign Agent", value="campaign" in st.session_state["selected_agents_set"], key="chk_campaign"):
+            selected_agent_ids.append("campaign")
+    with o2:
+        if st.checkbox("Journey Agent", value="journey" in st.session_state["selected_agents_set"], key="chk_journey"):
+            selected_agent_ids.append("journey")
+    with o3:
+        if st.checkbox("Database Audit Agent", value="database_audit" in st.session_state["selected_agents_set"], key="chk_db"):
+            selected_agent_ids.append("database_audit")
+    with o4:
+        if st.checkbox("UI/UX Agent", value="ui_ux" in st.session_state["selected_agents_set"], key="chk_ui"):
+            selected_agent_ids.append("ui_ux")
+
+    st.session_state["selected_agents_set"] = set(selected_agent_ids)
 
     st.write("")
     if st.button("Run Multi-Agent Analysis", type="primary", use_container_width=True):
@@ -152,18 +188,33 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
             unsafe_allow_html=True,
         )
 
+        # System Readiness Summary Panel
+        agent_outputs_list = [AgentOutput(**d) if isinstance(d, dict) else d for d in report.agent_outputs]
+        sys_summary = compute_system_readiness_summary(agent_outputs_list)
+
+        st.markdown("##### System Readiness Summary")
+        sr1, sr2, sr3, sr4 = st.columns(4)
+        with sr1:
+            st.metric("Database Integrity", sys_summary["database_integrity"])
+        with sr2:
+            st.metric("Journey Readiness", sys_summary["journey_readiness"])
+        with sr3:
+            st.metric("Campaign Activity", sys_summary["campaign_readiness"])
+        with sr4:
+            st.metric("Demo Readiness", sys_summary["demo_readiness"])
+
         # On-Demand LLM Executive Supervision Summary Button
         st.markdown("##### Executive Summary Generation (Button-Triggered Only)")
         col_btn, col_info = st.columns([2, 3])
         with col_btn:
             if st.button("Generate LLM Executive Supervision Summary", use_container_width=True):
-                with st.spinner("Calling local Ollama LLM to synthesize executive report..."):
+                with st.spinner("Calling local Ollama LLM to synthesize 8-agent executive report..."):
                     orchestrator = OrchestratorAgent()
                     llm_result = orchestrator.generate_llm_executive_summary(report)
                     st.session_state["agent_llm_summary"] = llm_result
 
         with col_info:
-            st.caption("Executes local Ollama client using Orchestrator output. Does not modify storage.")
+            st.caption("Executes local Ollama client using Orchestrator output across all 8 agents.")
 
         # Display LLM Executive Summary if generated
         llm_summary = st.session_state.get("agent_llm_summary")

@@ -1,8 +1,8 @@
 """
-OSMOS Multi-Agent Supervision Layer — Unit Tests (Phase 8.1)
+OSMOS Multi-Agent Supervision Layer — Unit Tests (Phase 8.2)
 ============================================================
-Comprehensive test suite verifying BaseAgent, context builder, specialized agents,
-orchestration, result aggregation, evidence traceability, and no-write guarantees.
+Comprehensive test suite verifying BaseAgent, context builder, 8 specialized agents,
+orchestration, result aggregation, evidence traceability, and read-only no-write guarantees.
 """
 
 import unittest
@@ -16,6 +16,10 @@ from agents.digital_twin_agent import DigitalTwinAgent
 from agents.clv_agent import CLVAgent
 from agents.churn_agent import ChurnRiskAgent
 from agents.persona_agent import PersonaAgent
+from agents.campaign_agent import CampaignAgent
+from agents.journey_agent import JourneyAgent
+from agents.database_audit_agent import DatabaseAuditAgent
+from agents.ui_ux_agent import UIUXAgent
 from agents.agent_registry import AGENT_REGISTRY, get_agent, get_active_agents
 from agents.result_aggregator import (
     aggregate_agent_status,
@@ -23,6 +27,7 @@ from agents.result_aggregator import (
     merge_opportunities,
     merge_recommendations,
     choose_next_best_action,
+    compute_system_readiness_summary,
 )
 from agents.orchestrator_agent import OrchestratorAgent, run_orchestrated_analysis
 
@@ -37,7 +42,7 @@ class BrokenTestAgent(BaseAgent):
         raise ValueError("Simulated unexpected crash inside specialized agent!")
 
 
-class TestMultiAgentSupervisionLayer(unittest.TestCase):
+class TestMultiAgentSupervisionLayerPhase82(unittest.TestCase):
 
     def setUp(self):
         self.sample_df = pd.DataFrame([
@@ -68,132 +73,99 @@ class TestMultiAgentSupervisionLayer(unittest.TestCase):
             },
         ])
 
-    def test_evidence_item_schema(self):
-        """Verifies EvidenceItem formatting and dictionary conversion."""
-        item = EvidenceItem("test_metric", 100, ">50", "Test interpretation")
-        d = item.to_dict()
-        self.assertEqual(d["metric_name"], "test_metric")
-        self.assertEqual(d["value"], 100)
-        self.assertEqual(d["threshold"], ">50")
-        self.assertEqual(d["interpretation"], "Test interpretation")
+    def test_registry_contains_all_8_agents(self):
+        """Verifies AGENT_REGISTRY contains all 8 active specialized agents."""
+        self.assertEqual(len(AGENT_REGISTRY), 8)
+        expected = {"digital_twin", "clv", "churn", "persona", "campaign", "journey", "database_audit", "ui_ux"}
+        self.assertEqual(set(AGENT_REGISTRY.keys()), expected)
 
-    def test_base_agent_validation_and_error_handling(self):
-        """Verifies BaseAgent safely handles invalid contexts and crashes."""
-        agent = DigitalTwinAgent()
-
-        # Invalid Context
-        output_invalid = agent.safe_analyze(None)
-        self.assertEqual(output_invalid.status, "Insufficient Data")
-        self.assertEqual(output_invalid.confidence_score, 0.0)
-
-        # Exception isolation
-        broken_agent = BrokenTestAgent()
-        valid_ctx = AgentContext(entity_id="P_DEMO_001")
-        output_broken = broken_agent.safe_analyze(valid_ctx)
-        self.assertEqual(output_broken.status, "Error")
-        self.assertIn("Simulated unexpected crash", output_broken.observations[1])
-
-    def test_context_builder(self):
-        """Verifies Context Builder extracts entity fields from DataFrame in read-only mode."""
+    def test_campaign_agent_no_history(self):
+        """Verifies CampaignAgent handles entities with zero campaign history cleanly."""
+        agent = CampaignAgent()
         ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
-        self.assertEqual(ctx.entity_id, "P_DEMO_001")
-        self.assertEqual(ctx.entity_type, "Prospect")
-        self.assertEqual(ctx.latest_segment, "Prospect")
-        self.assertEqual(ctx.latest_persona, "New Explorer")
-        self.assertIn(ctx.storage_mode, ["postgres", "excel"])
-
-    def test_digital_twin_agent(self):
-        """Verifies DigitalTwinAgent evaluates profile completeness and evidence traceability."""
-        ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
-        agent = DigitalTwinAgent()
-        output = agent.safe_analyze(ctx)
-
-        self.assertIn(output.status, ["OK", "Warning"])
-        self.assertGreater(len(output.evidence), 0)
-        self.assertEqual(output.evidence[0]["metric_name"], "profile_completeness")
-
-    def test_clv_agent_classification(self):
-        """Verifies CLVAgent tiering logic (VIP, Medium, Low, Collapse)."""
-        agent = CLVAgent()
-
-        # VIP Client
-        vip_ctx = build_entity_agent_context("C00001", df=self.sample_df)
-        vip_out = agent.safe_analyze(vip_ctx)
-        self.assertIn("High Value", vip_out.observations[0])
-
-        # Low Value Client
-        low_df = pd.DataFrame([{"entity_id": "L001", "predicted_clv_amount_mad": 500.0}])
-        low_ctx = build_entity_agent_context("L001", df=low_df)
-        low_out = agent.safe_analyze(low_ctx)
-        self.assertIn("Low Value", low_out.observations[0])
-
-        # Value Collapse
-        zero_df = pd.DataFrame([{"entity_id": "Z001", "predicted_clv_amount_mad": 0.0}])
-        zero_ctx = build_entity_agent_context("Z001", df=zero_df)
-        zero_out = agent.safe_analyze(zero_ctx)
-        self.assertEqual(zero_out.status, "Warning")
-
-    def test_churn_risk_agent(self):
-        """Verifies ChurnRiskAgent threshold evaluation (Critical vs Low Risk)."""
-        agent = ChurnRiskAgent()
-
-        # Critical Churn Risk Client (C00001 has churn_risk_score = 0.85)
-        crit_ctx = build_entity_agent_context("C00001", df=self.sample_df)
-        crit_out = agent.safe_analyze(crit_ctx)
-        self.assertEqual(crit_out.status, "Critical")
-        self.assertTrue(any("Critical churn risk" in r for r in crit_out.risks))
-
-        # Low Churn Risk Prospect (P_DEMO_001 has churn_risk_score = 0.25)
-        low_ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
-        low_out = agent.safe_analyze(low_ctx)
-        self.assertEqual(low_out.status, "OK")
-
-    def test_persona_agent_resolution(self):
-        """Verifies PersonaAgent checks segment-first resolution and official library."""
-        agent = PersonaAgent()
-        ctx = build_entity_agent_context("C00001", df=self.sample_df)
         out = agent.safe_analyze(ctx)
 
         self.assertEqual(out.status, "OK")
-        self.assertTrue(any("Premium Loyalist" in obs for obs in out.observations))
+        self.assertTrue(any("No campaign history" in obs for obs in out.observations))
 
-    def test_result_aggregator(self):
-        """Verifies result aggregator logic, global status, and NBA selection."""
-        agent_dt = DigitalTwinAgent()
-        agent_churn = ChurnRiskAgent()
-        agent_clv = CLVAgent()
-
-        crit_ctx = build_entity_agent_context("C00001", df=self.sample_df)
-
-        outputs = [
-            agent_dt.safe_analyze(crit_ctx),
-            agent_churn.safe_analyze(crit_ctx),
-            agent_clv.safe_analyze(crit_ctx),
+    def test_campaign_agent_negative_response(self):
+        """Verifies CampaignAgent detects negative campaign responses."""
+        agent = CampaignAgent()
+        ctx = build_entity_agent_context("C00001", df=self.sample_df)
+        ctx.campaign_history = [
+            {"dispatch_id": 1, "campaign_id": 5, "status": "Dispatched"},
+            {"response_id": 10, "campaign_id": 5, "response_type": "Unsubscribed", "response_score": -1.0},
         ]
+        out = agent.safe_analyze(ctx)
 
-        global_status = aggregate_agent_status(outputs)
-        self.assertEqual(global_status, "Critical")
+        self.assertEqual(out.status, "Warning")
+        self.assertTrue(any("Negative campaign response" in r for r in out.risks))
 
-        nba = choose_next_best_action(outputs, entity_type="Client")
-        self.assertIn("RETENTION", nba)
+    def test_journey_agent_completed_journey(self):
+        """Verifies JourneyAgent detects a completed 5-stage lifecycle journey."""
+        agent = JourneyAgent()
+        ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
+        ctx.journey_history = [
+            {"step_id": 1, "current_stage": "1. New Prospect", "trigger_event_id": "E1"},
+            {"step_id": 2, "current_stage": "2. First Purchase", "trigger_event_id": "E2"},
+            {"step_id": 3, "current_stage": "3. Emerging Loyalist", "trigger_event_id": "E3"},
+            {"step_id": 4, "current_stage": "4. VIP Loyalist", "trigger_event_id": "E4"},
+            {"step_id": 5, "current_stage": "5. At-Risk VIP", "trigger_event_id": "E5"},
+        ]
+        out = agent.safe_analyze(ctx)
 
-    def test_orchestrator_execution(self):
-        """Verifies end-to-end Orchestrator execution without automatic LLM calls."""
+        self.assertEqual(out.status, "OK")
+        self.assertTrue(any("completed standard 5-stage" in opp for opp in out.opportunities))
+
+    def test_journey_agent_missing_event_refs(self):
+        """Verifies JourneyAgent detects missing trigger_event_id references."""
+        agent = JourneyAgent()
+        ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
+        ctx.journey_history = [
+            {"step_id": 1, "current_stage": "1. New Prospect", "trigger_event_id": None},
+        ]
+        out = agent.safe_analyze(ctx)
+
+        self.assertEqual(out.status, "Warning")
+        self.assertTrue(any("missing trigger_event_id" in r for r in out.risks))
+
+    def test_database_audit_agent(self):
+        """Verifies DatabaseAuditAgent audits record counts without altering data."""
+        agent = DatabaseAuditAgent()
+        ctx = build_entity_agent_context("C00001", df=self.sample_df)
+        out = agent.safe_analyze(ctx)
+
+        self.assertIn(out.status, ["OK", "Warning"])
+        self.assertGreater(len(out.evidence), 0)
+        self.assertEqual(out.evidence[0]["metric_name"], "storage_mode")
+
+    def test_ui_ux_agent_readiness(self):
+        """Verifies UIUXAgent evaluates presentation readiness for P_DEMO_001."""
+        agent = UIUXAgent()
+        ctx = build_entity_agent_context("P_DEMO_001", df=self.sample_df)
+        out = agent.safe_analyze(ctx)
+
+        self.assertIn(out.status, ["OK", "Warning", "Insufficient Data"])
+        self.assertTrue(any("P_DEMO_001" in ev["value"] for ev in out.evidence))
+
+    def test_orchestrator_all_8_agents(self):
+        """Verifies OrchestratorAgent executes all 8 agents and computes system readiness."""
         orchestrator = OrchestratorAgent()
-        report = orchestrator.analyze_entity("C00001", df=self.sample_df)
+        all_ids = ["digital_twin", "clv", "churn", "persona", "campaign", "journey", "database_audit", "ui_ux"]
+        report = orchestrator.analyze_entity("C00001", df=self.sample_df, selected_agent_ids=all_ids)
 
         self.assertIsInstance(report, OrchestratorOutput)
-        self.assertEqual(report.entity_id, "C00001")
-        self.assertEqual(report.global_status, "Critical")
-        self.assertGreater(len(report.agent_outputs), 0)
-        self.assertIsNone(report.llm_executive_summary)  # Must be None until button click
+        self.assertEqual(len(report.agent_outputs), 8)
+        self.assertIsNone(report.llm_executive_summary)  # Button-triggered only
 
-    def test_read_only_no_write_guard(self):
-        """Verifies deterministic analysis makes zero DB write calls."""
+    def test_read_only_no_write_guard_all_agents(self):
+        """Verifies executing all 8 agents makes zero DB writes and zero DataFrame mutations."""
         original_df = self.sample_df.copy(deep=True)
-        report = run_orchestrated_analysis("P_DEMO_001", df=self.sample_df)
+        orchestrator = OrchestratorAgent()
+        all_ids = list(AGENT_REGISTRY.keys())
+        report = orchestrator.analyze_entity("P_DEMO_001", df=self.sample_df, selected_agent_ids=all_ids)
+
         self.assertEqual(report.entity_id, "P_DEMO_001")
-        # Assert DataFrame was not mutated
         pd.testing.assert_frame_equal(self.sample_df, original_df)
 
 

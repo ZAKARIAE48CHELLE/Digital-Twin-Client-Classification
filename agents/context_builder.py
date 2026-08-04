@@ -1,10 +1,10 @@
 """
-OSMOS Multi-Agent Supervision Layer — Context Builder (Phase 8.1)
+OSMOS Multi-Agent Supervision Layer — Context Builder (Phase 8.2)
 ===================================================================
 Constructs a unified, read-only AgentContext for a specific entity.
 Safely extracts data from PostgreSQL or Excel fallback, DataFrame rows,
-event history, predicted CLV/RFM, campaign history, journey steps,
-and dynamic persona context.
+event history, predicted CLV/RFM, campaign dispatches & responses,
+journey scenarios & steps, database record counts, and demo readiness indicators.
 """
 
 import logging
@@ -107,8 +107,8 @@ def get_latest_segment_persona(entity_id: str) -> Dict[str, Any]:
     return {}
 
 
-def get_campaign_history(entity_id: str) -> List[Dict[str, Any]]:
-    """Retrieves campaign dispatches and responses for entity (Read-Only)."""
+def get_campaign_dispatches_for_entity(entity_id: str) -> List[Dict[str, Any]]:
+    """Retrieves campaign dispatches for entity (Read-Only)."""
     campaigns = []
     if get_storage_backend() == "postgres" and is_postgres_available():
         try:
@@ -127,21 +127,71 @@ def get_campaign_history(entity_id: str) -> List[Dict[str, Any]]:
                 if rows:
                     campaigns = [dict(r) for r in rows]
         except Exception as e:
-            logger.debug(f"PostgreSQL campaign history fallback for {entity_id}: {e}")
+            logger.debug(f"PostgreSQL campaign dispatches fallback for {entity_id}: {e}")
 
     return campaigns
 
 
-def get_journey_history(entity_id: str) -> List[Dict[str, Any]]:
-    """Retrieves customer journey step transitions for entity (Read-Only)."""
-    journeys = []
+def get_campaign_responses_for_entity(entity_id: str) -> List[Dict[str, Any]]:
+    """Retrieves campaign responses for entity (Read-Only)."""
+    responses = []
     if get_storage_backend() == "postgres" and is_postgres_available():
         try:
             from database.db import get_cursor
             with get_cursor(commit=False) as cur:
                 cur.execute(
                     """
-                    SELECT step_id, scenario_id, entity_id, current_stage, next_stage, action_taken, status, created_at
+                    SELECT response_id, campaign_id, entity_id, response_type, response_score, event_id, created_at
+                    FROM campaign_responses
+                    WHERE entity_id = %s
+                    ORDER BY created_at DESC LIMIT 20;
+                    """,
+                    (entity_id,),
+                )
+                rows = cur.fetchall()
+                if rows:
+                    responses = [dict(r) for r in rows]
+        except Exception as e:
+            logger.debug(f"PostgreSQL campaign responses fallback for {entity_id}: {e}")
+
+    return responses
+
+
+def get_journey_scenarios_for_entity(entity_id: str) -> List[Dict[str, Any]]:
+    """Retrieves journey scenarios for entity (Read-Only)."""
+    scenarios = []
+    if get_storage_backend() == "postgres" and is_postgres_available():
+        try:
+            from database.db import get_cursor
+            with get_cursor(commit=False) as cur:
+                cur.execute(
+                    """
+                    SELECT scenario_id, entity_id, scenario_name, current_stage, status, created_at, updated_at
+                    FROM journey_scenarios
+                    WHERE entity_id = %s
+                    ORDER BY updated_at DESC LIMIT 10;
+                    """,
+                    (entity_id,),
+                )
+                rows = cur.fetchall()
+                if rows:
+                    scenarios = [dict(r) for r in rows]
+        except Exception as e:
+            logger.debug(f"PostgreSQL journey scenarios fallback for {entity_id}: {e}")
+
+    return scenarios
+
+
+def get_journey_steps_for_entity(entity_id: str) -> List[Dict[str, Any]]:
+    """Retrieves journey step transitions for entity (Read-Only)."""
+    steps = []
+    if get_storage_backend() == "postgres" and is_postgres_available():
+        try:
+            from database.db import get_cursor
+            with get_cursor(commit=False) as cur:
+                cur.execute(
+                    """
+                    SELECT step_id, scenario_id, entity_id, current_stage, next_stage, action_taken, trigger_event_id, status, created_at
                     FROM journey_step_history
                     WHERE entity_id = %s
                     ORDER BY created_at DESC LIMIT 20;
@@ -150,16 +200,91 @@ def get_journey_history(entity_id: str) -> List[Dict[str, Any]]:
                 )
                 rows = cur.fetchall()
                 if rows:
-                    journeys = [dict(r) for r in rows]
+                    steps = [dict(r) for r in rows]
         except Exception as e:
-            logger.debug(f"PostgreSQL journey history fallback for {entity_id}: {e}")
+            logger.debug(f"PostgreSQL journey step history fallback for {entity_id}: {e}")
 
-    return journeys
+    return steps
+
+
+def get_event_reference_check(entity_id: str) -> Dict[str, Any]:
+    """Audits whether journey/campaign event IDs exist in customer_event_history (Read-Only)."""
+    result = {"missing_event_refs": [], "valid_event_refs_count": 0, "total_refs_checked": 0}
+    if get_storage_backend() == "postgres" and is_postgres_available():
+        try:
+            from database.db import get_cursor
+            steps = get_journey_steps_for_entity(entity_id)
+            responses = get_campaign_responses_for_entity(entity_id)
+
+            ref_ids = set()
+            for s in steps:
+                if s.get("trigger_event_id"):
+                    ref_ids.add(str(s["trigger_event_id"]))
+            for r in responses:
+                if r.get("event_id"):
+                    ref_ids.add(str(r["event_id"]))
+
+            if ref_ids:
+                result["total_refs_checked"] = len(ref_ids)
+                with get_cursor(commit=False) as cur:
+                    cur.execute(
+                        "SELECT event_id FROM customer_event_history WHERE event_id = ANY(%s);",
+                        (list(ref_ids),),
+                    )
+                    found = set(r.get("event_id") for r in cur.fetchall())
+                    result["valid_event_refs_count"] = len(found)
+                    result["missing_event_refs"] = list(ref_ids - found)
+        except Exception as e:
+            logger.debug(f"PostgreSQL event reference check fallback for {entity_id}: {e}")
+
+    return result
+
+
+def get_database_record_counts(entity_id: str) -> Dict[str, int]:
+    """Audits record counts across entity tables in PostgreSQL (Read-Only)."""
+    counts = {
+        "digital_twin_count": 0,
+        "event_count": 0,
+        "rfm_count": 0,
+        "clv_count": 0,
+        "classification_count": 0,
+        "segment_count": 0,
+        "campaign_count": 0,
+        "journey_step_count": 0,
+    }
+
+    if get_storage_backend() == "postgres" and is_postgres_available():
+        try:
+            from database.db import get_cursor
+            with get_cursor(commit=False) as cur:
+                cur.execute("SELECT COUNT(*) FROM digital_twin_snapshot WHERE entity_id = %s;", (entity_id,))
+                counts["digital_twin_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM customer_event_history WHERE entity_id = %s;", (entity_id,))
+                counts["event_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM rfm_es_scores WHERE entity_id = %s;", (entity_id,))
+                counts["rfm_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM model_predictions_history WHERE entity_id = %s;", (entity_id,))
+                counts["clv_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM segment_persona_history WHERE entity_id = %s;", (entity_id,))
+                counts["segment_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM campaign_dispatches WHERE entity_id = %s;", (entity_id,))
+                counts["campaign_count"] = cur.fetchone().get("count", 0)
+
+                cur.execute("SELECT COUNT(*) FROM journey_step_history WHERE entity_id = %s;", (entity_id,))
+                counts["journey_step_count"] = cur.fetchone().get("count", 0)
+        except Exception as e:
+            logger.debug(f"PostgreSQL database record counts fallback for {entity_id}: {e}")
+
+    return counts
 
 
 def get_dynamic_persona_context(entity_id: str) -> Dict[str, Any]:
     """Retrieves dynamic exploratory persona context if generated (Read-Only)."""
-    # Dynamic personas are exploratory and in-memory or session-based
     return {"cluster_id": None, "dynamic_persona_title": None, "exploratory_only": True}
 
 
@@ -211,13 +336,20 @@ def build_entity_agent_context(
         "persona_name", entity_state.get("persona_name", entity_state.get("persona", "Unknown"))
     )
 
-    # Recent events, campaigns, journey
+    # Recent events, campaigns, journey, database audit
     recent_events = get_recent_events(str_entity_id)
-    campaign_history = get_campaign_history(str_entity_id)
-    journey_history = get_journey_history(str_entity_id)
+    campaign_dispatches = get_campaign_dispatches_for_entity(str_entity_id)
+    campaign_responses = get_campaign_responses_for_entity(str_entity_id)
+    journey_scenarios = get_journey_scenarios_for_entity(str_entity_id)
+    journey_steps = get_journey_steps_for_entity(str_entity_id)
+    ref_check = get_event_reference_check(str_entity_id)
+    record_counts = get_database_record_counts(str_entity_id)
     dynamic_persona_ctx = get_dynamic_persona_context(str_entity_id)
 
     storage_mode = get_storage_backend() if is_postgres_available() else "excel"
+
+    # Merge dispatches & responses into campaign_history
+    campaign_history = campaign_dispatches + campaign_responses
 
     return AgentContext(
         entity_id=str_entity_id,
@@ -230,7 +362,7 @@ def build_entity_agent_context(
         latest_persona=str(latest_persona),
         recent_events=recent_events,
         campaign_history=campaign_history,
-        journey_history=journey_history,
+        journey_history=journey_steps,
         dynamic_persona_context=dynamic_persona_ctx,
         storage_mode=storage_mode,
     )

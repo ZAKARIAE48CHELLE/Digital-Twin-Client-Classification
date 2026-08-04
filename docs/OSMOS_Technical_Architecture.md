@@ -47,7 +47,7 @@ PFA-Summer/
 │   ├── digital_twin_explainer.py   # Deterministic explanations & LLM summary generators
 │   └── digital_twin_dashboard.py   # Streamlit UI Explorer for Digital Twins
 │
-├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1)
+├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1 & 8.2)
 │   ├── base_agent.py               # Abstract BaseAgent & read-only guard
 │   ├── agent_schemas.py            # Dataclass schemas & evidence traceability
 │   ├── context_builder.py          # Read-only entity context assembler
@@ -57,7 +57,11 @@ PFA-Summer/
 │   ├── clv_agent.py                # CLV monetary tier & VIP protection agent
 │   ├── churn_agent.py              # Churn risk & friction detection agent
 │   ├── persona_agent.py            # Segment-first stable persona agent
-│   ├── agent_registry.py           # Central agent registry & placeholder support
+│   ├── campaign_agent.py           # Campaign dispatch & response alignment agent
+│   ├── journey_agent.py            # Customer journey scenario & step reference agent
+│   ├── database_audit_agent.py     # PostgreSQL schema & orphaned event reference audit agent
+│   ├── ui_ux_agent.py              # UI readiness & demo suitability agent
+│   ├── agent_registry.py           # Central agent registry (8 active agents)
 │   └── agent_dashboard.py          # Agent Supervision Center Streamlit dashboard
 │
 ├── personas/                       # Persona Modeling & Library Catalog

@@ -1,9 +1,9 @@
 """
-OSMOS Multi-Agent Supervision Layer — Result Aggregator (Phase 8.1)
+OSMOS Multi-Agent Supervision Layer — Result Aggregator (Phase 8.2)
 ====================================================================
 Consolidates individual specialized agent outputs into a unified
 supervision report with global status rules, merged risks/opportunities,
-confidence scoring, and Next Best Action recommendations.
+confidence scoring, system readiness summaries, and Next Best Action recommendations.
 """
 
 from typing import List, Dict, Any
@@ -83,49 +83,78 @@ def compute_global_confidence(agent_outputs: List[AgentOutput]) -> float:
     return round(sum(scores) / len(scores), 2)
 
 
+def compute_system_readiness_summary(agent_outputs: List[AgentOutput]) -> Dict[str, Any]:
+    """Synthesizes an executive System Readiness Summary across operational agents."""
+    by_id: Dict[str, AgentOutput] = {out.agent_id: out for out in agent_outputs}
+
+    db_out = by_id.get("database_audit")
+    journey_out = by_id.get("journey")
+    campaign_out = by_id.get("campaign")
+    ui_out = by_id.get("ui_ux")
+
+    return {
+        "database_integrity": db_out.status if db_out else "Not Checked",
+        "journey_readiness": journey_out.status if journey_out else "Not Checked",
+        "campaign_readiness": campaign_out.status if campaign_out else "Not Checked",
+        "demo_readiness": ui_out.status if ui_out else "Not Checked",
+        "total_agents_run": len(agent_outputs),
+        "critical_agent_count": sum(1 for out in agent_outputs if out.status == "Critical"),
+        "warning_agent_count": sum(1 for out in agent_outputs if out.status == "Warning"),
+        "ok_agent_count": sum(1 for out in agent_outputs if out.status == "OK"),
+    }
+
+
 def choose_next_best_action(agent_outputs: List[AgentOutput], entity_type: str = "Client") -> str:
     """
     Deterministic rule-based engine selecting the Next Best Action (NBA).
     Priority order:
     1. Critical Churn + High CLV
     2. Critical / High Churn
-    3. High CLV VIP Loyalty
-    4. Prospect Conversion
-    5. Low Value Nurture
-    6. Profile Data Complete
+    3. Database Orphaned References / Missing History
+    4. Journey Incomplete / Repeating Stage
+    5. High Churn Risk + Missing Campaign
+    6. High CLV VIP Loyalty
+    7. Prospect Conversion
+    8. Default Automated Nurturing
     """
     by_id: Dict[str, AgentOutput] = {out.agent_id: out for out in agent_outputs}
 
     clv_out = by_id.get("clv")
     churn_out = by_id.get("churn")
     twin_out = by_id.get("digital_twin")
-    persona_out = by_id.get("persona")
+    db_out = by_id.get("database_audit")
+    journey_out = by_id.get("journey")
+    campaign_out = by_id.get("campaign")
 
-    global_status = aggregate_agent_status(agent_outputs)
-
-    # Rule 1: High Value at Risk (Critical CLV + Critical Churn)
+    # Priority 1: High Value at Risk (Critical CLV + Critical Churn)
     if (clv_out and clv_out.status == "Critical") or (churn_out and churn_out.status == "Critical"):
         if clv_out and any("VIP" in r or "High CLV" in r or "High Value" in r for r in clv_out.risks + clv_out.observations):
             return "URGENT VIP RETENTION: Initiate high-priority executive outreach and service recovery protocol."
         return "RETENTION INTERVENTION: Execute churn prevention campaign with targeted customer incentive."
 
-    # Rule 2: Warning Churn
+    # Priority 2: Database Integrity Audit Warning
+    if db_out and db_out.status == "Warning" and any("orphaned" in r.lower() or "missing" in r.lower() for r in db_out.risks):
+        return "DATABASE AUDIT AUDIT REQUIRED: Verify PostgreSQL event persistence to fix orphaned foreign key references."
+
+    # Priority 3: Journey Incomplete or Stuck
+    if journey_out and journey_out.status == "Warning" and any("stuck" in r.lower() or "incomplete" in r.lower() for r in journey_out.risks):
+        return "JOURNEY SCENARIO CONTINUATION: Execute remaining stages in Journey Simulator to complete lifecycle tree."
+
+    # Priority 4: Warning Churn Risk + Missing Retention Campaign
     if churn_out and churn_out.status == "Warning":
+        if campaign_out and (campaign_out.status in {"Warning", "OK"} and any("ZERO campaign" in r or "no campaign" in r.lower() for r in campaign_out.risks + campaign_out.recommendations)):
+            return "PREPARE RETENTION CAMPAIGN SIMULATION: High churn risk detected with no active campaign engagement."
         return "SERVICE RECOVERY: Schedule satisfaction survey and re-engagement campaign."
 
-    # Rule 3: High Value VIP (OK status)
+    # Priority 5: High Value VIP (OK status)
     if clv_out and any("VIP" in o or "High Value" in o for o in clv_out.observations + clv_out.opportunities):
         return "VIP LOYALTY ENROLLMENT: Apply premium account perks and targeted cross-sell offering."
 
-    # Rule 4: Prospect Conversion
+    # Priority 6: Prospect Conversion
     if entity_type == "Prospect":
         return "PROSPECT CONVERSION: Launch personalized introductory onboarding campaign."
 
-    # Rule 5: Profile Data Deficit
-    if global_status == "Insufficient Data" or (twin_out and twin_out.status in {"Insufficient Data", "Warning"}):
-        return "DATA ENRICHMENT: Review profile completeness and verify entity event ingestion."
-
-    # Rule 6: Default Operational Monitoring
+    # Priority 7: Default Operational Monitoring
     return "AUTOMATED NURTURING: Continue standard monitoring and routine digital campaign dispatches."
 
 
@@ -147,6 +176,6 @@ def synthesize_orchestrator_summary(
 
     return (
         f"Multi-Agent Supervision for Entity [{entity_id}] evaluated a global status of '{global_status}' "
-        f"across {len(agent_outputs)} agents ({count_str}). "
+        f"across {len(agent_outputs)} specialized agents ({count_str}). "
         f"Recommended Next Best Action: '{next_best_action}'."
     )
