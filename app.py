@@ -4697,6 +4697,10 @@ if __name__ == "__main__":
         from journey.journey_dashboard import render_journey_dashboard
         render_journey_dashboard(df_data, df_history)
 
+    elif page == "Agent Supervision Center":
+        from agents.agent_dashboard import render_agent_dashboard
+        render_agent_dashboard(df_data, df_history)
+
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard
         render_database_dashboard(df_data, df_history)

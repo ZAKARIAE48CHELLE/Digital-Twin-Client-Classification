@@ -15,6 +15,7 @@ MAIN_PAGES = [
     "Digital Twin & Persona",
     "Campaign Simulation",
     "Journey Simulator",
+    "Agent Supervision Center",
     "Simulate Event",
     "Create New Entity",
     "Database Intelligence",
@@ -30,6 +31,7 @@ PAGE_LABELS = {
     "Digital Twin & Persona": "Digital Twin Explorer",
     "Campaign Simulation": "Campaign Simulation",
     "Journey Simulator": "Journey Simulator",
+    "Agent Supervision Center": "Agent Supervision",
 }
 
 PAGE_ICONS = {
@@ -42,6 +44,7 @@ PAGE_ICONS = {
     "Digital Twin & Persona": "bi-diagram-3",
     "Campaign Simulation": "bi-megaphone",
     "Journey Simulator": "bi-signpost-split",
+    "Agent Supervision Center": "bi-robot",
 }
 
 ICON_MAP = {

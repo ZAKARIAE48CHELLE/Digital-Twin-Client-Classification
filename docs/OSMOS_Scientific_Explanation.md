@@ -42,3 +42,11 @@ graph TD
 - **Single-Entity Snapshot Delta Saves**: Low latency event simulations (< 1s execution) achieved by updating only affected entity rows instead of re-processing full dataset frames.
 - **AHP-Weighted Multi-Criteria Scoring**: Analytical Hierarchy Process (AHP) weighting for custom, scientifically sound RFM-ES score synthesis.
 - **Deterministic-first AI Architecture**: Machine learning models and mathematical formulas handle 100% of calculations; LLM models are restricted to qualitative explanation and advice generation.
+- **Multi-Agent Supervision Layer (Phase 8)**: Coordinates specialized analytical agents (Digital Twin, CLV, Churn Risk, Persona) under a deterministic Orchestrator to synthesize entity-level risks, opportunities, evidence traceability, and Next Best Actions in read-only mode.
+
+---
+
+## 4. Multi-Agent Supervision Layer (Phase 8)
+
+The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, and persona consistency. Each agent produces structured observations, risks, opportunities, and recommendations alongside an Evidence Traceability Matrix. The Orchestrator aggregates these outputs into a final next-best-action recommendation for the administrator. The first implementation is read-only and deterministic, preserving the separation between analytical computation, generative explanation, and human-approved action.
+

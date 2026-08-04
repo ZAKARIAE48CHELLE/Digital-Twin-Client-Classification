@@ -238,6 +238,30 @@ PAGE_HELP = {
         "mini_workflow": "P_DEMO_001 → Generated Events → Digital Twin Update → Class/Segment/Persona Change → LLM Explanation → Presentation Tree",
         "demo_tip": "Use this page in the presentation video because it explains the whole platform clearly and visually.",
         "requires_postgres": True
+    },
+    "Agent Supervision Center": {
+        "title": "Multi-Agent Intelligent Supervision Layer",
+        "purpose": "Coordinates specialized analytical agents (Digital Twin, CLV, Churn Risk, Persona) to inspect entity state in read-only mode and synthesize global Next Best Actions.",
+        "actions": [
+            "Select entity to inspect.",
+            "Select active specialized agents.",
+            "Run read-only multi-agent analysis.",
+            "Inspect evidence traceability matrix.",
+            "Generate button-triggered LLM executive summary.",
+            "Toggle Presentation Mode for executive view."
+        ],
+        "outputs": [
+            "Global supervision status (OK, Warning, Critical).",
+            "Consolidated risks, opportunities, and recommendations.",
+            "Deterministic Next Best Action recommendation.",
+            "Individual agent cards & confidence scores.",
+            "Evidence traceability matrix.",
+            "Optional bilingual (FR/EN) LLM executive summary."
+        ],
+        "workflow_position": "Workflow position: Multi-Agent Intelligent Supervision Layer",
+        "mini_workflow": "Admin Request → Context Builder → Specialized Agents → Result Aggregator → Next Best Action → Optional LLM Summary",
+        "demo_tip": "Demonstrate read-only multi-agent supervision for P_DEMO_001 or C00001 to show deterministic NBA recommendation followed by optional LLM summary generation.",
+        "requires_postgres": False
     }
 }
 
