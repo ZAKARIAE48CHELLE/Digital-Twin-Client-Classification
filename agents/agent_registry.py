@@ -5,7 +5,7 @@ Central registry managing all 8 active specialized supervision agents.
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from agents.base_agent import BaseAgent
 from agents.digital_twin_agent import DigitalTwinAgent
