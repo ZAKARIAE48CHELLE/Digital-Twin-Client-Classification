@@ -682,6 +682,58 @@ def build_design_system_css(theme="Light"):
     [data-baseweb="popover"] span,
     [data-baseweb="popover"] div,
     [data-baseweb="menu"] div,
+    [data-testid="stPlotlyChart"],
+    [data-testid="stVegaLiteChart"],
+    [data-testid="stPyplot"] {{
+        background: var(--osmos-card-bg) !important;
+        border: 1px solid var(--osmos-border) !important;
+        border-radius: var(--osmos-radius) !important;
+        box-shadow: var(--osmos-shadow-sm) !important;
+        padding: 8px !important;
+        overflow: hidden;
+    }}
+
+    [data-testid="stPlotlyChart"] svg,
+    [data-testid="stPlotlyChart"] .main-svg {{
+        background: transparent !important;
+    }}
+
+    [data-testid="stSelectbox"],
+    [data-testid="stMultiSelect"],
+    [data-testid="stRadio"],
+    [data-testid="stSlider"],
+    [data-testid="stCheckbox"] {{
+        color: var(--osmos-text) !important;
+    }}
+
+    [data-testid="stSelectbox"] label,
+    [data-testid="stMultiSelect"] label,
+    [data-testid="stRadio"] label,
+    [data-testid="stSlider"] label,
+    [data-testid="stCheckbox"] label {{
+        color: var(--osmos-secondary) !important;
+        font-weight: 700 !important;
+        background: transparent !important;
+    }}
+
+    [data-baseweb="checkbox"] {{
+        background: transparent !important;
+    }}
+    [data-baseweb="checkbox"] > div {{
+        background: transparent !important;
+    }}
+    [data-baseweb="checkbox"] > div:first-child {{
+        background: var(--osmos-bg-soft) !important;
+        border-color: var(--osmos-border) !important;
+        border-radius: 4px !important;
+    }}
+
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] input,
+    [data-baseweb="select"] svg,
+    [data-baseweb="popover"] span,
+    [data-baseweb="popover"] div,
+    [data-baseweb="menu"] div,
     [data-baseweb="menu"] span {{
         color: var(--osmos-text) !important;
         fill: var(--osmos-text) !important;
@@ -744,6 +796,15 @@ def build_design_system_css(theme="Light"):
         box-shadow: var(--osmos-shadow-sm) !important;
         letter-spacing: 0 !important;
         white-space: normal !important;
+    }}
+
+    [data-testid="stMain"] .stButton > button p,
+    [data-testid="stMain"] .stButton > button div,
+    [data-testid="stMain"] .stButton > button span,
+    section.main .stButton > button p,
+    section.main .stButton > button div,
+    section.main .stButton > button span {{
+        color: #ffffff !important;
     }}
 
     [data-testid="stMain"] .stButton > button:hover,

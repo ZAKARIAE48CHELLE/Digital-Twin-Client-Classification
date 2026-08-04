@@ -587,8 +587,8 @@ st.markdown("""
     [data-testid="stNumberInput"] > div > div > input,
     [data-testid="stTextArea"] > div > div > textarea,
     [data-baseweb="select"] > div {
-        background: #0a0f18 !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        background: var(--panel) !important;
+        border: 1px solid var(--line) !important;
         border-radius: var(--radius) !important;
         color: var(--text-main) !important;
         min-height: 42px !important;
@@ -654,10 +654,19 @@ st.markdown("""
         border-color: var(--cyan) !important;
     }
 
-    [data-testid="stCheckbox"] label, [data-testid="stRadio"] label { color: var(--text-muted) !important; }
+    [data-testid="stCheckbox"] label, [data-testid="stRadio"] label {
+        color: var(--text-main) !important;
+        background: transparent !important;
+    }
+    [data-baseweb="checkbox"] {
+        background: transparent !important;
+    }
     [data-baseweb="checkbox"] > div {
-        background: #0a0f18 !important;
-        border-color: rgba(34, 211, 238, 0.36) !important;
+        background: transparent !important;
+    }
+    [data-baseweb="checkbox"] > div:first-child {
+        background: var(--panel) !important;
+        border-color: var(--line) !important;
         border-radius: 4px !important;
     }
 
