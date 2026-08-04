@@ -83,24 +83,39 @@ def compute_global_confidence(agent_outputs: List[AgentOutput]) -> float:
     return round(sum(scores) / len(scores), 2)
 
 
-def compute_system_readiness_summary(agent_outputs: List[AgentOutput]) -> Dict[str, Any]:
+def compute_system_readiness_summary(agent_outputs: List[Any]) -> Dict[str, Any]:
     """Synthesizes an executive System Readiness Summary across operational agents."""
-    by_id: Dict[str, AgentOutput] = {out.agent_id: out for out in agent_outputs}
+    by_id: Dict[str, Any] = {}
+    for out in agent_outputs or []:
+        aid = getattr(out, "agent_id", None) if hasattr(out, "agent_id") else (out.get("agent_id") if isinstance(out, dict) else None)
+        if aid:
+            by_id[aid] = out
 
-    db_out = by_id.get("database_audit")
-    journey_out = by_id.get("journey")
-    campaign_out = by_id.get("campaign")
-    ui_out = by_id.get("ui_ux")
+    def get_status(out_item: Any) -> str:
+        if not out_item:
+            return "Not Checked"
+        if hasattr(out_item, "status"):
+            return str(out_item.status)
+        if isinstance(out_item, dict):
+            return str(out_item.get("status", "Not Checked"))
+        return "Not Checked"
+
+    db_status = get_status(by_id.get("database_audit"))
+    journey_status = get_status(by_id.get("journey"))
+    campaign_status = get_status(by_id.get("campaign"))
+    ui_status = get_status(by_id.get("ui_ux"))
+
+    statuses = [get_status(out) for out in agent_outputs or []]
 
     return {
-        "database_integrity": db_out.status if db_out else "Not Checked",
-        "journey_readiness": journey_out.status if journey_out else "Not Checked",
-        "campaign_readiness": campaign_out.status if campaign_out else "Not Checked",
-        "demo_readiness": ui_out.status if ui_out else "Not Checked",
-        "total_agents_run": len(agent_outputs),
-        "critical_agent_count": sum(1 for out in agent_outputs if out.status == "Critical"),
-        "warning_agent_count": sum(1 for out in agent_outputs if out.status == "Warning"),
-        "ok_agent_count": sum(1 for out in agent_outputs if out.status == "OK"),
+        "database_integrity": db_status,
+        "journey_readiness": journey_status,
+        "campaign_readiness": campaign_status,
+        "demo_readiness": ui_status,
+        "total_agents_run": len(agent_outputs or []),
+        "critical_agent_count": sum(1 for s in statuses if s == "Critical"),
+        "warning_agent_count": sum(1 for s in statuses if s == "Warning"),
+        "ok_agent_count": sum(1 for s in statuses if s == "OK"),
     }
 
 

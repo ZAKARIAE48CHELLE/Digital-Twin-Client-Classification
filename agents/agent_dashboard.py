@@ -12,6 +12,7 @@ from typing import Optional, List, Dict, Any
 import pandas as pd
 import streamlit as st
 
+from agents.agent_schemas import AgentOutput
 from agents.orchestrator_agent import OrchestratorAgent, run_orchestrated_analysis
 from agents.agent_registry import list_agents, CORE_AGENT_IDS, OPERATIONAL_AGENT_IDS
 from agents.result_aggregator import compute_system_readiness_summary
