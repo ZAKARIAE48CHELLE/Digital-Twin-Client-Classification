@@ -554,31 +554,37 @@ st.markdown("""
     .stButton > button, [data-testid="stFormSubmitButton"] button {
         min-height: 42px !important;
         border-radius: var(--radius) !important;
-        border: 1px solid rgba(34, 211, 238, 0.4) !important;
-        background: linear-gradient(135deg, var(--teal), #0284c7) !important;
-        color: #ffffff !important;
+        border: 1px solid var(--line) !important;
+        background: var(--panel) !important;
+        color: var(--text-main) !important;
         font-weight: 700 !important;
         font-size: 13.5px !important;
-        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25) !important;
+        box-shadow: var(--shadow-sm) !important;
         white-space: normal !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    .stButton > button:hover, [data-testid="stFormSubmitButton"] button:hover {
-        transform: translateY(-2px) !important;
-        border-color: var(--cyan) !important;
-        box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4) !important;
+    .stButton > button p, .stButton > button span {
+        color: var(--text-main) !important;
     }
 
-    .stButton > button[kind="secondary"] {
-        background: rgba(255, 255, 255, 0.04) !important;
-        color: var(--cyan) !important;
-        border-color: rgba(34, 211, 238, 0.25) !important;
-        box-shadow: none !important;
-    }
-    .stButton > button[kind="secondary"]:hover {
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        border-color: var(--cyan) !important;
         background: rgba(34, 211, 238, 0.1) !important;
-        border-color: rgba(34, 211, 238, 0.5) !important;
+        color: var(--cyan) !important;
+    }
+
+    .stButton > button[kind="primary"], .stButton > button[data-testid="stBaseButton-primary"], [data-testid="stFormSubmitButton"] button {
+        background: linear-gradient(135deg, var(--teal), #0284c7) !important;
+        color: #ffffff !important;
+        border-color: var(--cyan) !important;
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25) !important;
+    }
+
+    .stButton > button[kind="primary"] p, .stButton > button[data-testid="stBaseButton-primary"] p,
+    .stButton > button[kind="primary"] span, .stButton > button[data-testid="stBaseButton-primary"] span {
+        color: #ffffff !important;
     }
 
     /* Inputs & Controls */

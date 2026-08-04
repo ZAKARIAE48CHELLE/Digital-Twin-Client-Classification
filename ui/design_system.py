@@ -781,20 +781,22 @@ def build_design_system_css(theme="Light"):
     [data-testid="stExpander"] summary:hover {{
         background: var(--osmos-bg-soft) !important;
     }}
+    /* Standard & Secondary Buttons */
     [data-testid="stMain"] .stButton > button,
-    [data-testid="stMain"] [data-testid="stFormSubmitButton"] button,
     section.main .stButton > button,
-    section.main [data-testid="stFormSubmitButton"] button {{
-        min-height: 42px !important;
+    .stButton > button,
+    [data-testid="stBaseButton-secondary"],
+    button[kind="secondary"] {{
+        min-height: 40px !important;
         border-radius: 12px !important;
-        border: 1px solid var(--osmos-primary-accent) !important;
-        background: var(--osmos-primary) !important;
-        color: #ffffff !important;
-        font-weight: 800 !important;
+        border: 1px solid var(--osmos-border-strong) !important;
+        background: var(--osmos-card-bg) !important;
+        color: var(--osmos-text) !important;
+        font-weight: 700 !important;
         font-size: 13.5px !important;
         box-shadow: var(--osmos-shadow-sm) !important;
-        letter-spacing: 0 !important;
         white-space: normal !important;
+        letter-spacing: 0 !important;
     }}
 
     [data-testid="stMain"] .stButton > button p,
@@ -802,26 +804,86 @@ def build_design_system_css(theme="Light"):
     [data-testid="stMain"] .stButton > button span,
     section.main .stButton > button p,
     section.main .stButton > button div,
-    section.main .stButton > button span {{
-        color: #ffffff !important;
+    section.main .stButton > button span,
+    .stButton > button p,
+    .stButton > button div,
+    .stButton > button span,
+    [data-testid="stBaseButton-secondary"] p,
+    [data-testid="stBaseButton-secondary"] span,
+    button[kind="secondary"] p,
+    button[kind="secondary"] span {{
+        color: var(--osmos-text) !important;
     }}
 
     [data-testid="stMain"] .stButton > button:hover,
-    [data-testid="stMain"] [data-testid="stFormSubmitButton"] button:hover,
     section.main .stButton > button:hover,
-    section.main [data-testid="stFormSubmitButton"] button:hover {{
+    .stButton > button:hover,
+    [data-testid="stBaseButton-secondary"]:hover,
+    button[kind="secondary"]:hover {{
         transform: translateY(-1px) !important;
-        background: var(--osmos-primary-accent) !important;
+        background: var(--osmos-primary-soft) !important;
         border-color: var(--osmos-primary-accent) !important;
-        box-shadow: var(--osmos-shadow) !important;
+        color: var(--osmos-primary) !important;
     }}
 
-    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-secondary"],
-    section.main .stButton > button[data-testid="stBaseButton-secondary"] {{
-        background: var(--osmos-card-bg) !important;
+    [data-testid="stMain"] .stButton > button:hover p,
+    [data-testid="stMain"] .stButton > button:hover span,
+    section.main .stButton > button:hover p,
+    section.main .stButton > button:hover span {{
         color: var(--osmos-primary) !important;
-        border-color: var(--osmos-border) !important;
-        box-shadow: none !important;
+    }}
+
+    /* Primary Buttons */
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"],
+    [data-testid="stMain"] .stButton > button[kind="primary"],
+    section.main .stButton > button[data-testid="stBaseButton-primary"],
+    section.main .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"],
+    .stButton > button[kind="primary"],
+    [data-testid="stFormSubmitButton"] button {{
+        min-height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--osmos-primary-accent) !important;
+        background: var(--osmos-primary) !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+        box-shadow: var(--osmos-shadow-sm) !important;
+        letter-spacing: 0.2px !important;
+        white-space: normal !important;
+    }}
+
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"] p,
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"] div,
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"] span,
+    [data-testid="stMain"] .stButton > button[kind="primary"] p,
+    [data-testid="stMain"] .stButton > button[kind="primary"] div,
+    [data-testid="stMain"] .stButton > button[kind="primary"] span,
+    section.main .stButton > button[data-testid="stBaseButton-primary"] p,
+    section.main .stButton > button[data-testid="stBaseButton-primary"] span,
+    section.main .stButton > button[kind="primary"] p,
+    section.main .stButton > button[kind="primary"] span,
+    .stButton > button[data-testid="stBaseButton-primary"] p,
+    .stButton > button[data-testid="stBaseButton-primary"] span,
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    [data-testid="stFormSubmitButton"] button p,
+    [data-testid="stFormSubmitButton"] button span {{
+        color: #ffffff !important;
+    }}
+
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stMain"] .stButton > button[kind="primary"]:hover,
+    section.main .stButton > button[data-testid="stBaseButton-primary"]:hover,
+    section.main .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="stBaseButton-primary"]:hover,
+    .stButton > button[kind="primary"]:hover,
+    [data-testid="stFormSubmitButton"] button:hover {{
+        transform: translateY(-2px) !important;
+        background: var(--osmos-primary-accent) !important;
+        border-color: var(--osmos-primary-accent) !important;
+        color: #ffffff !important;
+        box-shadow: var(--osmos-shadow) !important;
     }}
 
 
@@ -1064,6 +1126,19 @@ def build_design_system_css(theme="Light"):
         box-shadow: var(--osmos-shadow) !important;
         border: 1px solid var(--osmos-primary-accent) !important;
         transition: all 0.18s ease-in-out !important;
+    }}
+
+    .st-key-btn_open_page_guide button p,
+    .st-key-btn_open_page_guide button div,
+    .st-key-btn_open_page_guide button span,
+    .st-key-btn_close_page_guide button p,
+    .st-key-btn_close_page_guide button div,
+    .st-key-btn_close_page_guide button span,
+    div[data-testid="stButton"]:has(button[key="btn_open_page_guide"]) button p,
+    div[data-testid="stButton"]:has(button[key="btn_open_page_guide"]) button span,
+    div[data-testid="stButton"]:has(button[key="btn_close_page_guide"]) button p,
+    div[data-testid="stButton"]:has(button[key="btn_close_page_guide"]) button span {{
+        color: #ffffff !important;
     }}
 
     .st-key-btn_open_page_guide button:hover,
