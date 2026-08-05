@@ -47,16 +47,24 @@ PFA-Summer/
 │   ├── digital_twin_explainer.py   # Deterministic explanations & LLM summary generators
 │   └── digital_twin_dashboard.py   # Streamlit UI Explorer for Digital Twins
 │
-├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1 - 8.5)
+├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1 - 8.7)
 │   ├── base_agent.py               # Abstract BaseAgent & read-only guard
 │   ├── agent_schemas.py            # Dataclass schemas & evidence traceability
 │   ├── debate_schemas.py           # Agent debate & consensus schemas
-│   ├── context_builder.py          # Read-only entity context assembler (Phase 8.5 knowledge context)
+│   ├── context_builder.py          # Read-only entity context assembler
 │   ├── agent_repository.py         # Persistence repository (agent_runs, agent_outputs, approval_queue)
 │   ├── conflict_detector.py        # Rule-based conflict detection engine
 │   ├── consensus_builder.py       # Consensus synthesis & priority action selection
 │   ├── debate_engine.py            # Deterministic agent debate engine
-│   ├── orchestrator_agent.py       # Orchestrator & on-demand LLM summary engine
+│   ├── orchestrator_agent.py       # Legacy orchestrator & on-demand LLM summary engine
+│   ├── langgraph_supervision/      # LangGraph Workflow Orchestration (Phase 8.7)
+│   │   ├── graph_state.py          # TypedDict SupervisionGraphState schema
+│   │   ├── graph_nodes.py          # Read-only node functions wrapping 8 agents & debate
+│   │   ├── graph_router.py         # Conditional edge routing logic
+│   │   ├── graph_builder.py        # StateGraph compilation engine
+│   │   ├── graph_runner.py         # Entrypoint run_langgraph_supervision() & legacy fallback
+│   │   ├── README.md               # LangGraph architecture documentation
+│   │   └── test_langgraph_supervision.py # Phase 8.7 unit test suite
 │   ├── result_aggregator.py        # Status aggregation & Next Best Action selection
 │   ├── digital_twin_agent.py       # Digital Twin profile & event agent
 │   ├── clv_agent.py                # CLV monetary tier & VIP protection agent
@@ -67,7 +75,7 @@ PFA-Summer/
 │   ├── database_audit_agent.py     # PostgreSQL schema & orphaned event reference audit agent
 │   ├── ui_ux_agent.py              # UI readiness & demo suitability agent
 │   ├── agent_registry.py           # Central agent registry (8 active agents)
-│   ├── agent_dashboard.py          # Agent Supervision Center Streamlit dashboard (Debate, Memory & Queue tabs)
+│   ├── agent_dashboard.py          # Agent Supervision Center Streamlit dashboard (LangGraph & Legacy selector)
 │   ├── test_agents.py              # 8-agent unit test suite
 │   ├── test_agent_memory.py        # Agent memory & approval queue test suite
 │   └── test_agent_debate.py        # Agent collaboration & debate test suite

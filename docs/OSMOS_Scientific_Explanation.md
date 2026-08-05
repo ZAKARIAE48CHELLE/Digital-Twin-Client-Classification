@@ -46,7 +46,7 @@ graph TD
 
 ---
 
-## 4. Multi-Agent Supervision, Debate, Knowledge & Reporting Layer (Phase 8.1 - 8.6)
+## 4. Multi-Agent Supervision, Debate, Knowledge & LangGraph Orchestration (Phase 8.1 - 8.7)
 
 The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to 8 specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, persona consistency, campaign outcomes, journey step integrity, database auditability, and UI/demo readiness.
 
@@ -54,5 +54,7 @@ Phase 8.4 introduced **Agent Collaboration & Debate Mode**, where agents compare
 
 Phase 8.5 introduced **Agent Knowledge Base & Documentation Memory**, allowing agents to retrieve internal documentation, governance rules, and decision history (`agent_runs`, `agent_outputs`, `agent_approval_queue`).
 
-Phase 8.6 implements the **Executive Report Generator**. OSMOS can transform Digital Twin states, ML scores, 8-agent supervision reports, debate consensus decisions, knowledge evidence, approval queue items, campaign history, and journey event traces into clean, structured, downloadable executive reports (Markdown `.md`, styled HTML `.html`, and PDF `.pdf`). All report compilation operations remain 100% read-only, auditable, and human-governed.
+Phase 8.6 implemented the **Executive Report Generator** (`reports/` package).
+
+Phase 8.7 introduces **LangGraph Supervision Workflow Orchestration** (`agents/langgraph_supervision/` package). OSMOS uses LangGraph as an explicit stateful workflow orchestration layer. Existing deterministic agents are wrapped as graph nodes (`build_context_node`, `run_core_agents_node`, `run_operational_agents_node`, `aggregate_results_node`, `debate_node`, `finalize_orchestration_node`, `prepare_approval_actions_node`), while conditional edges route graph state based on error states and debate flags. This makes multi-agent supervision stateful, inspectable, modular, and easier to extend while preserving read-only governance, deterministic execution, and human approval.
 

@@ -13,7 +13,9 @@ import streamlit as st
 
 from agents.agent_schemas import AgentOutput
 from agents.orchestrator_agent import OrchestratorAgent, run_orchestrated_analysis
+from agents.langgraph_supervision import run_langgraph_supervision
 from agents.agent_registry import list_agents, CORE_AGENT_IDS, OPERATIONAL_AGENT_IDS
+
 from agents.result_aggregator import compute_system_readiness_summary
 from agents.agent_repository import (
     is_agent_db_available,
@@ -196,25 +198,66 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
 
         st.session_state["selected_agents_set"] = set(selected_agent_ids)
 
-        st.write("")
-        include_knowledge_memory = st.checkbox("Include Knowledge Memory (Docs, Governance Rules & Decision History)", value=False, key="chk_knowledge_memory")
+        eng_col1, eng_col2 = st.columns([2.5, 2.5])
+        with eng_col1:
+            include_knowledge_memory = st.checkbox("Include Knowledge Memory (Docs, Rules & Decision History)", value=False, key="chk_knowledge_memory")
+        with eng_col2:
+            execution_engine = st.selectbox(
+                "Agent Execution Engine:",
+                options=["LangGraph Workflow (StateGraph)", "Legacy Orchestrator"],
+                index=0,
+                key="sel_exec_engine",
+                help="Select between stateful LangGraph workflow engine and legacy orchestrator.",
+            )
+
+        # Visual LangGraph Workflow Summary Diagram
+        st.markdown(
+            f"""
+            <div style="background: var(--osmos-bg-soft); border: 1px solid var(--osmos-border); border-radius: 8px; 
+                        padding: 10px 16px; margin: 8px 0 16px 0; font-size: 13px; color: var(--osmos-text);">
+                <div style="font-weight: 700; color: var(--osmos-primary-accent); margin-bottom: 4px;">
+                    ⚡ Execution Pipeline: {execution_engine}
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 600;">
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Context Builder</span> ➔
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Core Agents</span> ➔
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Operational Agents</span> ➔
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Debate Engine</span> ➔
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Consensus</span> ➔
+                    <span style="background: var(--osmos-card-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--osmos-border);">Approval Prep</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         if st.button("Run Multi-Agent Analysis", type="primary", use_container_width=True, key="btn_run_analysis"):
-            with st.spinner(f"Orchestrator building context and executing {len(selected_agent_ids)} agents..."):
-                report = run_orchestrated_analysis(
-                    entity_id=selected_entity,
-                    df=df,
-                    history_df=history_df,
-                    selected_agent_ids=selected_agent_ids,
-                    debate_mode=enable_debate_mode,
-                    include_knowledge=include_knowledge_memory,
-                )
+            with st.spinner(f"Executing {execution_engine} for {len(selected_agent_ids)} agents..."):
+                if "LangGraph" in execution_engine:
+                    report = run_langgraph_supervision(
+                        entity_id=selected_entity,
+                        df=df,
+                        selected_agents=selected_agent_ids,
+                        include_knowledge=include_knowledge_memory,
+                        debate_mode=enable_debate_mode,
+                    )
+                else:
+                    report = run_orchestrated_analysis(
+                        entity_id=selected_entity,
+                        df=df,
+                        history_df=history_df,
+                        selected_agent_ids=selected_agent_ids,
+                        debate_mode=enable_debate_mode,
+                        include_knowledge=include_knowledge_memory,
+                    )
                 st.session_state["agent_supervision_report"] = report
+                st.session_state["execution_engine_used"] = execution_engine
                 st.session_state.pop("agent_llm_summary", None)
                 st.session_state.pop("agent_llm_debate_summary", None)
 
         # Display Analysis Results
         report = st.session_state.get("agent_supervision_report")
+        engine_used = st.session_state.get("execution_engine_used", "LangGraph Workflow")
         if report and report.entity_id == selected_entity:
             st.markdown("---")
 
@@ -226,7 +269,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <div>
                             <span style="color: var(--osmos-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
-                                Multi-Agent Orchestrator Supervision Report
+                                Multi-Agent Orchestrator Supervision Report ({engine_used})
                             </span>
                             <h3 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: var(--osmos-text);">Entity [{report.entity_id}]</h3>
                         </div>
@@ -247,7 +290,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                         </p>
                     </div>
                     <div style="margin-top: 12px; font-size: 12px; color: var(--osmos-muted); text-align: right;">
-                        Global Confidence Score: <strong>{report.confidence_score * 100:.0f}%</strong> | Mode: <strong>Read-Only</strong>
+                        Engine: <strong>{engine_used}</strong> | Confidence: <strong>{report.confidence_score * 100:.0f}%</strong> | Mode: <strong>Read-Only</strong>
                     </div>
                 </div>
                 """,

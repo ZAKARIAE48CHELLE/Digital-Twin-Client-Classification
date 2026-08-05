@@ -1,4 +1,4 @@
-# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.6)
+# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.7)
 
 ## Overview
 The **Multi-Agent Supervision Layer** transforms OSMOS into a **supervised intelligent CRM system**.
@@ -13,33 +13,45 @@ A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and 
 7. **Database Audit Agent** (PostgreSQL schema & data integrity audit)
 8. **UI/UX Agent** (UI readiness & presentation suitability)
 
-Phase 8.4 introduced **Agent Collaboration & Debate Mode**, Phase 8.5 added **Agent Knowledge Base & Documentation Memory**, and Phase 8.6 implements the **Executive Report Generator**:
+Phase 8.4 introduced **Agent Collaboration & Debate Mode**, Phase 8.5 added **Agent Knowledge Base & Documentation Memory**, Phase 8.6 implemented the **Executive Report Generator**, and Phase 8.7 introduces **LangGraph Supervision Workflow Orchestration**:
 ```
-  Documentation & Governance Rules   Decision Memory History (Runs & Approvals)
-                  │                                     │
-                  └───────────────────┬─────────────────┘
-                                      │
-                                      ▼
-                          Agent Knowledge Base
-                                      │
-                                      ▼
-                          Specialized Agents (8)
-                                      │
-                                      ▼
-                        Agent Debate Engine (8.4)
-                                      │
-                                      ▼
-                            Orchestrator Output
-                                      │
-                   ┌──────────────────┴──────────────────┐
-                   ▼                                     ▼
-          Human Approval Queue              Executive Report Generator (8.6)
-                                            (Markdown / HTML / PDF Exports)
+                        ┌─────────────────────────┐
+                        │      START WORKFLOW     │
+                        └────────────┬────────────┘
+                                     │
+                                     ▼
+                         build_context_node (8.5)
+                                     │
+                                     ▼
+                          run_core_agents_node (4)
+                                     │
+                                     ▼
+                       run_operational_agents_node (4)
+                                     │
+                                     ▼
+                          aggregate_results_node
+                                     │
+                           ┌─────────┴─────────┐
+                           │ debate_mode=True? │
+                           └────┬──────────┬────┘
+                         YES    │          │    NO
+                         ┌──────┘          └──────┐
+                         ▼                        ▼
+                    debate_node              finalize_node
+                         │                        │
+                         └──────────┬─────────────┘
+                                    │
+                                    ▼
+                       prepare_approval_actions_node
+                                    │
+                                    ▼
+                           END (OrchestratorOutput)
 ```
 
 > 🛡️ **Human-in-the-Loop & Read-Only Governance Guarantee**:
-> - Knowledge Base retrieval, debate execution, and report generation are **100% read-only** and **deterministic by default**.
+> - LangGraph workflows, debate execution, and report generation are **100% read-only** and **deterministic by default**.
 > - Agents detect, explain, cite documentation, and recommend actions but **never** modify customer data or execute campaigns automatically.
+> - Legacy Orchestrator remains fully functional as fallback.
 > - All operational actions require explicit administrative validation in the **Human Approval Queue**.
 
 ---
