@@ -105,8 +105,17 @@ def create_chunks_from_sections(
             })
             chunk_order += 1
         else:
-            # Paragraph or character split
-            paragraphs = s_content.split("\n\n")
+            # Paragraph or line/character split
+            raw_blocks = s_content.split("\n\n")
+            paragraphs: List[str] = []
+            for b in raw_blocks:
+                if len(b) > max_chars:
+                    # Break long block into max_chars pieces
+                    for i in range(0, len(b), max_chars):
+                        paragraphs.append(b[i:i + max_chars])
+                else:
+                    paragraphs.append(b)
+
             current_chunk: List[str] = []
             current_len = 0
 
