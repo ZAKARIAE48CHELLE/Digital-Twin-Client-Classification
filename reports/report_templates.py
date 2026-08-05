@@ -5,7 +5,18 @@ Markdown and HTML section renderers for executive reports.
 """
 
 from typing import Any, Dict, List
+import pandas as pd
 from reports.report_schemas import ReportContext
+
+
+def safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely converts value to float with default fallback for None/invalid types."""
+    if val is None or pd.isna(val):
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
 
 
 def render_report_title_page(ctx: ReportContext) -> str:
@@ -27,8 +38,8 @@ def render_report_title_page(ctx: ReportContext) -> str:
 def render_executive_summary(ctx: ReportContext) -> str:
     """Renders high-level executive summary callout block."""
     scores = ctx.latest_scores
-    churn = scores.get("churn_risk_score", 0.0)
-    clv = scores.get("predicted_clv_mad", 0.0)
+    churn = safe_float(scores.get("churn_risk_score"), 0.0)
+    clv = safe_float(scores.get("predicted_clv_mad"), 0.0)
 
     risk_label = f"High Churn Risk ({churn * 100:.1f}%)" if churn >= 0.50 else "Low Churn Friction"
     opp_label = f"High Monetary Potential ({clv:,.2f} MAD)" if clv >= 3000.0 else "Standard Engagement"
@@ -60,7 +71,7 @@ def render_digital_twin_section(ctx: ReportContext) -> str:
 | **Entity Type** | `{dt.get('entity_type', 'Client')}` | **Region** | {dt.get('region', 'N/A')} |
 | **Source Channel** | {dt.get('source_channel', 'Direct')} | **Preferred Device** | {dt.get('preferred_device', 'Desktop')} |
 | **Category Interest** | {dt.get('preferred_category', 'General')} | **Age Group** | {dt.get('age_group', '30-45')} |
-| **Marketing Consent** | `{dt.get('marketing_consent', True)}` | **Price Sensitivity** | {float(dt.get('price_sensitivity', 0.5)):.2f} |
+| **Marketing Consent** | `{dt.get('marketing_consent', True)}` | **Price Sensitivity** | {safe_float(dt.get('price_sensitivity'), 0.5):.2f} |
 
 ---
 """
@@ -74,10 +85,10 @@ def render_scores_section(ctx: ReportContext) -> str:
 
     return f"""## 📈 3. ML & Analytical Metrics
 
-- **Predicted CLV Amount:** `{float(s.get('predicted_clv_mad', 0.0)):,.2f} MAD`
-- **CLV Segment:** `{s.get('clv_segment', 'Unknown')}` (Score: `{float(s.get('clv_score', 0.0)):.1f}/100`)
-- **RFM Score:** `{float(s.get('rfm_score', 0.0)):.3f}` (Recency: `{float(s.get('recency_days', 0.0)):.0f} days`, Freq: `{float(s.get('frequency', 0.0)):.0f}`, Monetary: `{float(s.get('monetary_mad', 0.0)):,.2f} MAD`)
-- **Churn Risk Probability:** `{float(s.get('churn_risk_score', 0.0)) * 100:.1f}%`
+- **Predicted CLV Amount:** `{safe_float(s.get('predicted_clv_mad'), 0.0):,.2f} MAD`
+- **CLV Segment:** `{s.get('clv_segment', 'Unknown')}` (Score: `{safe_float(s.get('clv_score'), 0.0):.1f}/100`)
+- **RFM Score:** `{safe_float(s.get('rfm_score'), 0.0):.3f}` (Recency: `{safe_float(s.get('recency_days'), 0.0):.0f} days`, Freq: `{safe_float(s.get('frequency'), 0.0):.0f}`, Monetary: `{safe_float(s.get('monetary_mad'), 0.0):,.2f} MAD`)
+- **Churn Risk Probability:** `{safe_float(s.get('churn_risk_score'), 0.0) * 100:.1f}%`
 
 ---
 """
