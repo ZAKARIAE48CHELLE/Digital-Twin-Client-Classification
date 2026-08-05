@@ -37,7 +37,7 @@ class TestLangGraphSupervision(unittest.TestCase):
         self.assertIsInstance(res, OrchestratorOutput)
         self.assertEqual(res.entity_id, "P_DEMO_001")
         self.assertIsNotNone(res.debate_output)
-        self.assertIsNotNone(res.debate_output.consensus)
+        self.assertIsNotNone(res.debate_output.get("consensus"))
 
     def test_run_langgraph_supervision_with_knowledge(self):
         """Verifies LangGraph supervision supports include_knowledge=True."""

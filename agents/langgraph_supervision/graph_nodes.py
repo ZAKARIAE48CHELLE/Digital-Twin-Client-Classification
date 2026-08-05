@@ -115,7 +115,7 @@ def run_core_agents_node(state: SupervisionGraphState) -> Dict[str, Any]:
         agent = get_agent(agent_id)
         if agent:
             try:
-                res = agent.analyze(ctx_obj)
+                res = agent.safe_analyze(ctx_obj)
                 core_outputs.append(res.to_dict())
             except Exception as e:
                 logger.error(f"Core agent [{agent_id}] error: {e}")
@@ -143,7 +143,7 @@ def run_operational_agents_node(state: SupervisionGraphState) -> Dict[str, Any]:
         agent = get_agent(agent_id)
         if agent:
             try:
-                res = agent.analyze(ctx_obj)
+                res = agent.safe_analyze(ctx_obj)
                 op_outputs.append(res.to_dict())
             except Exception as e:
                 logger.error(f"Operational agent [{agent_id}] error: {e}")
