@@ -373,8 +373,68 @@ CREATE TABLE IF NOT EXISTS journey_steps (
 CREATE INDEX IF NOT EXISTS idx_j_steps_scenario_id ON journey_steps(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_j_steps_entity_id ON journey_steps(entity_id);
 CREATE INDEX IF NOT EXISTS idx_j_steps_stage_name ON journey_steps(stage_name);
-CREATE INDEX IF NOT EXISTS idx_j_steps_step_order ON journey_steps(step_order);
+CREATE INDEX IF NOT EXISTS idx_j_steps_step_order ON journey_steps(step_order);-- Q. Agent Supervision Runs (Phase 8.3)
+CREATE TABLE IF NOT EXISTS agent_runs (
+    run_id SERIAL PRIMARY KEY,
+    entity_id TEXT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    run_type TEXT DEFAULT 'Entity Supervision',
+    selected_agents JSONB,
+    global_status TEXT,
+    final_summary TEXT,
+    recommended_next_best_action TEXT,
+    confidence_score NUMERIC(5, 4),
+    storage_mode TEXT,
+    triggered_by TEXT DEFAULT 'admin',
+    llm_summary_generated BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
+CREATE INDEX IF NOT EXISTS idx_agent_runs_entity_id ON agent_runs(entity_id);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_global_status ON agent_runs(global_status);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_created_at ON agent_runs(created_at);
 
+-- R. Specialized Agent Outputs (Phase 8.3)
+CREATE TABLE IF NOT EXISTS agent_outputs (
+    output_id SERIAL PRIMARY KEY,
+    run_id INTEGER REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+    agent_id TEXT,
+    agent_name TEXT,
+    status TEXT,
+    summary TEXT,
+    observations JSONB,
+    risks JSONB,
+    opportunities JSONB,
+    recommendations JSONB,
+    evidence JSONB,
+    confidence_score NUMERIC(5, 4),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
+CREATE INDEX IF NOT EXISTS idx_agent_outputs_run_id ON agent_outputs(run_id);
+CREATE INDEX IF NOT EXISTS idx_agent_outputs_agent_id ON agent_outputs(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_outputs_status ON agent_outputs(status);
+CREATE INDEX IF NOT EXISTS idx_agent_outputs_created_at ON agent_outputs(created_at);
+
+-- S. Human Approval Queue (Phase 8.3)
+CREATE TABLE IF NOT EXISTS agent_approval_queue (
+    approval_id SERIAL PRIMARY KEY,
+    run_id INTEGER REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+    entity_id TEXT NULL REFERENCES entities(entity_id) ON DELETE CASCADE,
+    proposed_action_type TEXT,
+    proposed_action_title TEXT,
+    proposed_action_description TEXT,
+    source_agent TEXT,
+    priority TEXT DEFAULT 'Medium',
+    status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Converted to Campaign Draft', 'Ignored')),
+    admin_comment TEXT,
+    approved_by TEXT,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    rejected_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_appr_entity_id ON agent_approval_queue(entity_id);
+CREATE INDEX IF NOT EXISTS idx_agent_appr_status ON agent_approval_queue(status);
+CREATE INDEX IF NOT EXISTS idx_agent_appr_priority ON agent_approval_queue(priority);
+CREATE INDEX IF NOT EXISTS idx_agent_appr_created_at ON agent_approval_queue(created_at);
 

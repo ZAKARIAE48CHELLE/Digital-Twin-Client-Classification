@@ -179,6 +179,66 @@ Return ONLY valid JSON matching this exact schema:
             "suggested_admin_actions_en": orchestrator_output.final_recommendations[:3],
         }
 
+    def prepare_approval_actions(self, orchestrator_output: OrchestratorOutput) -> List[Dict[str, Any]]:
+        """
+        Converts consolidated recommendations into structured approval action items.
+        Action execution is NEVER automated; items remain Pending until administrative review.
+        """
+        items: List[Dict[str, Any]] = []
+
+        # 1. Primary Next Best Action item
+        if orchestrator_output.recommended_next_best_action:
+            nba = orchestrator_output.recommended_next_best_action
+            prio = "High" if orchestrator_output.global_status in {"Critical", "Warning"} else "Medium"
+            items.append(
+                {
+                    "proposed_action_type": "Next Best Action",
+                    "proposed_action_title": f"Action for {orchestrator_output.entity_id}",
+                    "proposed_action_description": nba,
+                    "source_agent": "Orchestrator",
+                    "priority": prio,
+                }
+            )
+
+        # 2. Individual recommendations
+        for rec in orchestrator_output.final_recommendations[:4]:
+            if rec != orchestrator_output.recommended_next_best_action:
+                items.append(
+                    {
+                        "proposed_action_type": "Supervision Recommendation",
+                        "proposed_action_title": rec[:60] + "..." if len(rec) > 60 else rec,
+                        "proposed_action_description": rec,
+                        "source_agent": "Specialized Agents",
+                        "priority": "Medium",
+                    }
+                )
+
+        return items
+
+    def save_supervision_run(
+        self,
+        orchestrator_output: OrchestratorOutput,
+        selected_agents: Optional[List[str]] = None,
+        storage_mode: str = "postgres",
+    ) -> Optional[int]:
+        """
+        Persists supervision run and outputs into PostgreSQL via agent_repository.
+        Executed strictly when requested by explicit admin button click.
+        """
+        from agents.agent_repository import save_agent_run, save_agent_outputs
+
+        run_id = save_agent_run(
+            orchestrator_output=orchestrator_output,
+            selected_agents=selected_agents,
+            storage_mode=storage_mode,
+            triggered_by="admin",
+        )
+
+        if run_id:
+            save_agent_outputs(run_id, orchestrator_output.agent_outputs)
+
+        return run_id
+
 
 def run_orchestrated_analysis(
     entity_id: str,

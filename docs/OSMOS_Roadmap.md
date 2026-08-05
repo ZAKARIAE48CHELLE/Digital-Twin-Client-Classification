@@ -37,7 +37,7 @@ gantt
 - **Phase 6.5: Documentation & Scientific Explanation Package**: Complete documentation suite, architectural diagrams, scientific frameworks, and demo guides.
 - **Phase 7: Closed-Loop Campaign Simulation**: Campaign draft dispatcher, probabilistic response simulator, single-entity event generator, and closed-loop CLV impact tracking.
 - **Phase 7.5: Digital Twin Journey Tree Simulator**: 5-stage customer lifecycle scenario engine, Mermaid tree visualization, timeline tracking, and Presentation Mode.
-- **Phase 8: Multi-Agent Supervision Layer (Phase 8.1 & 8.2)**: Read-only deterministic multi-agent supervision framework (`OrchestratorAgent`, `DigitalTwinAgent`, `CLVAgent`, `ChurnRiskAgent`, `PersonaAgent`, `CampaignAgent`, `JourneyAgent`, `DatabaseAuditAgent`, `UIUXAgent`), System Readiness Summary, Evidence Traceability Matrix, Next Best Action engine, and button-triggered LLM executive summary.
+- **Phase 8: Multi-Agent Supervision Layer (Phase 8.1, 8.2 & 8.3)**: Read-only deterministic 8-agent supervision framework, persistent Agent Memory (`agent_runs`, `agent_outputs`), Human Approval Queue (`agent_approval_queue`), System Readiness Summary, Evidence Traceability Matrix, Next Best Action engine, and button-triggered LLM executive summary.
 
 ### Planned Future Phases:
 
