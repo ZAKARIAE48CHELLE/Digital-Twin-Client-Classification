@@ -19,10 +19,82 @@ from agents.agent_schemas import OrchestratorOutput, AgentOutput
 
 logger = logging.getLogger("OSMOS_AGENT_REPOSITORY")
 
+_agent_tables_checked = False
+
+
+def ensure_agent_tables_exist() -> bool:
+    """Ensures agent_runs, agent_outputs, and agent_approval_queue tables exist in PostgreSQL."""
+    global _agent_tables_checked
+    if _agent_tables_checked:
+        return True
+
+    if get_storage_backend() != "postgres" or not is_postgres_available():
+        return False
+
+    try:
+        from database.db import get_cursor
+        with get_cursor(commit=True) as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS agent_runs (
+                    run_id SERIAL PRIMARY KEY,
+                    entity_id TEXT NULL,
+                    run_type TEXT DEFAULT 'Entity Supervision',
+                    selected_agents JSONB,
+                    global_status TEXT,
+                    final_summary TEXT,
+                    recommended_next_best_action TEXT,
+                    confidence_score NUMERIC(5, 4),
+                    storage_mode TEXT,
+                    triggered_by TEXT DEFAULT 'admin',
+                    llm_summary_generated BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS agent_outputs (
+                    output_id SERIAL PRIMARY KEY,
+                    run_id INTEGER REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                    agent_id TEXT,
+                    agent_name TEXT,
+                    status TEXT,
+                    summary TEXT,
+                    observations JSONB,
+                    risks JSONB,
+                    opportunities JSONB,
+                    recommendations JSONB,
+                    evidence JSONB,
+                    confidence_score NUMERIC(5, 4),
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS agent_approval_queue (
+                    approval_id SERIAL PRIMARY KEY,
+                    run_id INTEGER REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                    entity_id TEXT NULL,
+                    proposed_action_type TEXT,
+                    proposed_action_title TEXT,
+                    proposed_action_description TEXT,
+                    source_agent TEXT,
+                    priority TEXT DEFAULT 'Medium',
+                    status TEXT DEFAULT 'Pending',
+                    admin_comment TEXT,
+                    approved_by TEXT,
+                    approved_at TIMESTAMP WITH TIME ZONE,
+                    rejected_at TIMESTAMP WITH TIME ZONE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+            """)
+        _agent_tables_checked = True
+        return True
+    except Exception as e:
+        logger.warning(f"Could not auto-create agent tables in PostgreSQL: {e}")
+        return False
+
 
 def is_agent_db_available() -> bool:
-    """Checks whether PostgreSQL is active and available for agent memory operations."""
-    return get_storage_backend() == "postgres" and is_postgres_available()
+    """Checks whether PostgreSQL is active and agent memory tables exist."""
+    if get_storage_backend() != "postgres" or not is_postgres_available():
+        return False
+    return ensure_agent_tables_exist()
 
 
 def save_agent_run(

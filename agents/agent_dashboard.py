@@ -31,6 +31,17 @@ from ui.icons import icon_html
 logger = logging.getLogger("OSMOS_AGENT_DASHBOARD")
 
 
+def format_arrow_safe_df(records: Any) -> pd.DataFrame:
+    """Converts records list or DataFrame into a PyArrow-safe string DataFrame."""
+    if isinstance(records, pd.DataFrame):
+        df_out = records.copy()
+    else:
+        df_out = pd.DataFrame(records)
+    for col in df_out.columns:
+        df_out[col] = df_out[col].astype(str)
+    return df_out
+
+
 def render_agent_status_badge(status: str) -> str:
     """Renders a color-coded HTML badge for agent status."""
     colors = {
@@ -364,12 +375,13 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                     # Evidence Traceability Matrix
                     evidence_list = agent_dict.get("evidence", [])
                     if evidence_list:
+                        safe_ev_df = format_arrow_safe_df(evidence_list)
                         if presentation_mode:
                             with st.expander(f"View Evidence Traceability ({len(evidence_list)} metrics)", expanded=False):
-                                st.table(pd.DataFrame(evidence_list))
+                                st.table(safe_ev_df)
                         else:
                             st.markdown("**Evidence Traceability Matrix:**")
-                            st.dataframe(pd.DataFrame(evidence_list), use_container_width=True)
+                            st.dataframe(safe_ev_df, use_container_width=True)
 
         else:
             st.info("Select an entity and click **Run Multi-Agent Analysis** to trigger the supervision layer.")
