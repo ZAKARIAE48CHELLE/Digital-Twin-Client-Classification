@@ -16,6 +16,7 @@ MAIN_PAGES = [
     "Campaign Simulation",
     "Journey Simulator",
     "Agent Supervision Center",
+    "Knowledge Base",
     "Simulate Event",
     "Create New Entity",
     "Database Intelligence",
@@ -32,12 +33,14 @@ PAGE_LABELS = {
     "Campaign Simulation": "Campaign Simulation",
     "Journey Simulator": "Journey Simulator",
     "Agent Supervision Center": "Agent Supervision",
+    "Knowledge Base": "Knowledge Base",
 }
 
 PAGE_ICONS = {
     "Dashboard Overview": "bi-speedometer2",
     "Entity Profile": "bi-person-vcard",
     "Customer Segments & Personas": "bi-people",
+    "Knowledge Base": "bi-book",
     "Simulate Event": "bi-lightning-charge",
     "Create New Entity": "bi-person-plus",
     "Database Intelligence": "bi-database",

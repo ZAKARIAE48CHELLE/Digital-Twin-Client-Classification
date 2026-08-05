@@ -1,4 +1,4 @@
-# OSMOS Multi-Agent Supervision Layer (Phase 8.4)
+# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.5)
 
 ## Overview
 The **Multi-Agent Supervision Layer** transforms OSMOS into a **supervised intelligent CRM system**.
@@ -13,24 +13,31 @@ A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and 
 7. **Database Audit Agent** (PostgreSQL schema & data integrity audit)
 8. **UI/UX Agent** (UI readiness & presentation suitability)
 
-Phase 8.4 introduces **Agent Collaboration & Debate Mode**:
+Phase 8.4 introduced **Agent Collaboration & Debate Mode**, and Phase 8.5 adds **Agent Knowledge Base & Documentation Memory**:
 ```
-Individual Agent Outputs
-        ↓
-Agent Debate / Cross-Review (debate_engine.py)
-        ↓
-Conflict Detection (conflict_detector.py)
-        ↓
-Consensus Building (consensus_builder.py)
-        ↓
-Orchestrator Final Decision
-        ↓
-Human Approval Queue (agent_approval_queue)
+  Documentation & Governance Rules   Decision Memory History (Runs & Approvals)
+                  │                                     │
+                  └───────────────────┬─────────────────┘
+                                      │
+                                      ▼
+                          Agent Knowledge Base
+                                      │
+                                      ▼
+                          Specialized Agents (8)
+                                      │
+                                      ▼
+                        Agent Debate Engine (8.4)
+                                      │
+                                      ▼
+                            Orchestrator Output
+                                      │
+                                      ▼
+                             Human Approval Queue
 ```
 
 > 🛡️ **Human-in-the-Loop & Read-Only Governance Guarantee**:
-> - Debate execution is **100% read-only** and **deterministic by default**.
-> - Agents detect, explain, and recommend actions but **never** modify customer data or execute campaigns automatically.
+> - Knowledge Base retrieval and debate execution are **100% read-only** and **deterministic by default**.
+> - Agents detect, explain, cite documentation, and recommend actions but **never** modify customer data or execute campaigns automatically.
 > - All operational actions require explicit administrative validation in the **Human Approval Queue**.
 
 ---

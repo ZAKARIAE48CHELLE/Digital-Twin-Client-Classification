@@ -438,3 +438,40 @@ CREATE INDEX IF NOT EXISTS idx_agent_appr_status ON agent_approval_queue(status)
 CREATE INDEX IF NOT EXISTS idx_agent_appr_priority ON agent_approval_queue(priority);
 CREATE INDEX IF NOT EXISTS idx_agent_appr_created_at ON agent_approval_queue(created_at);
 
+-- T. Knowledge Base Documents (Phase 8.5)
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+    document_id SERIAL PRIMARY KEY,
+    source_type TEXT DEFAULT 'documentation',
+    source_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    section_name TEXT,
+    section_order INTEGER DEFAULT 1,
+    metadata JSONB,
+    indexed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_k_docs_source_type ON knowledge_documents(source_type);
+CREATE INDEX IF NOT EXISTS idx_k_docs_source_name ON knowledge_documents(source_name);
+CREATE INDEX IF NOT EXISTS idx_k_docs_title ON knowledge_documents(title);
+CREATE INDEX IF NOT EXISTS idx_k_docs_section_name ON knowledge_documents(section_name);
+CREATE INDEX IF NOT EXISTS idx_k_docs_indexed_at ON knowledge_documents(indexed_at);
+
+-- U. Knowledge Base Chunks (Phase 8.5)
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+    chunk_id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES knowledge_documents(document_id) ON DELETE CASCADE,
+    chunk_order INTEGER DEFAULT 1,
+    chunk_title TEXT,
+    chunk_text TEXT NOT NULL,
+    keywords TEXT[],
+    metadata JSONB,
+    indexed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_k_chunks_document_id ON knowledge_chunks(document_id);
+CREATE INDEX IF NOT EXISTS idx_k_chunks_chunk_order ON knowledge_chunks(chunk_order);
+CREATE INDEX IF NOT EXISTS idx_k_chunks_chunk_title ON knowledge_chunks(chunk_title);
+CREATE INDEX IF NOT EXISTS idx_k_chunks_indexed_at ON knowledge_chunks(indexed_at);
+
+

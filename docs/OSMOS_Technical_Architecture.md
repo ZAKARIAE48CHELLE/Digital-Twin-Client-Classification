@@ -47,15 +47,15 @@ PFA-Summer/
 │   ├── digital_twin_explainer.py   # Deterministic explanations & LLM summary generators
 │   └── digital_twin_dashboard.py   # Streamlit UI Explorer for Digital Twins
 │
-├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1 - 8.4)
+├── agents/                         # Multi-Agent Supervision Layer (Phase 8.1 - 8.5)
 │   ├── base_agent.py               # Abstract BaseAgent & read-only guard
 │   ├── agent_schemas.py            # Dataclass schemas & evidence traceability
-│   ├── debate_schemas.py           # Agent debate & consensus schemas (Phase 8.4)
-│   ├── context_builder.py          # Read-only entity context assembler
+│   ├── debate_schemas.py           # Agent debate & consensus schemas
+│   ├── context_builder.py          # Read-only entity context assembler (Phase 8.5 knowledge context)
 │   ├── agent_repository.py         # Persistence repository (agent_runs, agent_outputs, approval_queue)
-│   ├── conflict_detector.py        # Rule-based conflict detection engine (Phase 8.4)
-│   ├── consensus_builder.py       # Consensus synthesis & priority action selection (Phase 8.4)
-│   ├── debate_engine.py            # Deterministic agent debate engine (Phase 8.4)
+│   ├── conflict_detector.py        # Rule-based conflict detection engine
+│   ├── consensus_builder.py       # Consensus synthesis & priority action selection
+│   ├── debate_engine.py            # Deterministic agent debate engine
 │   ├── orchestrator_agent.py       # Orchestrator & on-demand LLM summary engine
 │   ├── result_aggregator.py        # Status aggregation & Next Best Action selection
 │   ├── digital_twin_agent.py       # Digital Twin profile & event agent
@@ -70,7 +70,17 @@ PFA-Summer/
 │   ├── agent_dashboard.py          # Agent Supervision Center Streamlit dashboard (Debate, Memory & Queue tabs)
 │   ├── test_agents.py              # 8-agent unit test suite
 │   ├── test_agent_memory.py        # Agent memory & approval queue test suite
-│   └── test_agent_debate.py        # Agent collaboration & debate test suite (Phase 8.4)
+│   └── test_agent_debate.py        # Agent collaboration & debate test suite
+│
+├── knowledge/                      # Agent Knowledge Base & Documentation Memory (Phase 8.5)
+│   ├── knowledge_schemas.py        # Schemas for documents, chunks, search results & decision memory
+│   ├── knowledge_repository.py     # Database persistence repository for knowledge_documents & knowledge_chunks
+│   ├── documentation_indexer.py    # Heading-based markdown parser & keyword chunking engine
+│   ├── knowledge_retriever.py      # Relevance search engine for documentation & governance rules
+│   ├── decision_memory.py          # Read-only decision memory explorer for previous runs & approvals
+│   ├── knowledge_dashboard.py      # Streamlit Knowledge Base UI dashboard
+│   ├── README.md                   # Package technical documentation
+│   └── test_knowledge.py           # Phase 8.5 unit test suite
 │
 ├── personas/                       # Persona Modeling & Library Catalog
 │   ├── persona_library.py          # DB CRUD & in-memory persona definitions

@@ -37,6 +37,11 @@ class AgentContext:
     campaign_history: List[Dict[str, Any]] = field(default_factory=list)
     journey_history: List[Dict[str, Any]] = field(default_factory=list)
     dynamic_persona_context: Dict[str, Any] = field(default_factory=dict)
+    knowledge_results: List[Dict[str, Any]] = field(default_factory=list)
+    decision_memory: List[Dict[str, Any]] = field(default_factory=list)
+    documentation_context: List[Dict[str, Any]] = field(default_factory=list)
+    previous_agent_runs: List[Dict[str, Any]] = field(default_factory=list)
+    approval_history: List[Dict[str, Any]] = field(default_factory=list)
     storage_mode: str = "excel"  # "postgres" or "excel"
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 

@@ -46,9 +46,11 @@ graph TD
 
 ---
 
-## 4. Multi-Agent Supervision & Debate Layer (Phase 8.1, 8.2, 8.3 & 8.4)
+## 4. Multi-Agent Supervision, Debate & Knowledge Layer (Phase 8.1 - 8.5)
 
 The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to 8 specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, persona consistency, campaign outcomes, journey step integrity, database auditability, and UI/demo readiness.
 
-Phase 8.4 introduces **Agent Collaboration & Debate Mode**. Instead of simply displaying independent agent outputs, OSMOS compares agent positions, detects risk vs. opportunity conflicts, builds consensus, and updates the orchestrator’s final recommendation. The debate remains deterministic and read-only by default, while optional LLM summarization can generate bilingual executive explanations after explicit admin request. Multi-agent analyses can be saved as auditable supervision runs in persistent memory (`agent_runs`, `agent_outputs`), and recommended actions can be converted into pending approval items in the Human Approval Queue (`agent_approval_queue`). Preserving the separation between analytical computation, generative explanation, and human-approved action remains central to the platform's safety architecture.
+Phase 8.4 introduced **Agent Collaboration & Debate Mode**, where agents compare findings, detect risk vs. opportunity conflicts, and synthesize consensus decisions.
+
+Phase 8.5 introduces **Agent Knowledge Base & Documentation Memory**. The multi-agent system can retrieve internal OSMOS documentation, system governance rules, prior agent supervision runs (`agent_runs`, `agent_outputs`), and administrative approval queue history (`agent_approval_queue`). This allows agents to cite system rules, detect previously rejected or approved recommendations, and explain decisions with full auditability. All indexing and retrieval operations remain 100% read-only, deterministic, and human-governed.
 

@@ -90,6 +90,15 @@ class CampaignAgent(BaseAgent):
 
         status = "OK"
 
+        # Phase 8.5 Decision Memory Check
+        if context.decision_memory:
+            try:
+                from knowledge.decision_memory import check_if_action_was_previously_rejected
+                if check_if_action_was_previously_rejected(context.entity_id, "campaign"):
+                    risks.append("Decision Memory: A similar campaign recommendation was previously REJECTED by an admin.")
+            except Exception as e:
+                pass
+
         if dispatch_count == 0:
             status = "OK"
             observations.append(f"No campaign history logged for Entity [{context.entity_id}].")

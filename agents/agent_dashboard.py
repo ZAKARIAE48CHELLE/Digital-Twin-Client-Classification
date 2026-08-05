@@ -197,6 +197,8 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         st.session_state["selected_agents_set"] = set(selected_agent_ids)
 
         st.write("")
+        include_knowledge_memory = st.checkbox("Include Knowledge Memory (Docs, Governance Rules & Decision History)", value=False, key="chk_knowledge_memory")
+
         if st.button("Run Multi-Agent Analysis", type="primary", use_container_width=True, key="btn_run_analysis"):
             with st.spinner(f"Orchestrator building context and executing {len(selected_agent_ids)} agents..."):
                 report = run_orchestrated_analysis(
@@ -205,6 +207,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                     history_df=history_df,
                     selected_agent_ids=selected_agent_ids,
                     debate_mode=enable_debate_mode,
+                    include_knowledge=include_knowledge_memory,
                 )
                 st.session_state["agent_supervision_report"] = report
                 st.session_state.pop("agent_llm_summary", None)

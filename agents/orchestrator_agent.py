@@ -80,16 +80,22 @@ class OrchestratorAgent:
         history_df: Optional[pd.DataFrame] = None,
         selected_agent_ids: Optional[List[str]] = None,
         debate_mode: bool = True,
+        include_knowledge: bool = False,
     ) -> OrchestratorOutput:
         """
-        Main deterministic analysis entrypoint with optional Agent Debate Mode.
-        1. Builds AgentContext (Read-Only).
+        Main deterministic analysis entrypoint with optional Agent Debate Mode & Knowledge Memory.
+        1. Builds AgentContext (Read-Only) with optional knowledge retrieval.
         2. Executes selected specialized agents.
         3. Aggregates outputs, risks, opportunities, recommendations.
         4. If debate_mode=True: runs cross-review, conflict detection & consensus synthesis.
         5. Returns structured OrchestratorOutput with optional debate_output.
         """
-        context = build_entity_agent_context(entity_id=entity_id, df=df, history_df=history_df)
+        context = build_entity_agent_context(
+            entity_id=entity_id,
+            df=df,
+            history_df=history_df,
+            include_knowledge=include_knowledge,
+        )
         agent_outputs = self.run_agents(context, selected_agent_ids)
 
         global_status = aggregate_agent_status(agent_outputs)
@@ -337,8 +343,9 @@ def run_orchestrated_analysis(
     history_df: Optional[pd.DataFrame] = None,
     selected_agent_ids: Optional[List[str]] = None,
     debate_mode: bool = True,
+    include_knowledge: bool = False,
 ) -> OrchestratorOutput:
-    """Convenience functional wrapper for executing multi-agent orchestrated supervision with debate."""
+    """Convenience functional wrapper for executing multi-agent orchestrated supervision with debate and knowledge."""
     orchestrator = OrchestratorAgent()
     return orchestrator.analyze_entity(
         entity_id=entity_id,
@@ -346,4 +353,5 @@ def run_orchestrated_analysis(
         history_df=history_df,
         selected_agent_ids=selected_agent_ids,
         debate_mode=debate_mode,
+        include_knowledge=include_knowledge,
     )

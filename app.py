@@ -2799,6 +2799,8 @@ if __name__ == "__main__":
         "Digital Twin & Persona": ":material/account_tree:",
         "Campaign Simulation": ":material/campaign:",
         "Journey Simulator": ":material/route:",
+        "Agent Supervision Center": ":material/smart_toy:",
+        "Knowledge Base": ":material/book:",
         "Simulate Event": ":material/bolt:",
         "Create New Entity": ":material/person_add:",
         "Database Intelligence": ":material/database:",
@@ -4715,6 +4717,10 @@ if __name__ == "__main__":
     elif page == "Agent Supervision Center":
         from agents.agent_dashboard import render_agent_dashboard
         render_agent_dashboard(df_data, df_history)
+
+    elif page == "Knowledge Base":
+        from knowledge.knowledge_dashboard import render_knowledge_dashboard
+        render_knowledge_dashboard(df_data, df_history)
 
     elif page == "Database Intelligence":
         from admin.database_dashboard import render_database_dashboard

@@ -292,10 +292,12 @@ def build_entity_agent_context(
     entity_id: str,
     df: Optional[pd.DataFrame] = None,
     history_df: Optional[pd.DataFrame] = None,
+    include_knowledge: bool = False,
 ) -> AgentContext:
     """
     Main Context Builder entrypoint.
     Assembles a complete, immutable AgentContext for an entity in READ-ONLY mode.
+    Optionally fetches decision memory and knowledge base snippets when include_knowledge=True.
     """
     str_entity_id = str(entity_id).strip()
     entity_state = get_latest_entity_state(str_entity_id, df=df)
@@ -351,6 +353,29 @@ def build_entity_agent_context(
     # Merge dispatches & responses into campaign_history
     campaign_history = campaign_dispatches + campaign_responses
 
+    # Optional Phase 8.5 Knowledge Base & Decision Memory Retrieval
+    k_results = []
+    d_memory = []
+    prev_runs = []
+    appr_hist = []
+
+    if include_knowledge:
+        try:
+            from knowledge.decision_memory import get_entity_decision_memory
+            from knowledge.knowledge_retriever import retrieve_relevant_knowledge
+            from agents.agent_repository import get_agent_runs, get_approval_queue
+
+            d_mem_items = get_entity_decision_memory(str_entity_id)
+            d_memory = [m.to_dict() for m in d_mem_items]
+
+            k_items = retrieve_relevant_knowledge(f"governance rule {latest_segment} {latest_persona}", limit=3)
+            k_results = [k.to_dict() for k in k_items]
+
+            prev_runs = get_agent_runs(entity_id=str_entity_id, limit=10)
+            appr_hist = get_approval_queue(entity_id=str_entity_id, limit=10)
+        except Exception as e:
+            logger.debug(f"Knowledge memory retrieval fallback for {str_entity_id}: {e}")
+
     return AgentContext(
         entity_id=str_entity_id,
         entity_type=entity_type,
@@ -364,5 +389,10 @@ def build_entity_agent_context(
         campaign_history=campaign_history,
         journey_history=journey_steps,
         dynamic_persona_context=dynamic_persona_ctx,
+        knowledge_results=k_results,
+        decision_memory=d_memory,
+        documentation_context=k_results,
+        previous_agent_runs=prev_runs,
+        approval_history=appr_hist,
         storage_mode=storage_mode,
     )
