@@ -1,9 +1,9 @@
 """
-OSMOS Multi-Agent Supervision Layer — Agent Dashboard (Phase 8.3)
+OSMOS Multi-Agent Supervision Layer — Agent Dashboard (Phase 8.4)
 ==================================================================
 Streamlit dashboard page for the Agent Supervision Center.
 Supports 8 specialized agents, persistent Agent Memory (supervision runs),
-and human-in-the-loop action governance via the Human Approval Queue.
+Human Approval Queue, and Agent Collaboration & Debate Mode.
 """
 
 import logging
@@ -64,6 +64,23 @@ def render_agent_status_badge(status: str) -> str:
     )
 
 
+def render_consensus_badge(status: str) -> str:
+    """Renders a color-coded HTML badge for debate consensus status."""
+    colors = {
+        "Strong Consensus": ("#10B981", "rgba(16, 185, 129, 0.15)"),
+        "Partial Consensus": ("#3B82F6", "rgba(59, 130, 246, 0.15)"),
+        "Conflict Detected": ("#F59E0B", "rgba(245, 158, 11, 0.15)"),
+        "Critical Conflict": ("#EF4444", "rgba(239, 68, 68, 0.15)"),
+        "Insufficient Data": ("#6B7280", "rgba(107, 114, 128, 0.15)"),
+    }
+    text_color, bg_color = colors.get(status, ("#8B5CF6", "rgba(139, 92, 246, 0.15)"))
+    return (
+        f'<span style="background-color: {bg_color}; color: {text_color}; '
+        f'padding: 5px 12px; border-radius: 9999px; font-weight: 800; font-size: 13px; '
+        f'border: 1.5px solid {text_color}; display: inline-block;">{status}</span>'
+    )
+
+
 def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Optional[pd.DataFrame] = None):
     """Main rendering entrypoint for the Agent Supervision Center page."""
     st.markdown(
@@ -73,7 +90,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                 {icon_html('bot')} Agent Supervision Center
             </h1>
             <p style="color: var(--osmos-muted); font-size: 14px; margin-bottom: 8px;">
-                8-Agent Multi-Agent Intelligent CRM Supervision Layer, Persistent Memory & Human Approval Queue
+                8-Agent Multi-Agent CRM Supervision, Agent Collaboration & Debate, Memory & Human Approval Queue
             </p>
         </div>
         """,
@@ -123,7 +140,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
 
         # Categorized Agent Selection
         st.markdown("##### Agent Selection & Presets")
-        preset_col1, preset_col2, preset_col3, _ = st.columns([1.5, 1.5, 1.5, 3.5])
+        preset_col1, preset_col2, preset_col3, preset_col4 = st.columns([1.5, 1.5, 1.5, 2.5])
 
         if "selected_agents_set" not in st.session_state:
             st.session_state["selected_agents_set"] = set(CORE_AGENT_IDS)
@@ -139,6 +156,9 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         with preset_col3:
             if st.button("Clear Selection", use_container_width=True, key="btn_sel_clear"):
                 st.session_state["selected_agents_set"] = set()
+
+        with preset_col4:
+            enable_debate_mode = st.toggle("Enable Agent Debate Mode", value=True, key="tgl_debate", help="Cross-review agent findings, detect risk/opportunity conflicts, and synthesize consensus.")
 
         # Category Group 1: Core Customer Intelligence
         st.markdown("**Core Customer Intelligence Agents:**")
@@ -184,9 +204,11 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                     df=df,
                     history_df=history_df,
                     selected_agent_ids=selected_agent_ids,
+                    debate_mode=enable_debate_mode,
                 )
                 st.session_state["agent_supervision_report"] = report
                 st.session_state.pop("agent_llm_summary", None)
+                st.session_state.pop("agent_llm_debate_summary", None)
 
         # Display Analysis Results
         report = st.session_state.get("agent_supervision_report")
@@ -229,7 +251,149 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                 unsafe_allow_html=True,
             )
 
-            # Phase 8.3 Actions: Save Analysis & Create Approval Queue Items
+            # PHASE 8.4: AGENT COLLABORATION & DEBATE SECTION
+            deb = report.debate_output
+            if deb and enable_debate_mode:
+                st.markdown("### 🤝 Agent Collaboration & Debate Engine")
+                consensus = deb.get("consensus", {})
+                c_status = consensus.get("consensus_status", "Strong Consensus")
+                priority_action = consensus.get("priority_action", report.recommended_next_best_action)
+                conflicts = deb.get("conflicts", [])
+                statements = deb.get("agent_statements", [])
+
+                # Debate Banner
+                st.markdown(
+                    f"""
+                    <div style="background: var(--osmos-card-bg); border: 1.5px solid var(--osmos-primary-accent); 
+                                border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: var(--osmos-shadow-sm);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <span style="color: var(--osmos-primary-accent); font-size: 12px; font-weight: 800; text-transform: uppercase;">
+                                    Cross-Agent Consensus Synthesis
+                                </span>
+                                <h4 style="margin: 2px 0 0 0; font-size: 18px; font-weight: 800; color: var(--osmos-text);">Debate Decision & Conflict Audit</h4>
+                            </div>
+                            <div>
+                                {render_consensus_badge(c_status)}
+                            </div>
+                        </div>
+                        <p style="font-size: 14px; color: var(--osmos-text); margin-bottom: 12px;">
+                            <strong>Reasoning:</strong> {consensus.get('reasoning_summary')}
+                        </p>
+                        <div style="background: var(--osmos-bg-soft); border-left: 4px solid #8B5CF6; padding: 12px 14px; border-radius: 6px;">
+                            <span style="font-size: 11px; font-weight: 800; color: #8B5CF6; text-transform: uppercase;">Synthesized Priority Action</span>
+                            <p style="margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: var(--osmos-text);">{priority_action}</p>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                if presentation_mode:
+                    # Executive View in Presentation Mode
+                    st.markdown("##### Executive Agent Debate Summary")
+                    st.info(f"**Consensus Status:** {c_status} | **Debate Confidence:** {consensus.get('confidence_score', 0.85)*100:.0f}%")
+                    st.markdown(f"**Primary Action Decision:** {priority_action}")
+                    if conflicts:
+                        st.warning(f"**Resolved Conflicts ({len(conflicts)}):** " + "; ".join([c.get("description", "") for c in conflicts]))
+                else:
+                    # Full Diagnostic View in Standard Mode
+                    tab_stmt, tab_conf, tab_dec = st.tabs(["Agent Statements & Positions", f"Conflicts Detected ({len(conflicts)})", "Consensus Decision Details"])
+
+                    with tab_stmt:
+                        st.markdown("##### Agent Statements & Proposed Positions")
+                        for stmt in statements:
+                            concern = stmt.get("concern_level", "Low")
+                            c_color = "#10B981" if concern == "Low" else "#F59E0B" if concern == "Medium" else "#EF4444"
+                            st.markdown(
+                                f"""
+                                <div style="border: 1px solid var(--osmos-border); border-radius: 8px; padding: 12px; margin-bottom: 8px; background: var(--osmos-bg-soft);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <strong>{stmt.get('agent_name')}</strong>
+                                        <span style="color: {c_color}; font-weight: 700; font-size: 12px;">Concern: {concern}</span>
+                                    </div>
+                                    <p style="margin: 4px 0 6px 0; font-size: 13px;">{stmt.get('position')}</p>
+                                    <div style="font-size: 12px; color: var(--osmos-muted);"><strong>Proposed Action:</strong> {stmt.get('proposed_action')}</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+
+                    with tab_conf:
+                        if not conflicts:
+                            st.success("Zero conflicts detected across active agents! Full alignment reached.")
+                        else:
+                            st.markdown("##### Identified Risk & Opportunity Disagreements")
+                            for conf_item in conflicts:
+                                sev = conf_item.get("severity", "Medium")
+                                st.markdown(
+                                    f"""
+                                    <div style="border: 1px solid var(--osmos-border); border-radius: 8px; padding: 14px; margin-bottom: 10px; background: var(--osmos-card-bg);">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <strong style="color: var(--osmos-primary-accent);">{conf_item.get('conflict_type')}</strong>
+                                            {render_agent_status_badge(sev if sev != 'Low' else 'OK')}
+                                        </div>
+                                        <p style="margin: 6px 0; font-size: 13.5px;">{conf_item.get('description')}</p>
+                                        <div style="background: var(--osmos-bg-soft); padding: 8px 10px; border-radius: 4px; font-size: 12.5px; margin-top: 6px;">
+                                            💡 <strong>Resolution Advice:</strong> {conf_item.get('resolution_suggestion')}
+                                        </div>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
+
+                    with tab_dec:
+                        st.markdown("##### Consensus Decision Breakdown")
+                        r_col, o_col = st.columns(2)
+                        with r_col:
+                            st.markdown("**Agreed Risks:**")
+                            for r in consensus.get("agreed_risks", []):
+                                st.markdown(f"- :warning: {r}")
+                        with o_col:
+                            st.markdown("**Agreed Opportunities:**")
+                            for o in consensus.get("agreed_opportunities", []):
+                                st.markdown(f"- :rocket: {o}")
+
+                # Button-Triggered LLM Debate Summary Button
+                st.markdown("##### LLM Debate Summary Generation (Button-Triggered Only)")
+                d_btn_col, d_info_col = st.columns([2, 3])
+                with d_btn_col:
+                    if st.button("Generate LLM Debate Summary", use_container_width=True, key="btn_gen_llm_debate"):
+                        with st.spinner("Synthesizing agent debate with local Ollama LLM..."):
+                            orchestrator = OrchestratorAgent()
+                            deb_llm_res = orchestrator.generate_llm_debate_summary(report)
+                            st.session_state["agent_llm_debate_summary"] = deb_llm_res
+
+                with d_info_col:
+                    st.caption("Executes Ollama LLM to produce a bilingual executive synthesis of the agent debate.")
+
+                llm_deb_summary = st.session_state.get("agent_llm_debate_summary")
+                if llm_deb_summary:
+                    st.write("")
+                    with st.expander("LLM Executive Debate Synthesis (Bilingual FR / EN)", expanded=True):
+                        if not llm_deb_summary.get("available", True):
+                            st.info(f"Ollama Offline / Fallback Mode: {llm_deb_summary.get('reason')}")
+
+                        t_en, t_fr = st.tabs(["English Synthesis", "Synthèse Française"])
+                        with t_en:
+                            st.markdown(f"**Debate Synthesis:** {llm_deb_summary.get('debate_summary_en')}")
+                            st.markdown(f"**Final Decision:** {llm_deb_summary.get('final_decision_en')}")
+                            g_en = llm_deb_summary.get("admin_guidance_en", [])
+                            if g_en:
+                                st.markdown("**Admin Guidance:**")
+                                for g in g_en:
+                                    st.markdown(f"- {g}")
+
+                        with t_fr:
+                            st.markdown(f"**Synthèse du Débat:** {llm_deb_summary.get('debate_summary_fr')}")
+                            st.markdown(f"**Décision Finale:** {llm_deb_summary.get('final_decision_fr')}")
+                            g_fr = llm_deb_summary.get("admin_guidance_fr", [])
+                            if g_fr:
+                                st.markdown("**Directives Administrateur:**")
+                                for g in g_fr:
+                                    st.markdown(f"- {g}")
+
+            # Phase 8.3 & 8.4 Actions: Save Analysis & Create Approval Queue Items
             st.markdown("##### Agent Memory & Governance Actions")
             btn_save_col, btn_appr_col = st.columns(2)
 

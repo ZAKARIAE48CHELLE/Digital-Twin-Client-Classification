@@ -79,14 +79,15 @@ class OrchestratorAgent:
         df: Optional[pd.DataFrame] = None,
         history_df: Optional[pd.DataFrame] = None,
         selected_agent_ids: Optional[List[str]] = None,
+        debate_mode: bool = True,
     ) -> OrchestratorOutput:
         """
-        Main deterministic analysis entrypoint.
+        Main deterministic analysis entrypoint with optional Agent Debate Mode.
         1. Builds AgentContext (Read-Only).
         2. Executes selected specialized agents.
         3. Aggregates outputs, risks, opportunities, recommendations.
-        4. Selects deterministic Next Best Action.
-        5. Returns structured OrchestratorOutput.
+        4. If debate_mode=True: runs cross-review, conflict detection & consensus synthesis.
+        5. Returns structured OrchestratorOutput with optional debate_output.
         """
         context = build_entity_agent_context(entity_id=entity_id, df=df, history_df=history_df)
         agent_outputs = self.run_agents(context, selected_agent_ids)
@@ -97,6 +98,19 @@ class OrchestratorAgent:
         consolidated_recs = merge_recommendations(agent_outputs)
         confidence = compute_global_confidence(agent_outputs)
         next_best_action = choose_next_best_action(agent_outputs, entity_type=context.entity_type)
+
+        debate_dict = None
+        if debate_mode and agent_outputs:
+            from agents.debate_engine import run_deterministic_debate
+            deb_out = run_deterministic_debate(agent_outputs, entity_id=entity_id, context=context)
+            debate_dict = deb_out.to_dict()
+
+            # Override next best action & confidence with consensus decision if available
+            consensus = deb_out.consensus or {}
+            if consensus.get("priority_action"):
+                next_best_action = consensus.get("priority_action")
+            if consensus.get("confidence_score") is not None:
+                confidence = float(consensus.get("confidence_score"))
 
         summary = synthesize_orchestrator_summary(
             entity_id=context.entity_id,
@@ -118,6 +132,7 @@ class OrchestratorAgent:
             recommended_next_best_action=next_best_action,
             confidence_score=confidence,
             llm_executive_summary=None,  # Button-triggered only
+            debate_output=debate_dict,
         )
 
     def generate_llm_executive_summary(self, orchestrator_output: OrchestratorOutput) -> Dict[str, Any]:
@@ -179,23 +194,99 @@ Return ONLY valid JSON matching this exact schema:
             "suggested_admin_actions_en": orchestrator_output.final_recommendations[:3],
         }
 
+    def generate_llm_debate_summary(self, orchestrator_output: OrchestratorOutput) -> Dict[str, Any]:
+        """
+        Generates a bilingual LLM synthesis of the Agent Debate & Collaboration results.
+        STRICTLY BUTTON-TRIGGERED ONLY.
+        """
+        available, reason = check_llm_available()
+        deb = orchestrator_output.debate_output or {}
+        consensus = deb.get("consensus", {})
+        conflicts = deb.get("conflicts", [])
+
+        if not available or not deb:
+            return {
+                "available": False,
+                "reason": reason if not available else "Debate output unavailable",
+                "debate_summary_fr": f"Résumé du débat déterministe pour [{orchestrator_output.entity_id}]: Consensus '{consensus.get('consensus_status', 'N/A')}'. Action: {consensus.get('priority_action', 'N/A')}",
+                "debate_summary_en": f"Deterministic debate summary for [{orchestrator_output.entity_id}]: Consensus '{consensus.get('consensus_status', 'N/A')}'. Action: {consensus.get('priority_action', 'N/A')}",
+                "final_decision_fr": consensus.get("priority_action", orchestrator_output.recommended_next_best_action),
+                "final_decision_en": consensus.get("priority_action", orchestrator_output.recommended_next_best_action),
+                "admin_guidance_fr": [f"Résolution des conflits: {c.get('resolution_suggestion')}" for c in conflicts if c.get("resolution_suggestion")] or ["Aucun conflit majeur."],
+                "admin_guidance_en": [f"Conflict resolution: {c.get('resolution_suggestion')}" for c in conflicts if c.get("resolution_suggestion")] or ["No major conflicts."],
+            }
+
+        prompt = f"""
+You are the OSMOS Agent Debate Synthesizer.
+Synthesize the agent debate and conflict resolution results into a bilingual executive summary (French & English).
+
+DEBATE METADATA:
+- Entity ID: {orchestrator_output.entity_id}
+- Consensus Status: {consensus.get('consensus_status')}
+- Priority Action: {consensus.get('priority_action')}
+- Reasoning Summary: {consensus.get('reasoning_summary')}
+- Detected Conflicts ({len(conflicts)}): {', '.join([c.get('description', '') for c in conflicts]) or 'None'}
+
+Return ONLY valid JSON matching this exact schema:
+{{
+  "debate_summary_fr": "Synthese du debat et du consensus atteint en francais.",
+  "debate_summary_en": "Executive synthesis of agent debate and consensus reached in English.",
+  "final_decision_fr": "Action prioritaire decidee apres debat en francais.",
+  "final_decision_en": "Priority decision reached after debate in English.",
+  "admin_guidance_fr": ["Recommandation administrateur 1", "Recommandation 2"],
+  "admin_guidance_en": ["Admin guidance 1", "Admin guidance 2"]
+}}
+"""
+        try:
+            raw = generate_text(prompt, temperature=0.2)
+            parsed = extract_and_parse_json(raw)
+            if parsed and isinstance(parsed, dict) and "debate_summary_en" in parsed:
+                parsed["available"] = True
+                parsed["reason"] = "LLM Debate Summary generated successfully."
+                return parsed
+        except Exception as e:
+            logger.error(f"Error generating LLM debate summary: {e}")
+
+        return {
+            "available": False,
+            "reason": "LLM debate summary fallback",
+            "debate_summary_fr": f"Consensus: {consensus.get('consensus_status')}. Action: {consensus.get('priority_action')}",
+            "debate_summary_en": f"Consensus: {consensus.get('consensus_status')}. Action: {consensus.get('priority_action')}",
+            "final_decision_fr": consensus.get("priority_action"),
+            "final_decision_en": consensus.get("priority_action"),
+            "admin_guidance_fr": ["Procéder à la validation administrative."],
+            "admin_guidance_en": ["Proceed with administrative validation."],
+        }
+
     def prepare_approval_actions(self, orchestrator_output: OrchestratorOutput) -> List[Dict[str, Any]]:
         """
         Converts consolidated recommendations into structured approval action items.
+        Includes debate consensus status and conflict alerts when debate output exists.
         Action execution is NEVER automated; items remain Pending until administrative review.
         """
         items: List[Dict[str, Any]] = []
+        deb = orchestrator_output.debate_output or {}
+        consensus = deb.get("consensus", {})
+        conflicts = deb.get("conflicts", [])
+
+        c_status = consensus.get("consensus_status", "Standard")
+        desc_prefix = f"[Debate Consensus: {c_status}] " if deb else ""
+
+        if conflicts:
+            conflict_warn = f" (Warning: {len(conflicts)} conflict(s) resolved during debate)"
+        else:
+            conflict_warn = ""
 
         # 1. Primary Next Best Action item
         if orchestrator_output.recommended_next_best_action:
             nba = orchestrator_output.recommended_next_best_action
-            prio = "High" if orchestrator_output.global_status in {"Critical", "Warning"} else "Medium"
+            prio = "High" if orchestrator_output.global_status in {"Critical", "Warning"} or conflicts else "Medium"
             items.append(
                 {
-                    "proposed_action_type": "Next Best Action",
+                    "proposed_action_type": "Debate Next Best Action" if deb else "Next Best Action",
                     "proposed_action_title": f"Action for {orchestrator_output.entity_id}",
-                    "proposed_action_description": nba,
-                    "source_agent": "Orchestrator",
+                    "proposed_action_description": f"{desc_prefix}{nba}{conflict_warn}",
+                    "source_agent": "Agent Debate Engine" if deb else "Orchestrator",
                     "priority": prio,
                 }
             )
@@ -207,7 +298,7 @@ Return ONLY valid JSON matching this exact schema:
                     {
                         "proposed_action_type": "Supervision Recommendation",
                         "proposed_action_title": rec[:60] + "..." if len(rec) > 60 else rec,
-                        "proposed_action_description": rec,
+                        "proposed_action_description": f"{desc_prefix}{rec}",
                         "source_agent": "Specialized Agents",
                         "priority": "Medium",
                     }
@@ -245,12 +336,14 @@ def run_orchestrated_analysis(
     df: Optional[pd.DataFrame] = None,
     history_df: Optional[pd.DataFrame] = None,
     selected_agent_ids: Optional[List[str]] = None,
+    debate_mode: bool = True,
 ) -> OrchestratorOutput:
-    """Convenience functional wrapper for executing multi-agent orchestrated supervision."""
+    """Convenience functional wrapper for executing multi-agent orchestrated supervision with debate."""
     orchestrator = OrchestratorAgent()
     return orchestrator.analyze_entity(
         entity_id=entity_id,
         df=df,
         history_df=history_df,
         selected_agent_ids=selected_agent_ids,
+        debate_mode=debate_mode,
     )

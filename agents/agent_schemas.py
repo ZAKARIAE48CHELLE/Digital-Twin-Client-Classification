@@ -77,6 +77,7 @@ class OrchestratorOutput:
     recommended_next_best_action: str = "No immediate action required"
     confidence_score: float = 1.0
     llm_executive_summary: Optional[Dict[str, Any]] = None
+    debate_output: Optional[Dict[str, Any]] = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:

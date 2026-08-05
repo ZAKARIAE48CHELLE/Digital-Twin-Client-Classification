@@ -1,43 +1,58 @@
-# OSMOS Multi-Agent Supervision Layer (Phase 8.3)
+# OSMOS Multi-Agent Supervision Layer (Phase 8.4)
 
 ## Overview
 The **Multi-Agent Supervision Layer** transforms OSMOS into a **supervised intelligent CRM system**.
 
-A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and operational agents to inspect customer state, Digital Twin evolution, Customer Lifetime Value (CLV), churn risk, persona consistency, campaign history, journey transitions, database integrity, and UI/demo readiness.
+A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and operational agents:
+1. **Digital Twin Agent** (Profile & state completeness)
+2. **CLV Agent** (Monetary value tiering & VIP protection)
+3. **Churn Risk Agent** (Probability of churn & friction detection)
+4. **Persona Agent** (Segment-first persona consistency verification)
+5. **Campaign Agent** (Campaign dispatch & customer response alignment)
+6. **Journey Agent** (Lifecycle scenario & stage transition reference)
+7. **Database Audit Agent** (PostgreSQL schema & data integrity audit)
+8. **UI/UX Agent** (UI readiness & presentation suitability)
 
-Phase 8.3 introduces **Persistent Agent Memory** (`agent_runs`, `agent_outputs`) and a **Human Approval Queue** (`agent_approval_queue`) for administrative action governance.
+Phase 8.4 introduces **Agent Collaboration & Debate Mode**:
+```
+Individual Agent Outputs
+        ↓
+Agent Debate / Cross-Review (debate_engine.py)
+        ↓
+Conflict Detection (conflict_detector.py)
+        ↓
+Consensus Building (consensus_builder.py)
+        ↓
+Orchestrator Final Decision
+        ↓
+Human Approval Queue (agent_approval_queue)
+```
 
-> 🛡️ **Human-in-the-Loop Governance Guarantee**:
-> Agents recommend actions but never execute them automatically. All operational actions require explicit administrative validation in the Human Approval Queue.
+> 🛡️ **Human-in-the-Loop & Read-Only Governance Guarantee**:
+> - Debate execution is **100% read-only** and **deterministic by default**.
+> - Agents detect, explain, and recommend actions but **never** modify customer data or execute campaigns automatically.
+> - All operational actions require explicit administrative validation in the **Human Approval Queue**.
 
 ---
 
-## Key Architecture Principles
+## Agent Debate Engine Components
 
-1. **Read-Only First Guarantee**:
-   All 8 agents analyze, evaluate risks/opportunities, audit database integrity, and generate advice in pure **READ-ONLY** mode. Agents **never** write directly to core tables (`entities`, `customer_event_history`, `clv_predictions`, etc.) or alter DataFrames.
-
-2. **Allowed Database Writes**:
-   The ONLY database write operations permitted in Phase 8.3 are:
-   - Saving agent supervision runs (`agent_runs`)
-   - Saving specialized agent outputs (`agent_outputs`)
-   - Managing administrative approval items (`agent_approval_queue`)
-
-3. **Deterministic Execution & Optional Button-Triggered LLM**:
-   All agent evaluations run deterministically using pure Python logic. Local Ollama LLM executive summaries remain strictly button-triggered ("Generate LLM Executive Supervision Summary").
-
-4. **Evidence Traceability**:
-   Every specialized agent report includes an **Evidence Traceability Matrix** detailing `metric_name`, observed `value`, reference `threshold`, and domain `interpretation`.
-
----
-
-## Database Schema (Phase 8.3 Tables)
-
-| Table Name | Description | Key Columns |
+| Module | Description | Key Functions |
 | :--- | :--- | :--- |
-| `agent_runs` | Stores auditable multi-agent supervision runs. | `run_id`, `entity_id`, `global_status`, `recommended_next_best_action`, `confidence_score`, `storage_mode` |
-| `agent_outputs` | Stores specialized agent outputs linked to a run. | `output_id`, `run_id`, `agent_id`, `status`, `summary`, `observations`, `risks`, `opportunities`, `recommendations`, `evidence` |
-| `agent_approval_queue` | Stores pending and processed administrative approval items. | `approval_id`, `run_id`, `entity_id`, `proposed_action_title`, `priority`, `status`, `admin_comment`, `approved_at` |
+| `debate_schemas.py` | Dataclass schemas for statements, conflicts, and consensus. | `AgentDebateStatement`, `AgentConflict`, `AgentConsensus`, `DebateOutput` |
+| `conflict_detector.py` | Rule-based conflict detection engine evaluating risk/opportunity clashes and DB audit overrides. | `detect_all_conflicts()`, `detect_priority_conflicts()`, `detect_status_conflicts()`, `detect_data_quality_conflicts()` |
+| `consensus_builder.py` | Synthesis engine calculating consensus status, ranking actions, and computing debate confidence. | `build_consensus()`, `compute_consensus_status()`, `choose_priority_action()`, `compute_debate_confidence()` |
+| `debate_engine.py` | Main debate execution engine connecting statements, conflicts, and consensus synthesis. | `run_deterministic_debate()`, `build_agent_statements()`, `prepare_llm_debate_payload()` |
+
+---
+
+## Consensus Status Definitions
+
+- **`Strong Consensus`**: All active agents report aligned findings with zero conflicts detected.
+- **`Partial Consensus`**: Minor priority alignments or warnings present without high-severity conflicts.
+- **`Conflict Detected`**: Risk vs. opportunity or priority clash detected between active agents (e.g., high CLV vs. high churn).
+- **`Critical Conflict`**: Database audit critical alert or critical conflict requiring immediate administrative risk resolution before expansion.
+- **`Insufficient Data`**: Majority of active agents lack sufficient historical data.
 
 ---
 
@@ -48,10 +63,14 @@ agents/
 ├── __init__.py               # Package initialization & exports
 ├── base_agent.py             # Abstract BaseAgent with crash-proof exception handling & read-only guard
 ├── agent_schemas.py          # Dataclass schemas (AgentContext, AgentOutput, OrchestratorOutput, EvidenceItem)
+├── debate_schemas.py         # Debate schemas (AgentDebateStatement, AgentConflict, AgentConsensus, DebateOutput)
+├── conflict_detector.py      # Rule-based conflict detection engine (Phase 8.4)
+├── consensus_builder.py     # Consensus synthesis & priority action selection (Phase 8.4)
+├── debate_engine.py          # Deterministic agent debate engine (Phase 8.4)
 ├── agent_registry.py         # Central agent registry (8 active agents)
 ├── context_builder.py        # Read-only entity context assembler (Postgres & Excel fallback)
 ├── agent_repository.py       # Persistence layer for agent_runs, agent_outputs, and approval queue
-├── orchestrator_agent.py     # Deterministic orchestrator, LLM summary engine & approval action preparer
+├── orchestrator_agent.py     # Deterministic orchestrator, LLM summary engine & debate mode wrapper
 ├── result_aggregator.py      # Status aggregation, risk/opportunity merging, and Next Best Action rules
 ├── digital_twin_agent.py     # Digital Twin behavioral & profile completeness agent
 ├── clv_agent.py              # CLV monetary tier & VIP protection agent
@@ -61,30 +80,19 @@ agents/
 ├── journey_agent.py          # Customer journey scenario & step reference agent
 ├── database_audit_agent.py   # PostgreSQL schema & orphaned event reference audit agent
 ├── ui_ux_agent.py            # UI readiness & demo suitability agent
-├── agent_dashboard.py        # Streamlit Agent Supervision Center UI (Memory & Approval tabs)
-├── README.md                 # Technical architecture & developer guide
+├── agent_dashboard.py        # Streamlit Agent Supervision Center UI (Debate, Memory & Approval tabs)
 ├── test_agents.py            # 8-agent execution unit test suite
-└── test_agent_memory.py      # Agent memory & human approval queue test suite
+├── test_agent_memory.py      # Agent memory & human approval queue test suite
+└── test_agent_debate.py      # Agent collaboration & debate test suite (Phase 8.4)
 ```
-
----
-
-## Human Approval Queue Status Lifecycle
-
-Allowed statuses in `agent_approval_queue`:
-- `Pending`: Default status upon creation from agent recommendations.
-- `Approved`: Validated by administrator with optional comment.
-- `Rejected`: Declined by administrator with audit reason.
-- `Converted to Campaign Draft`: (Optional) Approved action converted into a campaign draft in campaign simulator (no real messages sent).
-- `Ignored`: Archived without action.
 
 ---
 
 ## Testing
 
-Run agent memory and approval queue tests:
+Run Phase 8.4 Agent Debate unit tests:
 ```bash
-python -m unittest agents/test_agent_memory.py
+python -m unittest agents/test_agent_debate.py
 ```
 Or run full workspace tests:
 ```bash
