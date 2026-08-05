@@ -258,10 +258,16 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
         # Display Analysis Results
         report = st.session_state.get("agent_supervision_report")
         engine_used = st.session_state.get("execution_engine_used", "LangGraph Workflow")
-        if report and report.entity_id == selected_entity:
+        rep_entity_id = _rep_val(report, "entity_id")
+        if report and rep_entity_id == selected_entity:
             st.markdown("---")
 
             # Global Status Callout Card
+            rep_status = _rep_val(report, "global_status", "OK")
+            rep_summary = _rep_val(report, "final_summary", "")
+            rep_nba = _rep_val(report, "recommended_next_best_action", "Maintain active supervision")
+            rep_conf = _rep_val(report, "confidence_score", 1.0)
+
             st.markdown(
                 f"""
                 <div style="background: var(--osmos-card-bg); border: 1px solid var(--osmos-border); 
@@ -271,14 +277,14 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                             <span style="color: var(--osmos-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
                                 Multi-Agent Orchestrator Supervision Report ({engine_used})
                             </span>
-                            <h3 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: var(--osmos-text);">Entity [{report.entity_id}]</h3>
+                            <h3 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: var(--osmos-text);">Entity [{rep_entity_id}]</h3>
                         </div>
                         <div>
-                            {render_agent_status_badge(report.global_status)}
+                            {render_agent_status_badge(rep_status)}
                         </div>
                     </div>
                     <p style="font-size: 14px; margin-bottom: 16px; color: var(--osmos-text); line-height: 1.5;">
-                        {report.final_summary}
+                        {rep_summary}
                     </p>
                     <div style="background: var(--osmos-bg-soft); border-left: 4px solid var(--osmos-primary-accent); 
                                 padding: 14px 16px; border-radius: 6px;">
@@ -286,11 +292,11 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                             Recommended Next Best Action (Read-Only Advice)
                         </span>
                         <p style="margin: 4px 0 0 0; font-size: 15px; font-weight: 700; color: var(--osmos-text);">
-                            {report.recommended_next_best_action}
+                            {rep_nba}
                         </p>
                     </div>
                     <div style="margin-top: 12px; font-size: 12px; color: var(--osmos-muted); text-align: right;">
-                        Engine: <strong>{engine_used}</strong> | Confidence: <strong>{report.confidence_score * 100:.0f}%</strong> | Mode: <strong>Read-Only</strong>
+                        Engine: <strong>{engine_used}</strong> | Confidence: <strong>{rep_conf * 100:.0f}%</strong> | Mode: <strong>Read-Only</strong>
                     </div>
                 </div>
                 """,
@@ -298,14 +304,15 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
             )
 
             # PHASE 8.4: AGENT COLLABORATION & DEBATE SECTION
-            deb = report.debate_output
+            deb = _rep_val(report, "debate_output")
             if deb and enable_debate_mode:
                 st.markdown("### 🤝 Agent Collaboration & Debate Engine")
-                consensus = deb.get("consensus", {})
+                consensus = _rep_val(deb, "consensus", {})
+                if not isinstance(consensus, dict): consensus = _to_dict(consensus)
                 c_status = consensus.get("consensus_status", "Strong Consensus")
-                priority_action = consensus.get("priority_action", report.recommended_next_best_action)
-                conflicts = deb.get("conflicts", [])
-                statements = deb.get("agent_statements", [])
+                priority_action = consensus.get("priority_action", rep_nba)
+                conflicts = _rep_val(deb, "conflicts", [])
+                statements = _rep_val(deb, "agent_statements", [])
 
                 # Debate Banner
                 st.markdown(
@@ -462,7 +469,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                         actions = orchestrator.prepare_approval_actions(report)
                         created_count = 0
                         for act in actions:
-                            appr_id = create_approval_item(run_id=None, entity_id=report.entity_id, action_dict=act)
+                            appr_id = create_approval_item(run_id=None, entity_id=_rep_val(report, "entity_id"), action_dict=act)
                             if appr_id:
                                 created_count += 1
                         st.success(f"Successfully created {created_count} Pending items in the Human Approval Queue!")
@@ -470,7 +477,8 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
             st.write("")
 
             # System Readiness Summary Panel
-            agent_outputs_list = [AgentOutput(**d) if isinstance(d, dict) else d for d in report.agent_outputs]
+            raw_outputs = _rep_val(report, "agent_outputs", [])
+            agent_outputs_list = [AgentOutput(**d) if isinstance(d, dict) else d for d in raw_outputs]
             sys_summary = compute_system_readiness_summary(agent_outputs_list)
 
             st.markdown("##### System Readiness Summary")
@@ -528,7 +536,7 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
             st.markdown("### Specialized Agent Reports")
 
             # Display Agent Cards
-            agent_outputs = report.agent_outputs
+            agent_outputs = [_to_dict(a) for a in raw_outputs]
             if not agent_outputs:
                 st.warning("No specialized agents were selected for analysis.")
 
