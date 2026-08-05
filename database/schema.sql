@@ -474,4 +474,21 @@ CREATE INDEX IF NOT EXISTS idx_k_chunks_chunk_order ON knowledge_chunks(chunk_or
 CREATE INDEX IF NOT EXISTS idx_k_chunks_chunk_title ON knowledge_chunks(chunk_title);
 CREATE INDEX IF NOT EXISTS idx_k_chunks_indexed_at ON knowledge_chunks(indexed_at);
 
+-- V. Executive Report Exports (Phase 8.6)
+CREATE TABLE IF NOT EXISTS report_exports (
+    export_id SERIAL PRIMARY KEY,
+    report_type TEXT NOT NULL,
+    entity_id TEXT,
+    run_id INTEGER,
+    file_name TEXT NOT NULL,
+    export_format TEXT NOT NULL,
+    generated_by TEXT DEFAULT 'admin',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_exp_type ON report_exports(report_type);
+CREATE INDEX IF NOT EXISTS idx_report_exp_entity_id ON report_exports(entity_id);
+CREATE INDEX IF NOT EXISTS idx_report_exp_created_at ON report_exports(created_at);
+
+
 

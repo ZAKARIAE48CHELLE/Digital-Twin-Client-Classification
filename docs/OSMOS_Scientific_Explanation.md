@@ -46,11 +46,13 @@ graph TD
 
 ---
 
-## 4. Multi-Agent Supervision, Debate & Knowledge Layer (Phase 8.1 - 8.5)
+## 4. Multi-Agent Supervision, Debate, Knowledge & Reporting Layer (Phase 8.1 - 8.6)
 
 The **Multi-Agent Supervision Layer** extends OSMOS into a coordinated intelligent supervision system. An **Orchestrator Agent** constructs the customer context and delegates analysis to 8 specialized agents responsible for Digital Twin consistency, CLV value evolution, churn risk detection, persona consistency, campaign outcomes, journey step integrity, database auditability, and UI/demo readiness.
 
 Phase 8.4 introduced **Agent Collaboration & Debate Mode**, where agents compare findings, detect risk vs. opportunity conflicts, and synthesize consensus decisions.
 
-Phase 8.5 introduces **Agent Knowledge Base & Documentation Memory**. The multi-agent system can retrieve internal OSMOS documentation, system governance rules, prior agent supervision runs (`agent_runs`, `agent_outputs`), and administrative approval queue history (`agent_approval_queue`). This allows agents to cite system rules, detect previously rejected or approved recommendations, and explain decisions with full auditability. All indexing and retrieval operations remain 100% read-only, deterministic, and human-governed.
+Phase 8.5 introduced **Agent Knowledge Base & Documentation Memory**, allowing agents to retrieve internal documentation, governance rules, and decision history (`agent_runs`, `agent_outputs`, `agent_approval_queue`).
+
+Phase 8.6 implements the **Executive Report Generator**. OSMOS can transform Digital Twin states, ML scores, 8-agent supervision reports, debate consensus decisions, knowledge evidence, approval queue items, campaign history, and journey event traces into clean, structured, downloadable executive reports (Markdown `.md`, styled HTML `.html`, and PDF `.pdf`). All report compilation operations remain 100% read-only, auditable, and human-governed.
 

@@ -1,4 +1,4 @@
-# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.5)
+# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.6)
 
 ## Overview
 The **Multi-Agent Supervision Layer** transforms OSMOS into a **supervised intelligent CRM system**.
@@ -13,7 +13,7 @@ A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and 
 7. **Database Audit Agent** (PostgreSQL schema & data integrity audit)
 8. **UI/UX Agent** (UI readiness & presentation suitability)
 
-Phase 8.4 introduced **Agent Collaboration & Debate Mode**, and Phase 8.5 adds **Agent Knowledge Base & Documentation Memory**:
+Phase 8.4 introduced **Agent Collaboration & Debate Mode**, Phase 8.5 added **Agent Knowledge Base & Documentation Memory**, and Phase 8.6 implements the **Executive Report Generator**:
 ```
   Documentation & Governance Rules   Decision Memory History (Runs & Approvals)
                   │                                     │
@@ -31,12 +31,14 @@ Phase 8.4 introduced **Agent Collaboration & Debate Mode**, and Phase 8.5 adds *
                                       ▼
                             Orchestrator Output
                                       │
-                                      ▼
-                             Human Approval Queue
+                   ┌──────────────────┴──────────────────┐
+                   ▼                                     ▼
+          Human Approval Queue              Executive Report Generator (8.6)
+                                            (Markdown / HTML / PDF Exports)
 ```
 
 > 🛡️ **Human-in-the-Loop & Read-Only Governance Guarantee**:
-> - Knowledge Base retrieval and debate execution are **100% read-only** and **deterministic by default**.
+> - Knowledge Base retrieval, debate execution, and report generation are **100% read-only** and **deterministic by default**.
 > - Agents detect, explain, cite documentation, and recommend actions but **never** modify customer data or execute campaigns automatically.
 > - All operational actions require explicit administrative validation in the **Human Approval Queue**.
 

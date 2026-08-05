@@ -82,6 +82,16 @@ PFA-Summer/
 │   ├── README.md                   # Package technical documentation
 │   └── test_knowledge.py           # Phase 8.5 unit test suite
 │
+├── reports/                        # Executive Report Generator (Phase 8.6)
+│   ├── report_schemas.py           # Schemas for ReportContext, ReportSection, ReportExportResult
+│   ├── report_context_builder.py   # Context assembly for Entity, Agent Run, Journey, and System reports
+│   ├── report_templates.py        # Markdown/HTML section renderers for report chapters
+│   ├── report_generator.py        # Central report compilation engine
+│   ├── report_exporter.py         # File exporter saving .md, .html, and .pdf files to reports/generated/
+│   ├── report_dashboard.py        # Streamlit Executive Reports UI dashboard
+│   ├── README.md                  # Package technical documentation
+│   └── test_reports.py            # Phase 8.6 unit test suite
+│
 ├── personas/                       # Persona Modeling & Library Catalog
 │   ├── persona_library.py          # DB CRUD & in-memory persona definitions
 │   ├── persona_matcher.py          # Segment-first persona resolution chain
