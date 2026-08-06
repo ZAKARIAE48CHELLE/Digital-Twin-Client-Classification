@@ -59,7 +59,13 @@ class TestJourneySimulator(unittest.TestCase):
         self.assertGreater(res["steps_executed"], 0)
         from storage.storage_manager import load_data
         _, history = load_data()
-        demo_events = [e for e in history if e.get("entity_id") == "P_DEMO_001"]
+        if isinstance(history, pd.DataFrame):
+            history_records = history.to_dict("records")
+        elif isinstance(history, list):
+            history_records = history
+        else:
+            history_records = []
+        demo_events = [e for e in history_records if isinstance(e, dict) and e.get("entity_id") == "P_DEMO_001"]
         self.assertGreater(len(demo_events), 0)
 
     # 3. Recent Events Creation

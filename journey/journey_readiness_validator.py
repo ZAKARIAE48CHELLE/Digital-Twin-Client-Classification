@@ -56,7 +56,14 @@ def validate_journey_entity_state(entity_id: str = "P_DEMO_001") -> Dict[str, An
     row = entity_row.iloc[0]
 
     # 2. Event History & Recency
-    entity_events = [e for e in history if str(e.get("entity_id")) == str(entity_id)]
+    if isinstance(history, pd.DataFrame):
+        history_records = history.to_dict("records")
+    elif isinstance(history, list):
+        history_records = history
+    else:
+        history_records = []
+
+    entity_events = [e for e in history_records if isinstance(e, dict) and str(e.get("entity_id")) == str(entity_id)]
     event_count = len(entity_events)
     recent_events = [e for e in entity_events if e.get("event_type") != "demo_entity_initialized"]
     recent_count = len(recent_events)
