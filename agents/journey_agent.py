@@ -90,7 +90,7 @@ class JourneyAgent(BaseAgent):
                 status = "Warning"  # Missing demo journey is a demo readiness warning
                 observations.append("Demo entity [P_DEMO_001] journey has not been started (0/5 steps executed).")
                 risks.append("Demo readiness incomplete: journey scenario simulator has not been executed for P_DEMO_001.")
-                recommendations.append("Run Journey Simulator before presentation to generate 5-stage lifecycle scenario for P_DEMO_001.")
+                recommendations.append("Run 'Prepare Full Demo Entity' in Journey Simulator before using P_DEMO_001 in presentations or multi-agent demos.")
             else:
                 status = "OK"
                 observations.append(f"No journey scenario expected or logged for Entity [{entity_id}]. No journey scenario expected for this entity.")

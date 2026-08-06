@@ -26,23 +26,21 @@ The interface includes a custom OSMOS visual design system with Light/Dark mode 
 * **Speaker Script**:
   > *"Here is the core scientific distinction of OSMOS. On the left, we see the individual Digital Twin of entity P01501 - showing its exact recency, spend, churn risk, and predicted CLV of 17,507 MAD. Through our strict resolution chain, P01501 is assigned to the 'High-Value Loyalists' segment, which automatically maps to the 'Premium Loyalist' Persona Blueprint."*
 
-### Step 4: Event Simulation & Sub-Second Optimization
-* **Action**: Return to Entity Profile, select `P00001` (Prospect), and run an event simulation such as *Record Purchase*.
+### Step 4: One-Click Demo Preparation & LLM Journey Planner (Phase 8.7)
+* **Action**: Navigate to **Digital Twin Journey Tree Simulator**. Click `Prepare Full Demo Entity`.
 * **Speaker Script**:
-  > *"Watch as we simulate a customer transaction. In under 1 second, OSMOS updates only the affected entity snapshot in PostgreSQL, recalculates its scores, and converts the prospect to a client instantly."*
+  > *"The Journey Simulator is the controlled lifecycle generator for OSMOS. By clicking 'Prepare Full Demo Entity', OSMOS resets demo entity P_DEMO_001 to a clean Prospect state and deterministically executes a 5-stage customer lifecycle scenario with real PostgreSQL event_history records, journey_steps, snapshots, and persona resolution. Additionally, our Phase 8.7 LLM-assisted journey planner allows proposing custom scenarios: the LLM proposes a structured plan, OSMOS validates it deterministically, the admin approves it, and only then the Journey Runner applies valid events into PostgreSQL history."*
 
-### Step 5: Database Intelligence & Historical Drift
-* **Action**: Navigate to **Database Intelligence**.
+### Step 5: Multi-Agent Supervision & Debate Mode
+* **Action**: Navigate to **Agent Supervision Center**. Select `P_DEMO_001` and click `Run Multi-Agent Audit`.
 * **Speaker Script**:
-  > *"Unlike traditional spreadsheets, OSMOS maintains full historical versioning in PostgreSQL. Here we can audit time-series CLV evolution, segment transition matrices, and system health metrics in real time."*
+  > *"With P_DEMO_001 fully prepared, our 8 supervision agents evaluate customer health and operational readiness in parallel. Notice how debate mode identifies gaps and synthesizes a clear Next Best Action using official OSMOS terminology."*
 
 ---
 
 ## 2. Key Talking Points & FAQ Answers
 
-- **Q: Does the LLM calculate customer lifetime value?**
-  * **Answer**: *"No. All calculations (CLV, RFM-ES, Churn Risk) are 100% deterministic and computed by Python machine learning models. The LLM acts purely as an advisory synthesis layer."*
+- **Q: Does the LLM calculate customer lifetime value or write directly to the database?**
+  * **Answer**: *"No. All calculations (CLV, RFM-ES, Churn Risk) are 100% deterministic. The LLM acts purely as an advisory synthesis layer. In journey planning, the LLM proposes a scenario, OSMOS validates it deterministically against 14 safety rules, the admin approves it, and only then the Journey Runner writes real events to PostgreSQL."*
 - **Q: Why separate Digital Twin from Persona?**
   * **Answer**: *"A Digital Twin belongs to an individual customer and changes constantly with real-time data. A Persona belongs to a segment and defines standard marketing strategy. Conflating the two leads to inaccurate marketing."*
-- **Q: How do Stable Personas differ from Dynamic Personas?**
-  * **Answer**: *"OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9). Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas."*

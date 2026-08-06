@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from storage.storage_manager import load_data, save_entity_snapshot
 from digital_twin.digital_twin_builder import build_digital_twin_profile
 from personas.persona_matcher import get_persona_for_entity
@@ -23,7 +23,7 @@ DEMO_ENTITY_ID = "P_DEMO_001"
 def create_demo_entity(entity_id=DEMO_ENTITY_ID):
     """
     Creates or resets the demo entity P_DEMO_001 in memory and database.
-    Uses single-entity snapshot save optimization (< 1s execution).
+    Initializes clean Prospect profile with non-critical state and an initial event_history record.
     """
     from admin.database_metrics import is_postgres_available
     if is_postgres_available():
@@ -36,7 +36,6 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
                 cur.execute("DELETE FROM rfm_es_scores WHERE entity_id = %s;", (entity_id,))
         except Exception as e:
             logger.warning(f"Cleanup of old prediction history for [{entity_id}] failed: {e}")
-
 
     df, history = load_data()
     
@@ -54,7 +53,7 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
         "region": "Grand Casablanca",
         "age": 28,
         "gender": "M",
-        "signup_date": datetime.now().strftime("%Y-%m-%d"),
+        "signup_date": (datetime.now() - timedelta(days=20)).strftime("%Y-%m-%d"),
         "source_channel": "Web Search",
         "preferred_category": "Electronics",
         "income_power_score": 0.5,
@@ -75,7 +74,7 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
         "predicted_clv_score": 0.0,
         "predicted_clv_amount_mad": 0.0,
         "predicted_clv_segment": "Low Value",
-        "churn_risk_score": 0.10,
+        "churn_risk_score": 0.15,  # Low/moderate initial churn risk (not critical)
         "conversion_probability": 0.10,
         "behavioral_engagement_score": 0.20,
         "predictive_value_score": 0.10,
@@ -96,8 +95,14 @@ def create_demo_entity(entity_id=DEMO_ENTITY_ID):
         new_df = pd.DataFrame([demo_row])
         df = pd.concat([df, new_df], ignore_index=True)
         
-    # Save single entity snapshot
     save_entity_snapshot(df, entity_id, history)
+
+    # Initial event_history record
+    from app import simulate_event
+    df, history, _, _, _, _, _, _, _ = simulate_event(
+        df, history, entity_id, "demo_entity_initialized", None, timestamp_offset_days=-20
+    )
+
     logger.info(f"Demo entity [{entity_id}] initialized/reset successfully.")
     return df
 
@@ -139,7 +144,7 @@ def capture_entity_state(entity_id=DEMO_ENTITY_ID):
             return default
 
     rfm_val = safe_num(state.get("rfm_score"), safe_num(scores.get("rfm_score"), 0.15))
-    churn_val = safe_num(state.get("churn_risk_score"), 0.10)
+    churn_val = safe_num(state.get("churn_risk_score"), 0.15)
     
     clv_val = safe_num(predictions.get("predicted_clv_amount_mad"))
     if clv_val == 0.0:
@@ -158,12 +163,10 @@ def capture_entity_state(entity_id=DEMO_ENTITY_ID):
         "churn_risk": churn_val
     }
 
-
-
 def apply_journey_stage_events(entity_id, stage):
     """
     Applies trigger events for a stage to the demo entity via app.simulate_event.
-    Updates ONLY single entity (< 1s execution).
+    Supports realistic timestamp offsets. Updates ONLY single entity.
     Returns (primary_event_id, generated_event_ids).
     """
     from app import simulate_event
@@ -171,11 +174,13 @@ def apply_journey_stage_events(entity_id, stage):
     
     events = stage.get("trigger_events", [])
     values = stage.get("event_values", [])
+    offsets = stage.get("event_offsets", [])
     
     generated_event_ids = []
-    for evt_type, val in zip(events, values):
+    for idx, (evt_type, val) in enumerate(zip(events, values)):
+        offset = offsets[idx] if idx < len(offsets) else 0
         df, history, _, _, _, _, _, _, new_ev_id = simulate_event(
-            df, history, entity_id, evt_type, val
+            df, history, entity_id, evt_type, val, timestamp_offset_days=offset
         )
         if new_ev_id:
             generated_event_ids.append(new_ev_id)
@@ -203,17 +208,12 @@ def run_next_journey_step(scenario_id):
         
     stage = DEFAULT_STAGES[next_order - 1]
     
-    # 1. Update scenario status to Running
     if scenario.get("status") == "Draft":
         update_journey_scenario_status(scenario_id, "Running")
         
-    # 2. Capture before state
     before_state = capture_entity_state(entity_id)
-    
-    # 3. Apply stage events
     trigger_ev_id, generated_ev_ids = apply_journey_stage_events(entity_id, stage)
     
-    # 4. FK & Persistence Integrity Check: Verify trigger_event_id exists in event_history
     if not trigger_ev_id:
         logger.error("Journey step could not be saved because the trigger event was not persisted.")
         return None
@@ -232,10 +232,8 @@ def run_next_journey_step(scenario_id):
             logger.error(f"Journey step could not be saved because the trigger event '{trigger_ev_id}' was not persisted in event_history.")
             return None
 
-    # 5. Capture after state
     after_state = capture_entity_state(entity_id)
     
-    # 6. Build step record
     step_dict = {
         "scenario_id": scenario_id,
         "step_order": next_order,
@@ -262,7 +260,6 @@ def run_next_journey_step(scenario_id):
         "llm_recommendation_en": stage["recommendation_en"],
         "node_status": "Completed"
     }
-
     
     step_id = insert_journey_step(step_dict)
     if not step_id:
@@ -271,8 +268,7 @@ def run_next_journey_step(scenario_id):
         
     step_dict["step_id"] = step_id
     
-    # If final stage, mark scenario completed
-    if next_order == len(DEFAULT_STAGES):
+    if next_order >= 5:
         update_journey_scenario_status(scenario_id, "Completed")
         
     logger.info(f"Executed Journey Step #{next_order} for Scenario #{scenario_id} (Entity [{entity_id}]). Step ID: {step_id}")
@@ -280,12 +276,11 @@ def run_next_journey_step(scenario_id):
 
 def run_full_journey(scenario_id, use_llm=False):
     """
-    Runs all remaining steps of a scenario in sequence.
-    Optionally calls LLM for each step if use_llm=True.
+    Runs stages 1 through 5 of the default scenario in sequence.
     Stops immediately if a step fails.
     """
     results = []
-    for _ in range(len(DEFAULT_STAGES)):
+    for _ in range(5):
         step = run_next_journey_step(scenario_id)
         if not step or not step.get("step_id"):
             logger.error("Run Full Journey stopped due to a failed or missing journey step.")
@@ -295,6 +290,140 @@ def run_full_journey(scenario_id, use_llm=False):
         results.append(step)
     return results
 
+def run_service_recovery_step(scenario_id):
+    """Executes Stage 6 (Service Recovery / Retention Simulation)."""
+    scenario = get_journey_scenario_by_id(scenario_id)
+    if not scenario:
+        return None
+    entity_id = scenario.get("entity_id", DEMO_ENTITY_ID)
+    stage = DEFAULT_STAGES[5]  # Stage 6
+    before_state = capture_entity_state(entity_id)
+    trigger_ev_id, generated_ev_ids = apply_journey_stage_events(entity_id, stage)
+    if not trigger_ev_id:
+        return None
+    after_state = capture_entity_state(entity_id)
+
+    step_dict = {
+        "scenario_id": scenario_id,
+        "step_order": 6,
+        "entity_id": entity_id,
+        "stage_name": stage["stage_name"],
+        "trigger_event_type": ", ".join(stage["trigger_events"]),
+        "trigger_event_id": trigger_ev_id,
+        "trigger_event_ids": generated_ev_ids,
+        "before_dynamic_class": before_state["dynamic_class"],
+        "after_dynamic_class": after_state["dynamic_class"],
+        "before_segment": before_state["customer_segment"],
+        "after_segment": after_state["customer_segment"],
+        "before_persona": before_state["customer_persona"],
+        "after_persona": after_state["customer_persona"],
+        "before_clv_amount": before_state["clv_amount"],
+        "after_clv_amount": after_state["clv_amount"],
+        "before_rfm_score": before_state["rfm_score"],
+        "after_rfm_score": after_state["rfm_score"],
+        "before_churn_risk": before_state["churn_risk"],
+        "after_churn_risk": after_state["churn_risk"],
+        "llm_explanation_fr": stage["explanation_fr"],
+        "llm_explanation_en": stage["explanation_en"],
+        "llm_recommendation_fr": stage["recommendation_fr"],
+        "llm_recommendation_en": stage["recommendation_en"],
+        "node_status": "Completed"
+    }
+
+    step_id = insert_journey_step(step_dict)
+    if step_id:
+        step_dict["step_id"] = step_id
+    return step_dict
+
+def prepare_full_demo_entity(entity_id=DEMO_ENTITY_ID):
+    """
+    ONE-CLICK DEMO PREPARATION (Deterministic).
+    1. Resets P_DEMO_001 to clean prospect state.
+    2. Runs full 5-stage deterministic journey.
+    3. Runs Demo Entity Readiness Audit.
+    4. Returns summary dictionary.
+    """
+    scenario_id = reset_demo_journey(entity_id)
+    steps = run_full_journey(scenario_id)
+
+    from journey.journey_readiness_validator import validate_journey_entity_state
+    readiness = validate_journey_entity_state(entity_id)
+
+    return {
+        "scenario_id": scenario_id,
+        "steps_executed": len(steps),
+        "readiness": readiness,
+    }
+
+def execute_normalized_journey_plan(scenario_id: int, normalized_plan: dict):
+    """
+    Applies an approved normalized LLM journey plan deterministically.
+    Resets entity and executes each stage's events.
+    """
+    entity_id = normalized_plan.get("entity_id", DEMO_ENTITY_ID)
+    create_demo_entity(entity_id)
+    update_journey_scenario_status(scenario_id, "Running")
+
+    executed_steps = []
+    stages = normalized_plan.get("stages", [])
+
+    for stage in stages:
+        stage_dict = {
+            "trigger_events": [e["event_type"] for e in stage.get("events", [])],
+            "event_values": [e.get("event_value") for e in stage.get("events", [])],
+            "event_offsets": [e.get("event_offset_days", 0) for e in stage.get("events", [])],
+            "stage_name": stage.get("stage_name", "Custom Stage"),
+            "explanation_fr": stage.get("goal", ""),
+            "explanation_en": stage.get("goal", ""),
+            "recommendation_fr": "Custom LLM Plan Execution",
+            "recommendation_en": "Custom LLM Plan Execution",
+        }
+        before_state = capture_entity_state(entity_id)
+        trigger_ev_id, generated_ev_ids = apply_journey_stage_events(entity_id, stage_dict)
+        if not trigger_ev_id:
+            break
+        after_state = capture_entity_state(entity_id)
+
+        step_dict = {
+            "scenario_id": scenario_id,
+            "step_order": stage.get("stage_order", len(executed_steps) + 1),
+            "entity_id": entity_id,
+            "stage_name": stage_dict["stage_name"],
+            "trigger_event_type": ", ".join(stage_dict["trigger_events"]),
+            "trigger_event_id": trigger_ev_id,
+            "trigger_event_ids": generated_ev_ids,
+            "before_dynamic_class": before_state["dynamic_class"],
+            "after_dynamic_class": after_state["dynamic_class"],
+            "before_segment": before_state["customer_segment"],
+            "after_segment": after_state["customer_segment"],
+            "before_persona": before_state["customer_persona"],
+            "after_persona": after_state["customer_persona"],
+            "before_clv_amount": before_state["clv_amount"],
+            "after_clv_amount": after_state["clv_amount"],
+            "before_rfm_score": before_state["rfm_score"],
+            "after_rfm_score": after_state["rfm_score"],
+            "before_churn_risk": before_state["churn_risk"],
+            "after_churn_risk": after_state["churn_risk"],
+            "llm_explanation_fr": stage_dict["explanation_fr"],
+            "llm_explanation_en": stage_dict["explanation_en"],
+            "llm_recommendation_fr": stage_dict["recommendation_fr"],
+            "llm_recommendation_en": stage_dict["recommendation_en"],
+            "node_status": "Completed"
+        }
+        step_id = insert_journey_step(step_dict)
+        if step_id:
+            step_dict["step_id"] = step_id
+            executed_steps.append(step_dict)
+
+    update_journey_scenario_status(scenario_id, "Completed")
+    from journey.journey_readiness_validator import validate_journey_entity_state
+    readiness = validate_journey_entity_state(entity_id)
+
+    return {
+        "scenario_id": scenario_id,
+        "steps_executed": len(executed_steps),
+        "readiness": readiness,
+    }
 
 def generate_llm_journey_explanation(step_dict):
     """

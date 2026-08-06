@@ -2085,7 +2085,7 @@ def detect_prospect_to_client_conversion(old_row, new_row, old_class, new_class,
     return False
 
 # 12. Simulate Event logic
-def simulate_event(df, history, entity_id, event_type, event_value=None):
+def simulate_event(df, history, entity_id, event_type, event_value=None, timestamp_offset_days=0):
     row_idx = df[df["entity_id"] == entity_id].index
     if len(row_idx) == 0:
         return df, history, None, None, None, None, None, False, None
@@ -2384,7 +2384,12 @@ def simulate_event(df, history, entity_id, event_type, event_value=None):
         
     class_changed = bool(old_class != new_class)
 
-    event_date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if timestamp_offset_days:
+        from datetime import timedelta
+        event_date_dt = datetime.now() - timedelta(days=abs(float(timestamp_offset_days)))
+        event_date_str = event_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        event_date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     changed_vars_list = []
     before_vals_dict = {}
