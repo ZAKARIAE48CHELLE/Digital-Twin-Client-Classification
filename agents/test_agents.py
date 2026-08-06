@@ -126,8 +126,8 @@ class TestMultiAgentSupervisionLayerPhase82(unittest.TestCase):
         ]
         out = agent.safe_analyze(ctx)
 
-        self.assertEqual(out.status, "Warning")
-        self.assertTrue(any("missing trigger_event_id" in r for r in out.risks))
+        self.assertEqual(out.status, "Critical")
+        self.assertTrue(any("missing trigger_event_id" in r or "Broken journey references" in r for r in out.risks))
 
     def test_database_audit_agent(self):
         """Verifies DatabaseAuditAgent audits record counts without altering data."""

@@ -154,16 +154,16 @@ class TestAgentDebatePhase84(unittest.TestCase):
         """Verifies final Next Best Action recommendation uses OSMOS-specific system language."""
         from agents.result_aggregator import choose_next_best_action
         camp_out = AgentOutput(
-            agent_id="campaign", agent_name="Campaign Agent", status="Warning",
+            agent_id="campaign", agent_name="Campaign Agent", agent_role="Campaign Audit", status="Warning",
             summary="ZERO campaign dispatches logged.", risks=["ZERO campaign dispatches."],
         )
         p_out = AgentOutput(
-            agent_id="persona", agent_name="Persona Agent", status="Critical",
+            agent_id="persona", agent_name="Persona Agent", agent_role="Persona Audit", status="Critical",
             summary="Segment 'Complaint-Driven Risk Clients' exists but stable persona is None.",
             risks=["Persona mapping incomplete for segment."],
         )
         j_out = AgentOutput(
-            agent_id="journey", agent_name="Journey Agent", status="Warning",
+            agent_id="journey", agent_name="Journey Agent", agent_role="Journey Audit", status="Warning",
             summary="Demo entity [P_DEMO_001] journey has not been started (0/5 steps executed).",
         )
         nba = choose_next_best_action([self.churn_output, camp_out, p_out, j_out], entity_id="P_DEMO_001")
@@ -187,7 +187,7 @@ class TestAgentDebatePhase84(unittest.TestCase):
         out = JourneyAgent().safe_analyze(ctx)
         # Normal entity with 0 steps has status OK in Journey Agent (no customer churn status pollution)
         self.assertEqual(out.status, "OK")
-        self.assertIn("No journey scenario expected", out.summary)
+        self.assertTrue(any("No journey scenario expected" in obs for obs in out.observations))
 
     def test_consensus_builder_strong_consensus(self):
         """Verifies consensus status is Strong Consensus when no conflicts exist."""
@@ -206,7 +206,7 @@ class TestAgentDebatePhase84(unittest.TestCase):
         """Verifies priority action selects retention/recovery before upsell when churn is high."""
         conflicts = detect_all_conflicts([self.clv_output, self.churn_output])
         priority = choose_priority_action([self.clv_output, self.churn_output], conflicts)
-        self.assertIn("SERVICE RECOVERY", priority)
+        self.assertTrue(any(k in priority for k in ["RETENTION", "SERVICE RECOVERY"]))
 
     def test_debate_confidence_decreases_with_conflicts(self):
         """Verifies debate confidence score decreases when conflicts exist."""

@@ -34,6 +34,14 @@ class PersonaAgent(BaseAgent):
         segment = str(seg_raw).strip() if seg_raw and str(seg_raw).strip() != "None" else "Unknown"
         persona_name = str(persona_raw).strip() if persona_raw and str(persona_raw).strip() != "None" else "Unknown"
 
+        dynamic_ctx = context.dynamic_persona_context or {}
+
+        observations: List[str] = []
+        risks: List[str] = []
+        opportunities: List[str] = []
+        recommendations: List[str] = []
+        evidence: List[Dict[str, Any]] = []
+
         # Check against DEFAULT_PERSONA_MAP official names
         official_names = list(set(p["persona_name"] for p in DEFAULT_PERSONA_MAP.values()))
         is_official = persona_name in official_names and persona_name != "Unknown"
