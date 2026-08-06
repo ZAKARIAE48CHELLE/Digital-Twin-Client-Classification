@@ -181,18 +181,7 @@ def render_journey_dashboard(df_data=None, df_history=None):
     val = st.session_state.get("llm_journey_plan_validation")
 
     if proposal:
-        with st.expander("🤖 LLM Journey Plan Proposal Preview", expanded=True):
-            st.json(proposal)
-            if val:
-                st.markdown("---")
-                if val["is_valid"]:
-                    st.success("✅ **Validator Status: VALID PLAN** — Ready for Admin Approval")
-                else:
-                    st.error("❌ **Validator Status: INVALID PLAN** — Errors must be resolved before applying")
-                    for err in val["errors"]:
-                        st.markdown(f"- 🔴 **Error**: {err}")
-                for warn in val.get("warnings", []):
-                    st.markdown(f"- ⚠️ **Warning**: {warn}")
+        render_llm_journey_plan_preview(proposal, val)
 
     st.markdown("<div style='margin-bottom: 24px;'></div>", unsafe_allow_html=True)
 

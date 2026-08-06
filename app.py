@@ -2410,7 +2410,7 @@ def simulate_event(df, history, entity_id, event_type, event_value=None, timesta
     
     for c in audit_cols:
         b_val = before_row.get(c)
-        a_val = df.loc[idx, c]
+        a_val = df.loc[idx, c] if c in df.columns else None
         
         has_chg = False
         if safe_isna(b_val) and safe_isna(a_val):
