@@ -83,23 +83,14 @@ class PersonaAgent(BaseAgent):
         observations.append("Resolution Protocol: Entity -> Digital Twin -> Segment -> Persona Library (Segment-First).")
 
         # Required Fix 5 — Persona Mapping Warning/Critical
-        churn_ctx = context.latest_churn
-        churn_status = None
-        churn_score = 0.0
-
-        if churn_ctx:
-            if isinstance(churn_ctx, dict):
-                churn_status = churn_ctx.get("status")
-                churn_score = float(churn_ctx.get("churn_risk_score", 0.0) or 0.0)
-            else:
-                churn_status = getattr(churn_ctx, "status", None)
-                churn_score = float(getattr(churn_ctx, "churn_risk_score", 0.0) or 0.0)
-
+        class_ctx = getattr(context, "latest_classification", {}) or {}
+        class_churn_status = class_ctx.get("churn_status") or class_ctx.get("status")
+        class_churn_score = float(class_ctx.get("churn_risk_score", 0.0) or class_ctx.get("churn_probability", 0.0) or 0.0)
         dt_churn_score = float(dt.get("churn_risk_score", 0.0) or 0.0)
 
         churn_risk_high = (
-            churn_status in {"Warning", "Critical"} or
-            churn_score >= 0.60 or
+            class_churn_status in {"Warning", "Critical"} or
+            class_churn_score >= 0.60 or
             dt_churn_score >= 0.60
         )
 
