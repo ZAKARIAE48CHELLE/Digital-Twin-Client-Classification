@@ -21,7 +21,7 @@ from journey.journey_runner import (
     execute_normalized_journey_plan,
     generate_llm_journey_explanation
 )
-from journey.llm_journey_planner import generate_llm_journey_plan
+from journey.llm_journey_planner import generate_llm_journey_plan, regenerate_llm_journey_plan_with_feedback
 from journey.journey_plan_validator import validate_llm_journey_plan
 from journey.journey_readiness_validator import validate_journey_entity_state
 from journey.journey_tree import (
@@ -30,6 +30,172 @@ from journey.journey_tree import (
     build_step_card,
     get_stage_icon
 )
+
+
+def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
+    """Renders visual cards, quality score, validation feedback, and JSON preview."""
+    if not proposal:
+        return
+
+    scenario_name = proposal.get("scenario_name", "Custom Journey Plan")
+    entity_id = proposal.get("entity_id", "P_DEMO_001")
+    description = proposal.get("description", "LLM Proposed customer lifecycle sequence.")
+    stages = proposal.get("stages", [])
+
+    q_score = val.get("quality_score", 0.0) if val else 0.0
+    q_label = val.get("quality_label", "Not Audited") if val else "Not Audited"
+    is_valid = val.get("is_valid", False) if val else False
+
+    label_colors = {
+        "Excellent": ("#4ade80", "rgba(74, 222, 128, 0.15)", "rgba(74, 222, 128, 0.3)"),
+        "Acceptable": ("#38bdf8", "rgba(56, 189, 248, 0.15)", "rgba(56, 189, 248, 0.3)"),
+        "Weak": ("#fbbf24", "rgba(251, 191, 36, 0.15)", "rgba(251, 191, 36, 0.3)"),
+        "Invalid": ("#f87171", "rgba(248, 113, 113, 0.15)", "rgba(248, 113, 113, 0.3)"),
+        "Not Audited": ("#94a3b8", "rgba(148, 163, 184, 0.15)", "rgba(148, 163, 184, 0.3)"),
+    }
+    txt_col, bg_col, border_col = label_colors.get(q_label, label_colors["Not Audited"])
+
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+            <div>
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #38bdf8;">🤖 LLM Journey Plan Proposal</span>
+                <h3 style="margin: 4px 0 0; color: #f8fafc; font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800;">{scenario_name}</h3>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600;">Target: [{entity_id}]</span>
+                <span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600;">{len(stages)} Stages</span>
+                <span style="background: {bg_col}; color: {txt_col}; border: 1px solid {border_col}; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700;">Score: {q_score:.0f}/100 ({q_label})</span>
+            </div>
+        </div>
+        <p style="color: #94a3b8; font-size: 13.5px; margin: 0; line-height: 1.5;">{description}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Validation & Repair Feedback Box
+    if val:
+        repair_warns = val.get("repair_warnings", [])
+        if repair_warns:
+            with st.expander("🛠️ Automatic JSON Repairs Applied", expanded=False):
+                for rw in repair_warns:
+                    st.markdown(f"- 🔧 {rw}")
+
+        if not is_valid:
+            st.error(f"❌ **Validator Status: INVALID PLAN** ({len(val.get('errors', []))} Errors) — Click 'Regenerate with Validation Feedback' to fix.")
+            for err in val.get("errors", []):
+                st.markdown(f"- 🔴 **Error**: {err}")
+        else:
+            st.success(f"✅ **Validator Status: VALID PLAN** (Quality: **{q_label}**, Score: **{q_score:.0f}/100**) — Ready for Admin Approval.")
+
+        for warn in val.get("warnings", []):
+            st.markdown(f"- ⚠️ **Warning**: {warn}")
+
+        st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
+
+    event_icons = {
+        "page_visit": "🌐",
+        "product_view": "👁️",
+        "email_open": "✉️",
+        "email_click": "🖱️",
+        "add_to_cart": "🛒",
+        "purchase": "💰",
+        "complaint": "⚠️",
+        "negative_review": "👎",
+        "positive_review": "⭐",
+        "inactivity_period": "⏳",
+        "social_positive_mention": "👍",
+        "social_negative_mention": "🚨",
+        "service_recovery_contact": "🤝",
+        "retention_offer_sent": "🎁",
+    }
+
+    for idx, stage in enumerate(stages, start=1):
+        s_name = stage.get("stage_name", f"Stage #{idx}")
+        s_goal = stage.get("goal", "")
+        events = stage.get("events", [])
+        state_chg = stage.get("expected_state_change", {})
+
+        evt_pills = []
+        for e in events:
+            if isinstance(e, dict):
+                e_type = e.get("event_type", "event")
+                e_offset = e.get("event_offset_days", 0)
+                e_val = e.get("event_value")
+            else:
+                e_type = str(e)
+                e_offset = 0
+                e_val = None
+
+            icon = event_icons.get(e_type, "⚡")
+            val_str = f" ({e_val:,.0f} MAD)" if e_val is not None else ""
+            offset_str = f" (T{e_offset}d)" if e_offset else ""
+            evt_pills.append(f"""
+                <span style="background: rgba(30, 41, 59, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500;">
+                    {icon} <strong>{e_type}</strong>{val_str}<span style="color: #94a3b8; font-size: 11px;">{offset_str}</span>
+                </span>
+            """)
+
+        evt_html = "".join(evt_pills) if evt_pills else "<span style='color: #64748b; font-size: 12px;'>No events specified</span>"
+
+        entity_t = state_chg.get("entity_type", "Prospect" if idx < 3 else "Client")
+        dyn_class = state_chg.get("dynamic_class", "Cold Prospect")
+        segment = state_chg.get("segment", "Prospect")
+        persona = state_chg.get("persona", "New Explorer")
+
+        st.markdown(f"""
+        <div style="
+            background: rgba(15, 23, 42, 0.7);
+            border-left: 4px solid #38bdf8;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; color: #f8fafc; font-size: 16px; font-weight: 700;">{s_name}</h4>
+                <span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">🎯 {s_goal}</span>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Trigger Behavioral Telemetry:</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {evt_html}
+                </div>
+            </div>
+
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div>
+                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Entity Type</span>
+                    <div style="color: #f1f5f9; font-size: 13px; font-weight: 600;">{entity_t}</div>
+                </div>
+                <div>
+                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Dynamic Class</span>
+                    <div style="color: #38bdf8; font-size: 13px; font-weight: 600;">{dyn_class}</div>
+                </div>
+                <div>
+                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Segment</span>
+                    <div style="color: #c084fc; font-size: 13px; font-weight: 600;">{segment}</div>
+                </div>
+                <div>
+                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Stable Persona</span>
+                    <div style="color: #4ade80; font-size: 13px; font-weight: 600;">{persona}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with st.expander("🔍 View Raw Plan JSON Structure", expanded=False):
+        st.json(proposal)
+
 
 def render_journey_dashboard(df_data=None, df_history=None):
     """
@@ -42,13 +208,11 @@ def render_journey_dashboard(df_data=None, df_history=None):
         badge="Phase 8.7 Active",
     )
 
-    # 1. Excel Fallback Mode Check
     if not is_postgres_available():
         st.warning("**Journey Simulator with historical tracking requires PostgreSQL.**")
         st.info("The platform is currently running in **Excel Fallback Mode**. Switch to `OSMOS_STORAGE_BACKEND=postgres` to enable full scenario persistence, step-by-step tree rendering, and historical audit logs.")
         return
 
-    # 2. Historical Scenario Selection
     all_scenarios = get_journey_scenarios(limit=50)
     selected_scenario_id = None
     
@@ -142,30 +306,43 @@ def render_journey_dashboard(df_data=None, df_history=None):
     st.markdown(section_header_html("Section B: LLM-Assisted Journey Scenario Planner", "LLM Assistant"), unsafe_allow_html=True)
     st.caption("The LLM proposes a structured scenario plan. OSMOS validates it deterministically. Admin approval is required before execution.")
 
-    lcol1, lcol2, lcol3 = st.columns(3)
+    proposal = st.session_state.get("llm_journey_plan_proposal")
+    val = st.session_state.get("llm_journey_plan_validation")
+
+    lcol1, lcol2, lcol3, lcol4 = st.columns(4)
     with lcol1:
         if st.button("Generate LLM Journey Plan", key="btn_gen_llm_plan"):
             with st.spinner("Generating structured journey proposal via LLM..."):
-                proposal = generate_llm_journey_plan(DEMO_ENTITY_ID)
-                st.session_state["llm_journey_plan_proposal"] = proposal
-                st.session_state["llm_journey_plan_validation"] = None
-                st.success("Generated LLM Journey Plan Proposal!")
+                prop = generate_llm_journey_plan(DEMO_ENTITY_ID)
+                st.session_state["llm_journey_plan_proposal"] = prop
+                st.session_state["llm_journey_plan_validation"] = validate_llm_journey_plan(prop, DEMO_ENTITY_ID)
+                st.success("Generated & Validated LLM Journey Plan Proposal!")
+                st.rerun()
 
     with lcol2:
-        proposal = st.session_state.get("llm_journey_plan_proposal")
         if st.button("Validate Journey Plan", key="btn_val_llm_plan", disabled=(not proposal)):
             if proposal:
-                val = validate_llm_journey_plan(proposal, DEMO_ENTITY_ID)
-                st.session_state["llm_journey_plan_validation"] = val
-                if val["is_valid"]:
+                v = validate_llm_journey_plan(proposal, DEMO_ENTITY_ID)
+                st.session_state["llm_journey_plan_validation"] = v
+                if v["is_valid"]:
                     st.success("Plan Validation Passed!")
                 else:
-                    st.error(f"Plan Validation Failed: {len(val['errors'])} errors found.")
+                    st.error(f"Plan Validation Failed: {len(v['errors'])} errors found.")
 
     with lcol3:
-        val = st.session_state.get("llm_journey_plan_validation")
-        is_valid = val and val.get("is_valid")
-        if st.button("Approve & Apply Journey Plan", type="primary", key="btn_apply_llm_plan", disabled=(not is_valid)):
+        can_regen = proposal is not None and val is not None
+        if st.button("Regenerate with Feedback", key="btn_regen_llm_plan", disabled=(not can_regen)):
+            if proposal and val:
+                with st.spinner("Regenerating journey plan using validation feedback..."):
+                    re_prop = regenerate_llm_journey_plan_with_feedback(proposal, val, DEMO_ENTITY_ID)
+                    st.session_state["llm_journey_plan_proposal"] = re_prop
+                    st.session_state["llm_journey_plan_validation"] = validate_llm_journey_plan(re_prop, DEMO_ENTITY_ID)
+                    st.success("Regenerated & Re-validated Plan!")
+                    st.rerun()
+
+    with lcol4:
+        is_valid = val and val.get("is_valid") and val.get("quality_label") != "Invalid"
+        if st.button("Approve & Apply Plan", type="primary", key="btn_apply_llm_plan", disabled=(not is_valid)):
             if is_valid and val.get("normalized_plan"):
                 if not scenario_id:
                     scenario_id = reset_demo_journey(DEMO_ENTITY_ID)
@@ -176,10 +353,7 @@ def render_journey_dashboard(df_data=None, df_history=None):
                     st.session_state["llm_journey_plan_validation"] = None
                     st.rerun()
 
-    # Display LLM Plan Preview & Validation Details
-    proposal = st.session_state.get("llm_journey_plan_proposal")
-    val = st.session_state.get("llm_journey_plan_validation")
-
+    # Render LLM Plan Preview & Validation Details
     if proposal:
         render_llm_journey_plan_preview(proposal, val)
 

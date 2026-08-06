@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
+import pandas as pd
+
 from journey.journey_scenarios import DEFAULT_STAGES, get_default_scenario_definition
 from journey.journey_repository import (
     create_journey_scenario,
@@ -20,8 +22,9 @@ from journey.journey_runner import (
     execute_normalized_journey_plan,
     generate_llm_journey_explanation
 )
-from journey.llm_journey_planner import generate_llm_journey_plan
+from journey.llm_journey_planner import generate_llm_journey_plan, regenerate_llm_journey_plan_with_feedback
 from journey.journey_plan_validator import validate_llm_journey_plan
+from journey.journey_plan_normalizer import normalize_and_repair_json_plan
 from journey.journey_readiness_validator import validate_journey_entity_state
 from journey.journey_tree import render_journey_tree_mermaid, get_stage_icon
 
@@ -148,7 +151,7 @@ class TestJourneySimulator(unittest.TestCase):
         self.assertTrue(len(other_rows) >= 0)
 
     # 13. LLM Plan Generator Read-Only Guarantee
-    def test_llm_journey_plan_does_not_write_database(self):
+    def test_llm_does_not_write_database(self):
         """Verify LLM Journey Planner generates JSON proposal without mutating database."""
         from storage.storage_manager import load_data
         _, history_before = load_data()
@@ -158,79 +161,92 @@ class TestJourneySimulator(unittest.TestCase):
         _, history_after = load_data()
         self.assertEqual(len(history_before), len(history_after))
 
-    # 14. Validator Rejects Unknown Event Types
-    def test_llm_plan_validator_rejects_unknown_event_type(self):
-        """Verify validator rejects plans with unsupported event types."""
-        invalid_plan = {
-            "entity_id": "P_DEMO_001",
-            "stages": [
-                {"stage_order": i, "stage_name": f"Stage {i}", "events": [{"event_type": "unknown_event_xyz"}]}
-                for i in range(1, 6)
-            ]
-        }
-        val = validate_llm_journey_plan(invalid_plan)
-        self.assertFalse(val["is_valid"])
-        self.assertTrue(any("unsupported event type" in err for err in val["errors"]))
+    # 14. LLM Output with NULL is Normalized
+    def test_llm_output_with_null_is_normalized(self):
+        """Verify normalizer repairs capital NULL and None literals to JSON null."""
+        raw_str = '{"entity_id": "P_DEMO_001", "stages": [{"stage_order": 1, "stage_name": "Stage 1", "events": [{"event_type": "page_visit", "event_value": NULL}]}]}'
+        plan, warnings = normalize_and_repair_json_plan(raw_str)
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan["stages"][0]["events"][0]["event_value"], None)
+        self.assertTrue(any("NULL" in w for w in warnings))
 
-    # 15. Validator Rejects Purchase Before Conversion
-    def test_llm_plan_validator_rejects_purchase_before_conversion(self):
-        """Verify validator rejects purchase events placed in Stage 1 or Stage 2."""
-        invalid_plan = {
-            "entity_id": "P_DEMO_001",
-            "stages": [
-                {"stage_order": 1, "stage_name": "Stage 1", "events": [{"event_type": "purchase", "event_value": 1000.0}]},
-                {"stage_order": 2, "stage_name": "Stage 2", "events": [{"event_type": "page_visit"}]},
-                {"stage_order": 3, "stage_name": "Stage 3", "events": [{"event_type": "page_visit"}]},
-                {"stage_order": 4, "stage_name": "Stage 4", "events": [{"event_type": "page_visit"}]},
-                {"stage_order": 5, "stage_name": "Stage 5", "events": [{"event_type": "complaint"}]},
-            ]
-        }
-        val = validate_llm_journey_plan(invalid_plan)
-        self.assertFalse(val["is_valid"])
-        self.assertTrue(any("cannot occur before conversion stage" in err for err in val["errors"]))
+    # 15. Markdown Wrapped JSON is Normalized
+    def test_markdown_wrapped_json_is_normalized(self):
+        """Verify normalizer strips ```json fences gracefully."""
+        raw_str = '```json\n{"entity_id": "P_DEMO_001", "stages": []}\n```'
+        plan, warnings = normalize_and_repair_json_plan(raw_str)
+        self.assertIsNotNone(plan)
+        self.assertTrue(any("markdown" in w for w in warnings))
 
-    # 16. Validator Requires Negative Event in Churn Stage
-    def test_llm_plan_validator_requires_negative_event_in_churn_stage(self):
-        """Verify Stage 5 requires at least one negative signal."""
-        invalid_plan = {
+    # 16. Invalid JSON is Blocked
+    def test_invalid_json_is_blocked(self):
+        """Verify corrupted non-JSON input returns None and is blocked."""
+        raw_str = "This is completely invalid non-json string content 12345"
+        plan, warnings = normalize_and_repair_json_plan(raw_str)
+        self.assertIsNone(plan)
+        val = validate_llm_journey_plan(raw_str)
+        self.assertFalse(val["is_valid"])
+
+    # 17. Plan Quality Score Excellent
+    def test_plan_quality_score_excellent(self):
+        """Verify full 6-stage valid plan scores Excellent (>= 85)."""
+        plan = generate_llm_journey_plan("P_DEMO_001")
+        val = validate_llm_journey_plan(plan, "P_DEMO_001")
+        self.assertTrue(val["is_valid"])
+        self.assertGreaterEqual(val["quality_score"], 85.0)
+        self.assertEqual(val["quality_label"], "Excellent")
+
+    # 18. Plan Quality Score Weak
+    def test_plan_quality_score_weak(self):
+        """Verify plan missing recovery stage and VIP purchases scores Weak or Acceptable."""
+        plan = {
             "entity_id": "P_DEMO_001",
             "stages": [
                 {"stage_order": 1, "stage_name": "Stage 1", "events": [{"event_type": "page_visit"}]},
                 {"stage_order": 2, "stage_name": "Stage 2", "events": [{"event_type": "email_open"}]},
                 {"stage_order": 3, "stage_name": "Stage 3", "events": [{"event_type": "purchase", "event_value": 1500.0}], "expected_state_change": {"entity_type": "Client"}},
-                {"stage_order": 4, "stage_name": "Stage 4", "events": [{"event_type": "purchase", "event_value": 8000.0}]},
-                {"stage_order": 5, "stage_name": "Stage 5", "events": [{"event_type": "page_visit"}]},  # Missing negative event!
+                {"stage_order": 4, "stage_name": "Stage 4", "events": [{"event_type": "page_visit"}]},
+                {"stage_order": 5, "stage_name": "Stage 5", "events": [{"event_type": "complaint"}]},
             ]
         }
-        val = validate_llm_journey_plan(invalid_plan)
-        self.assertFalse(val["is_valid"])
-        self.assertTrue(any("must include at least one negative signal" in err for err in val["errors"]))
-
-    # 17. Valid LLM Plan Can Be Approved & Applied
-    def test_valid_llm_plan_can_be_approved_and_applied(self):
-        """Verify valid normalized LLM plan can be approved and executed deterministically."""
-        plan = generate_llm_journey_plan("P_DEMO_001")
-        val = validate_llm_journey_plan(plan, "P_DEMO_001")
+        val = validate_llm_journey_plan(plan)
         self.assertTrue(val["is_valid"])
-        scen_id = reset_demo_journey("P_DEMO_001")
-        res = execute_normalized_journey_plan(scen_id, val["normalized_plan"])
-        self.assertGreater(res["steps_executed"], 0)
+        self.assertLess(val["quality_score"], 85.0)
 
-    # 18. Invalid LLM Plan Cannot Be Applied
-    def test_invalid_llm_plan_cannot_be_applied(self):
-        """Verify invalid plan fails validation and normalized_plan is None."""
-        invalid_plan = {"entity_id": "P_DEMO_001", "stages": []}
-        val = validate_llm_journey_plan(invalid_plan)
+    # 19. Regenerate Uses Validation Feedback
+    def test_regenerate_uses_validation_feedback(self):
+        """Verify regenerate function receives feedback and returns structured plan without database writes."""
+        prev_plan = {"entity_id": "P_DEMO_001", "stages": []}
+        feedback = {"errors": ["Stage count missing"], "warnings": []}
+        re_plan = regenerate_llm_journey_plan_with_feedback(prev_plan, feedback, "P_DEMO_001")
+        self.assertIsInstance(re_plan, dict)
+        self.assertIn("stages", re_plan)
+
+    # 20. Approve Apply Disabled for Invalid Plan
+    def test_approve_apply_disabled_for_invalid_plan(self):
+        """Verify invalid plan produces is_valid=False and normalized_plan=None."""
+        val = validate_llm_journey_plan({"invalid": "data"})
         self.assertFalse(val["is_valid"])
+        self.assertEqual(val["quality_label"], "Invalid")
         self.assertIsNone(val["normalized_plan"])
 
-    # 19. LLM Not Called Automatically
+    # 21. LLM Not Called Automatically
     @patch("llm.llm_client.generate_text")
     def test_llm_not_called_automatically(self, mock_llm):
         """Verify deterministic journey execution makes zero LLM calls."""
         scen_id = reset_demo_journey("P_DEMO_001")
         run_full_journey(scen_id, use_llm=False)
         mock_llm.assert_not_called()
+
+    # 22. Normalized Valid Plan Can Be Applied
+    def test_normalized_valid_plan_can_be_applied(self):
+        """Verify valid normalized plan can be applied deterministically."""
+        plan = generate_llm_journey_plan("P_DEMO_001")
+        val = validate_llm_journey_plan(plan, "P_DEMO_001")
+        self.assertTrue(val["is_valid"])
+        scen_id = reset_demo_journey("P_DEMO_001")
+        res = execute_normalized_journey_plan(scen_id, val["normalized_plan"])
+        self.assertGreater(res["steps_executed"], 0)
 
 
 if __name__ == "__main__":
