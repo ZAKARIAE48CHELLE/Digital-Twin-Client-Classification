@@ -27,19 +27,16 @@ class PersonaAgent(BaseAgent):
 
     def _analyze_implementation(self, context: AgentContext) -> AgentOutput:
         dt = context.latest_digital_twin or {}
-        segment = str(context.latest_segment or dt.get("customer_segment") or dt.get("segment") or "Unknown")
-        persona_name = str(context.latest_persona or dt.get("persona_name") or dt.get("persona") or "Unknown")
-        dynamic_ctx = context.dynamic_persona_context or {}
+        # Determine segment and persona string values
+        seg_raw = context.latest_segment or dt.get("customer_segment") or dt.get("segment") or ""
+        persona_raw = context.latest_persona or dt.get("persona_name") or dt.get("persona") or ""
 
-        observations: List[str] = []
-        risks: List[str] = []
-        opportunities: List[str] = []
-        recommendations: List[str] = []
-        evidence: List[Dict[str, Any]] = []
+        segment = str(seg_raw).strip() if seg_raw and str(seg_raw).strip() != "None" else "Unknown"
+        persona_name = str(persona_raw).strip() if persona_raw and str(persona_raw).strip() != "None" else "Unknown"
 
-        # Extract official persona names from DEFAULT_PERSONA_MAP
+        # Check against DEFAULT_PERSONA_MAP official names
         official_names = list(set(p["persona_name"] for p in DEFAULT_PERSONA_MAP.values()))
-        is_official = persona_name in official_names
+        is_official = persona_name in official_names and persona_name != "Unknown"
 
         status = "OK"
 
@@ -77,17 +74,26 @@ class PersonaAgent(BaseAgent):
         observations.append(f"Customer Segment: '{segment}' | Stable Persona: '{persona_name}'.")
         observations.append("Resolution Protocol: Entity -> Digital Twin -> Segment -> Persona Library (Segment-First).")
 
-        if segment == "Unknown" or persona_name == "Unknown":
+        # Required Fix 5 — Persona Mapping Warning/Critical
+        churn_ctx = context.latest_churn or {}
+        churn_risk_high = (
+            churn_ctx.get("status") in {"Warning", "Critical"} or
+            float(dt.get("churn_risk_score", 0.0)) >= 0.60 or
+            float(churn_ctx.get("churn_risk_score", 0.0)) >= 0.60
+        )
+
+        if segment != "Unknown" and (persona_name == "Unknown" or not is_official):
+            status = "Critical" if churn_risk_high else "Warning"
+            observations.append(f"Segment '{segment}' exists, but stable persona resolution returned None or unmapped value.")
+            risks.append(f"Persona mapping incomplete for segment '{segment}'.")
+            recommendations.append("Check persona_library for segment mapping and rerun segment-first persona resolution.")
+
+        elif segment == "Unknown" and persona_name == "Unknown":
             status = "Warning"
-            risks.append("Missing segment or persona assignment in Digital Twin context.")
+            risks.append("Missing segment and persona assignment in Digital Twin context.")
             recommendations.append("Run Segment Classifier and Persona Matcher on this entity.")
 
-        elif not is_official:
-            status = "Warning"
-            risks.append(f"Persona '{persona_name}' is not registered in the official persona library.")
-            recommendations.append("Re-run persona matcher to resolve to an official strategic persona.")
-
-        else:
+        elif is_official:
             opportunities.append(f"Entity is mapped to official strategic persona '{persona_name}' for targeted messaging.")
             recommendations.append(f"Use '{persona_name}' value proposition guidelines for communication styling.")
 
@@ -106,7 +112,7 @@ class PersonaAgent(BaseAgent):
             )
 
         summary = (
-            f"Persona Agent verified Entity [{context.entity_id}] under segment '{segment}' "
+            f"Persona Agent evaluated Entity [{context.entity_id}] under segment '{segment}' "
             f"and stable persona '{persona_name}' (Status: {status})."
         )
 

@@ -80,16 +80,114 @@ class TestAgentDebatePhase84(unittest.TestCase):
         self.assertIn("churn", conflicts[0].agents_involved)
 
     def test_conflict_detector_status_disagreement(self):
-        """Verifies conflict detector catches Status Disagreement between OK and Critical agents."""
+        """Verifies conflict detector catches Status Disagreement between OK and Critical agents within the same domain."""
         conflicts = detect_status_conflicts([self.clv_output, self.churn_output])
         self.assertGreater(len(conflicts), 0)
-        self.assertEqual(conflicts[0].conflict_type, "Status Disagreement")
+        self.assertEqual(conflicts[0].conflict_type, "Customer Intelligence Status Disagreement")
 
     def test_conflict_detector_data_quality_override(self):
         """Verifies DB audit alerts create Data Quality Override conflict."""
         conflicts = detect_data_quality_conflicts([self.clv_output, self.db_output])
         self.assertGreater(len(conflicts), 0)
-        self.assertEqual(conflicts[0].conflict_type, "Data Quality Override")
+        self.assertEqual(conflicts[0].conflict_type, "Database Audit Override")
+
+    def test_churn_critical_journey_ok_not_conflict(self):
+        """Verifies Churn Critical and Journey OK are cross-domain and do NOT trigger a status conflict."""
+        journey_ok = AgentOutput(
+            agent_id="journey",
+            agent_name="Journey Agent",
+            agent_role="Journey Analysis",
+            status="OK",
+            summary="No journey scenario logged for Entity [C00001]. No journey scenario expected for this entity.",
+            confidence_score=0.90,
+        )
+        conflicts = detect_status_conflicts([self.churn_output, journey_ok])
+        self.assertEqual(len(conflicts), 0)
+
+    def test_journey_not_started_for_demo_entity_is_warning(self):
+        """Verifies Journey Agent status is Warning when P_DEMO_001 journey has 0 steps executed."""
+        from agents.journey_agent import JourneyAgent
+        from agents.agent_schemas import AgentContext
+        ctx = AgentContext(entity_id="P_DEMO_001", journey_history=[])
+        out = JourneyAgent().safe_analyze(ctx)
+        self.assertEqual(out.status, "Warning")
+        self.assertIn("P_DEMO_001", out.summary)
+
+    def test_churn_critical_no_campaign_creates_campaign_gap_finding(self):
+        """Verifies Churn Critical + 0 campaign dispatches creates Customer Risk + Campaign Gap conflict."""
+        from agents.conflict_detector import detect_campaign_readiness_conflicts
+        camp_out = AgentOutput(
+            agent_id="campaign",
+            agent_name="Campaign Agent",
+            agent_role="Campaign Dispatch Audit",
+            status="Warning",
+            summary="ZERO campaign dispatches recorded for Entity [P_DEMO_001].",
+            risks=["Entity has received 0 campaign dispatches."],
+            confidence_score=0.90,
+        )
+        conflicts = detect_campaign_readiness_conflicts([self.churn_output, camp_out])
+        self.assertGreater(len(conflicts), 0)
+        self.assertEqual(conflicts[0].conflict_type, "Customer Risk + Campaign Gap")
+
+    def test_persona_none_with_segment_creates_mapping_conflict(self):
+        """Verifies Persona Agent with valid segment and persona None creates Persona Mapping Issue conflict."""
+        from agents.persona_agent import PersonaAgent
+        from agents.conflict_detector import detect_persona_action_conflicts
+        from agents.agent_schemas import AgentContext
+
+        ctx = AgentContext(entity_id="P_DEMO_001", latest_segment="Complaint-Driven Risk Clients", latest_persona=None)
+        p_out = PersonaAgent().safe_analyze(ctx)
+        self.assertIn(p_out.status, {"Warning", "Critical"})
+
+        conflicts = detect_persona_action_conflicts([p_out, self.churn_output])
+        self.assertGreater(len(conflicts), 0)
+        self.assertEqual(conflicts[0].conflict_type, "Persona Mapping Issue")
+
+    def test_database_audit_critical_overrides_domains(self):
+        """Verifies Database Audit Critical overrides other domains and sets Data Quality Override conflict."""
+        conflicts = detect_data_quality_conflicts([self.clv_output, self.db_output])
+        self.assertGreater(len(conflicts), 0)
+        self.assertEqual(conflicts[0].conflict_type, "Database Audit Override")
+        self.assertEqual(conflicts[0].severity, "Critical")
+
+    def test_final_recommendation_uses_osmos_specific_language(self):
+        """Verifies final Next Best Action recommendation uses OSMOS-specific system language."""
+        from agents.result_aggregator import choose_next_best_action
+        camp_out = AgentOutput(
+            agent_id="campaign", agent_name="Campaign Agent", status="Warning",
+            summary="ZERO campaign dispatches logged.", risks=["ZERO campaign dispatches."],
+        )
+        p_out = AgentOutput(
+            agent_id="persona", agent_name="Persona Agent", status="Critical",
+            summary="Segment 'Complaint-Driven Risk Clients' exists but stable persona is None.",
+            risks=["Persona mapping incomplete for segment."],
+        )
+        j_out = AgentOutput(
+            agent_id="journey", agent_name="Journey Agent", status="Warning",
+            summary="Demo entity [P_DEMO_001] journey has not been started (0/5 steps executed).",
+        )
+        nba = choose_next_best_action([self.churn_output, camp_out, p_out, j_out], entity_id="P_DEMO_001")
+
+        self.assertIn("Prioritize service recovery", nba)
+        self.assertIn("Journey Simulator", nba)
+        self.assertIn("persona mapping", nba)
+        self.assertNotIn("risk management department", nba)
+        self.assertNotIn("prospecting agent", nba)
+        self.assertNotIn("marketing department", nba)
+
+    def test_journey_agent_scope_does_not_evaluate_customer_health(self):
+        """Verifies Journey Agent strictly evaluates journey scenario integrity and not customer churn health."""
+        from agents.journey_agent import JourneyAgent
+        from agents.agent_schemas import AgentContext
+        ctx = AgentContext(
+            entity_id="C00001",
+            journey_history=[],
+            latest_digital_twin={"churn_risk_score": 0.95, "churn_status": "Critical"},
+        )
+        out = JourneyAgent().safe_analyze(ctx)
+        # Normal entity with 0 steps has status OK in Journey Agent (no customer churn status pollution)
+        self.assertEqual(out.status, "OK")
+        self.assertIn("No journey scenario expected", out.summary)
 
     def test_consensus_builder_strong_consensus(self):
         """Verifies consensus status is Strong Consensus when no conflicts exist."""

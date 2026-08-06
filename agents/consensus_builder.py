@@ -109,24 +109,64 @@ def choose_priority_action(agent_outputs: List[Any], conflicts: List[AgentConfli
     db_d = by_id.get("database_audit", {})
     journey_d = by_id.get("journey", {})
     camp_d = by_id.get("campaign", {})
+    persona_d = by_id.get("persona", {})
 
-    # Priority Rule 1: Database Audit Critical
+    churn_critical = churn_d.get("status") == "Critical"
+    churn_risk_high = churn_critical or churn_d.get("status") == "Warning"
+
+    camp_gap = False
+    if camp_d:
+        c_sum = camp_d.get("summary", "").lower()
+        c_risks = [r.lower() for r in camp_d.get("risks", [])]
+        if "zero campaign" in c_sum or "no campaign" in c_sum or any("zero campaign" in r or "no campaign" in r for r in c_risks):
+            camp_gap = True
+        elif camp_d.get("status") in {"Warning", "Critical", "Insufficient Data"}:
+            camp_gap = True
+    else:
+        camp_gap = True
+
+    persona_issue = False
+    if persona_d:
+        p_risks = [r.lower() for r in persona_d.get("risks", [])]
+        if any("persona mapping incomplete" in r or "returned none" in r for r in p_risks) or "none" in persona_d.get("summary", "").lower():
+            persona_issue = True
+
+    journey_not_started = False
+    if journey_d:
+        j_sum = journey_d.get("summary", "").lower()
+        if journey_d.get("status") == "Warning" or "0 steps" in j_sum or "not been started" in j_sum:
+            journey_not_started = True
+
+    # Required Fix 4 Scenario: Churn Critical + Campaign Gap + Persona issue / Journey missing
+    if churn_critical and camp_gap:
+        if persona_issue or journey_not_started:
+            return (
+                "Prioritize service recovery and retention simulation because churn risk is critical and no campaign history exists. "
+                "Before presentation, fix persona mapping for the current segment and run the Journey Simulator if P_DEMO_001 is used as the demo entity."
+            )
+        return "RETENTION INTERVENTION: Prepare retention and service recovery campaign simulation in Campaign Agent."
+
+    # Priority 1: Database Audit Critical
     if db_d.get("status") == "Critical":
         return "DATABASE AUDIT: Audit schema integrity and resolve database errors before operational actions."
 
-    # Priority Rule 2: High Churn + High CLV
-    if churn_d.get("status") in {"Warning", "Critical"} and clv_d.get("status") in {"OK", "Warning"}:
+    # Priority 2: Persona Mapping Issue
+    if persona_issue:
+        return "PERSONA MAPPING AUDIT: Check persona_library for segment mapping and rerun segment-first persona resolution."
+
+    # Priority 3: High Churn + High CLV
+    if churn_risk_high and clv_d.get("status") in {"OK", "Warning"}:
         return "SERVICE RECOVERY: Prioritize urgent retention outreach before upsell or expansion."
 
-    # Priority Rule 3: High Churn + Missing Campaign
-    if churn_d.get("status") in {"Warning", "Critical"} and camp_d.get("status") in {"Warning", "Critical", "Insufficient Data"}:
+    # Priority 4: High Churn + Missing Campaign
+    if churn_risk_high and camp_gap:
         return "CAMPAIGN DRAFT: Prepare a targeted retention campaign draft in Human Approval Queue."
 
-    # Priority Rule 4: Journey Stage Error
+    # Priority 5: Journey Stage Error
     if journey_d.get("status") in {"Warning", "Critical"}:
         return "JOURNEY AUDIT: Fix journey step trigger references and verify stage transition history."
 
-    # Priority Rule 5: High CLV + Low Churn
+    # Priority 6: High CLV + Low Churn
     if clv_d.get("status") == "OK" and churn_d.get("status") == "OK":
         opps = clv_d.get("opportunities", [])
         if opps:

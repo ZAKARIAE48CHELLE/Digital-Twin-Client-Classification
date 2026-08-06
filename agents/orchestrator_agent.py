@@ -161,6 +161,10 @@ class OrchestratorAgent:
 You are the OSMOS Multi-Agent Executive Assistant.
 Synthesize the structured 8-Agent Supervision report into a bilingual executive summary (French & English).
 
+CRITICAL RULE:
+Use OSMOS-specific system terminology ONLY (e.g. Churn Risk Agent, Campaign Agent, Journey Simulator, Persona Matcher, event_history, persona_library).
+DO NOT invent or refer to generic corporate departments such as "risk management department", "marketing department", or "prospecting agent".
+
 ENTITIES METADATA:
 - Entity ID: {orchestrator_output.entity_id}
 - Global Supervision Status: {orchestrator_output.global_status}

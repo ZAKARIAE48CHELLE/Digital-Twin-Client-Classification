@@ -109,7 +109,7 @@ def run_deterministic_debate(
     logger.info(f"Running deterministic agent debate for Entity [{entity_id}] across {len(agent_outputs or [])} agents...")
 
     statements = build_agent_statements(agent_outputs)
-    conflicts = detect_all_conflicts(agent_outputs)
+    conflicts = detect_all_conflicts(agent_outputs, entity_id=entity_id)
     consensus = build_consensus(agent_outputs, conflicts)
 
     stmt_dicts = [s.to_dict() for s in statements]
