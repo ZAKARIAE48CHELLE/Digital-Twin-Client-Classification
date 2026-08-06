@@ -553,30 +553,35 @@ def render_agent_dashboard(df: Optional[pd.DataFrame] = None, history_df: Option
                                 st.markdown(f"- {r}")
 
             st.markdown("---")
-            st.markdown("### Specialized Agent Reports")
+            st.markdown("### Specialized Agent Reports (Individual Accordions)")
+            st.caption("Click any agent accordion below to view detailed observations, risk audits, recommendations, and evidence metrics. Accordions are closed by default.")
 
-            # Display Agent Cards
+            # Display Agent Cards in Individual Accordions (Closed by default)
             agent_outputs = [_to_dict(a) for a in raw_outputs]
             if not agent_outputs:
                 st.warning("No specialized agents were selected for analysis.")
 
             for agent_dict in agent_outputs:
+                a_name = agent_dict.get('agent_name', 'Specialized Agent')
+                a_role = agent_dict.get('agent_role', 'Supervision Agent')
+                a_status = agent_dict.get('status', 'OK')
+
                 st.write("")
-                with st.container():
+                with st.expander(f"🤖 {a_name} ({a_role}) — Status: [{a_status}]", expanded=False):
                     st.markdown(
                         f"""
                         <div style="border: 1px solid var(--osmos-border); border-radius: 10px; padding: 16px; 
                                     background: var(--osmos-card-bg); margin-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--osmos-text);">{agent_dict.get('agent_name')}</h4>
-                                    <span style="font-size: 12px; color: var(--osmos-muted);">{agent_dict.get('agent_role')}</span>
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--osmos-text);">{a_name}</h4>
+                                    <span style="font-size: 12px; color: var(--osmos-muted);">{a_role}</span>
                                 </div>
                                 <div>
-                                    {render_agent_status_badge(agent_dict.get('status', 'OK'))}
+                                    {render_agent_status_badge(a_status)}
                                 </div>
                             </div>
-                            <p style="margin: 10px 0; font-size: 13.5px; color: var(--osmos-text);">
+                            <p style="margin: 10px 0 0 0; font-size: 13.5px; color: var(--osmos-text);">
                                 <strong>Summary:</strong> {agent_dict.get('summary')}
                             </p>
                         </div>
