@@ -1,4 +1,5 @@
 import json
+from textwrap import dedent
 import streamlit as st
 import pandas as pd
 from ui.layout import render_page_header, section_header_html
@@ -55,7 +56,7 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
     }
     txt_col, bg_col, border_col = label_colors.get(q_label, label_colors["Not Audited"])
 
-    st.markdown(f"""
+    banner_html = dedent(f"""
     <div style="
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
         border: 1px solid rgba(56, 189, 248, 0.4);
@@ -77,7 +78,8 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
         </div>
         <p style="color: #94a3b8; font-size: 13.5px; margin: 0; line-height: 1.5;">{description}</p>
     </div>
-    """, unsafe_allow_html=True)
+    """)
+    st.markdown(banner_html, unsafe_allow_html=True)
 
     # Validation & Repair Feedback Box
     if val:
@@ -136,11 +138,7 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
             icon = event_icons.get(e_type, "⚡")
             val_str = f" ({e_val:,.0f} MAD)" if e_val is not None else ""
             offset_str = f" (T{e_offset}d)" if e_offset else ""
-            evt_pills.append(f"""
-                <span style="background: rgba(30, 41, 59, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500;">
-                    {icon} <strong>{e_type}</strong>{val_str}<span style="color: #94a3b8; font-size: 11px;">{offset_str}</span>
-                </span>
-            """)
+            evt_pills.append(f"""<span style="background: rgba(30, 41, 59, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500;">{icon} <strong>{e_type}</strong>{val_str}<span style="color: #94a3b8; font-size: 11px;">{offset_str}</span></span>""")
 
         evt_html = "".join(evt_pills) if evt_pills else "<span style='color: #64748b; font-size: 12px;'>No events specified</span>"
 
@@ -149,7 +147,7 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
         segment = state_chg.get("segment", "Prospect")
         persona = state_chg.get("persona", "New Explorer")
 
-        st.markdown(f"""
+        stage_card_html = dedent(f"""
         <div style="
             background: rgba(15, 23, 42, 0.7);
             border-left: 4px solid #38bdf8;
@@ -191,7 +189,8 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
+        st.markdown(stage_card_html, unsafe_allow_html=True)
 
     with st.expander("🔍 View Raw Plan JSON Structure", expanded=False):
         st.json(proposal)
