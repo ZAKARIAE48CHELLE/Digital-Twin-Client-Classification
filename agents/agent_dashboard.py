@@ -33,6 +33,26 @@ from ui.icons import icon_html
 logger = logging.getLogger("OSMOS_AGENT_DASHBOARD")
 
 
+def _rep_val(rep: Any, attr: str, default: Any = None) -> Any:
+    """Safely extracts an attribute or dict key from OrchestratorOutput or dict."""
+    if rep is None:
+        return default
+    if isinstance(rep, dict):
+        return rep.get(attr, default)
+    return getattr(rep, attr, default)
+
+
+def _to_dict(obj: Any) -> Dict[str, Any]:
+    """Converts object to dict if it has to_dict or __dict__, or returns dict as-is."""
+    if isinstance(obj, dict):
+        return obj
+    if hasattr(obj, "to_dict"):
+        return obj.to_dict()
+    if hasattr(obj, "__dict__"):
+        return obj.__dict__
+    return {}
+
+
 def format_arrow_safe_df(records: Any) -> pd.DataFrame:
     """Converts records list or DataFrame into a PyArrow-safe string DataFrame."""
     if isinstance(records, pd.DataFrame):
