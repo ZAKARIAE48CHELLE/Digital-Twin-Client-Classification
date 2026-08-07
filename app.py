@@ -2597,13 +2597,13 @@ def update_client_profile(df, entity_id, profile_data):
     df = update_customer_segmentation(df, entity_id)
     return df
 
-# Safe dialog fallback wrapper
-if hasattr(st, "dialog"):
-    @st.dialog("Complete / Edit Client Profile")
-    def show_client_completion_form(entity_id, is_edit=False):
-        render_dialog_ui(entity_id, is_edit)
-else:
-    def show_client_completion_form(entity_id, is_edit=False):
+def show_client_completion_form(entity_id, is_edit=False):
+    if hasattr(st, "dialog"):
+        @st.dialog("Complete / Edit Client Profile")
+        def _dialog_inner():
+            render_dialog_ui(entity_id, is_edit)
+        _dialog_inner()
+    else:
         st.warning("Native popup modal is not available. Rendering profile form below.")
         with st.container():
             render_dialog_ui(entity_id, is_edit)
@@ -2742,1998 +2742,2003 @@ def render_dialog_ui(entity_id, is_edit=False):
 
 # Execute Streamlit layout rendering only under __main__ scope
 # Streamlit layout rendering
-df_data, df_history = get_data()
-df_data = ensure_client_columns(df_data)
-df_history = ensure_history_columns(df_history)
+def main():
+    df_data, df_history = get_data()
+    df_data = ensure_client_columns(df_data)
+    df_history = ensure_history_columns(df_history)
 
-if "missing_cols_class" not in st.session_state:
-    st.session_state["missing_cols_class"] = []
-if "missing_cols_clv" not in st.session_state:
-    st.session_state["missing_cols_clv"] = []
-    
-model_artifact = load_model_artifact()
-active_model = model_artifact.get('best_model_name', 'Dynamic Classification Model') if model_artifact else "Dynamic Classification Model"
-df_data = calculate_rfm_from_model(df_data, model_artifact)
-df_data = update_customer_segmentation(df_data)
-clv_artifact = load_clv_model_artifact()
+    if "missing_cols_class" not in st.session_state:
+        st.session_state["missing_cols_class"] = []
+    if "missing_cols_clv" not in st.session_state:
+        st.session_state["missing_cols_clv"] = []
 
-if "conversion_form_open" not in st.session_state:
-    st.session_state["conversion_form_open"] = False
-if "pending_conversion_entity_id" not in st.session_state:
-    st.session_state["pending_conversion_entity_id"] = None
-if "conversion_event_id" not in st.session_state:
-    st.session_state["conversion_event_id"] = None
-if "profile_completed" not in st.session_state:
-    st.session_state["profile_completed"] = False
-if "edit_form_open" not in st.session_state:
-    st.session_state["edit_form_open"] = False
-if "pending_edit_entity_id" not in st.session_state:
-    st.session_state["pending_edit_entity_id"] = None
-# ── Active page tracker (replaces radio)
-if "active_page" not in st.session_state:
-    st.session_state["active_page"] = "Dashboard Overview"
+    model_artifact = load_model_artifact()
+    active_model = model_artifact.get('best_model_name', 'Dynamic Classification Model') if model_artifact else "Dynamic Classification Model"
+    df_data = calculate_rfm_from_model(df_data, model_artifact)
+    df_data = update_customer_segmentation(df_data)
+    clv_artifact = load_clv_model_artifact()
 
-if st.session_state.get("conversion_form_open") and st.session_state.get("pending_conversion_entity_id"):
-    show_client_completion_form(st.session_state["pending_conversion_entity_id"], is_edit=False)
+    if "conversion_form_open" not in st.session_state:
+        st.session_state["conversion_form_open"] = False
+    if "pending_conversion_entity_id" not in st.session_state:
+        st.session_state["pending_conversion_entity_id"] = None
+    if "conversion_event_id" not in st.session_state:
+        st.session_state["conversion_event_id"] = None
+    if "profile_completed" not in st.session_state:
+        st.session_state["profile_completed"] = False
+    if "edit_form_open" not in st.session_state:
+        st.session_state["edit_form_open"] = False
+    if "pending_edit_entity_id" not in st.session_state:
+        st.session_state["pending_edit_entity_id"] = None
+    # ── Active page tracker (replaces radio)
+    if "active_page" not in st.session_state:
+        st.session_state["active_page"] = "Dashboard Overview"
 
-if st.session_state.get("edit_form_open") and st.session_state.get("pending_edit_entity_id"):
-    show_client_completion_form(st.session_state["pending_edit_entity_id"], is_edit=True)
+    if st.session_state.get("conversion_form_open") and st.session_state.get("pending_conversion_entity_id"):
+        show_client_completion_form(st.session_state["pending_conversion_entity_id"], is_edit=False)
+
+    if st.session_state.get("edit_form_open") and st.session_state.get("pending_edit_entity_id"):
+        show_client_completion_form(st.session_state["pending_edit_entity_id"], is_edit=True)
 
 
-# ── Sidebar ──────────────────────────────────────────────────
-st.sidebar.markdown("""
-<div class='sidebar-brand'>
-    <div class='brand-mark'>O</div>
-    <div class='brand-copy'>
-        <div class='brand-title'>OSMOS</div>
-        <div class='brand-subtitle'>Digital Twin Platform</div>
+    # ── Sidebar ──────────────────────────────────────────────────
+    st.sidebar.markdown("""
+    <div class='sidebar-brand'>
+        <div class='brand-mark'>O</div>
+        <div class='brand-copy'>
+            <div class='brand-title'>OSMOS</div>
+            <div class='brand-subtitle'>Digital Twin Platform</div>
+        </div>
     </div>
-</div>
-<div class='sidebar-rule'></div>
-""", unsafe_allow_html=True)
+    <div class='sidebar-rule'></div>
+    """, unsafe_allow_html=True)
 
-# Appearance and navigation
-render_theme_toggle(st.sidebar)
+    # Appearance and navigation
+    render_theme_toggle(st.sidebar)
 
-_pages = list(MAIN_PAGES)
-_active = st.session_state["active_page"]
-_nav_button_icons = {
-    "Dashboard Overview": ":material/dashboard:",
-    "Entity Profile": ":material/id_card:",
-    "Customer Segments & Personas": ":material/groups:",
-    "Digital Twin & Persona": ":material/account_tree:",
-    "Campaign Simulation": ":material/campaign:",
-    "Journey Simulator": ":material/route:",
-    "Agent Supervision Center": ":material/smart_toy:",
-    "Knowledge Base": ":material/book:",
-    "Simulate Event": ":material/bolt:",
-    "Create New Entity": ":material/person_add:",
-    "Database Intelligence": ":material/database:",
-}
+    _pages = list(MAIN_PAGES)
+    _active = st.session_state["active_page"]
+    _nav_button_icons = {
+        "Dashboard Overview": ":material/dashboard:",
+        "Entity Profile": ":material/id_card:",
+        "Customer Segments & Personas": ":material/groups:",
+        "Digital Twin & Persona": ":material/account_tree:",
+        "Campaign Simulation": ":material/campaign:",
+        "Journey Simulator": ":material/route:",
+        "Agent Supervision Center": ":material/smart_toy:",
+        "Knowledge Base": ":material/book:",
+        "Simulate Event": ":material/bolt:",
+        "Create New Entity": ":material/person_add:",
+        "Database Intelligence": ":material/database:",
+    }
 
-st.sidebar.markdown("<div class='osmos-sidebar-nav' role='navigation' aria-label='Primary navigation'>", unsafe_allow_html=True)
-for _pid in _pages:
-    _is_active = _active == _pid
-    if st.sidebar.button(
-        PAGE_LABELS.get(_pid, _pid),
-        key="nav_" + _pid,
-        help=_pid,
-        type="primary" if _is_active else "secondary",
-        icon=_nav_button_icons.get(_pid),
-        width="stretch",
-    ):
-        st.session_state["active_page"] = _pid
-        st.rerun()
-st.sidebar.markdown("</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='osmos-sidebar-nav' role='navigation' aria-label='Primary navigation'>", unsafe_allow_html=True)
+    for _pid in _pages:
+        _is_active = _active == _pid
+        if st.sidebar.button(
+            PAGE_LABELS.get(_pid, _pid),
+            key="nav_" + _pid,
+            help=_pid,
+            type="primary" if _is_active else "secondary",
+            icon=_nav_button_icons.get(_pid),
+            width="stretch",
+        ):
+            st.session_state["active_page"] = _pid
+            st.rerun()
+    st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-page = st.session_state["active_page"]
-st.sidebar.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
+    page = st.session_state["active_page"]
+    st.sidebar.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
 
-# Sidebar model panels
 
-# ── Panel 1: Dynamic Classification Model ──
-class_status = "Missing"
-class_model_name = "N/A"
-class_selection_metric = "N/A"
-class_f1_str = "N/A"
-class_entity_format = "N/A"
-class_rfm_version = "N/A"
-class_export_date_val = "N/A"
+    # Sidebar model panels
 
-if model_artifact:
-    class_status = "Loaded"
-    class_model_name = model_artifact.get('best_model_name', 'Dynamic Classification Model')
-    class_selection_metric = model_artifact.get('selection_metric', 'f1_macro')
-    class_entity_format = model_artifact.get('entity_type_format', 'string')
-    class_rfm_version = model_artifact.get('rfm_version', 'RFM_ES_3_EXPERT_AHP')
-    class_export_date_val = model_artifact.get('export_date', 'N/A')
-    
-    if "results" in model_artifact:
-        results_df = model_artifact["results"]
-        if isinstance(results_df, pd.DataFrame):
-            matching_rows = results_df[results_df["model"] == class_model_name]
-            if len(matching_rows) > 0:
-                for f1_col in ["f1_macro", "f1", "accuracy", "F1"]:
-                    if f1_col in matching_rows.columns:
-                        class_f1_str = f"{matching_rows[f1_col].values[0]:.4f}"
-                        break
-                        
-st.sidebar.markdown(f"""
-<div style='background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.2);
-            border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
-    <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Dynamic Classification Model</div>
-    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
-        <span class='side-panel-icon'>{icon_html("Model")}</span>
-        <span style='font-size: 13px; font-weight: 700; color: #22d3ee; font-family: "JetBrains Mono", monospace;'>{class_model_name}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Status</span>
-        <span style='color: #cbd5e1; font-weight: 600;'>{class_status}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Selection Metric</span>
-        <span style='color: #cbd5e1; font-weight: 600;'>{class_selection_metric}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>F1-Macro</span>
-        <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{class_f1_str}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Entity Type Format</span>
-        <span style='color: #cbd5e1; font-weight: 600;'>{class_entity_format}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
-        <span style='color: #64748b;'>RFM Version</span>
-        <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{class_rfm_version}</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    # ── Panel 1: Dynamic Classification Model ──
+    class_status = "Missing"
+    class_model_name = "N/A"
+    class_selection_metric = "N/A"
+    class_f1_str = "N/A"
+    class_entity_format = "N/A"
+    class_rfm_version = "N/A"
+    class_export_date_val = "N/A"
 
-# ── Panel 2: CLV Models ──
-clv_status = "Missing"
-clv_amt_model = "N/A"
-clv_seg_model = "N/A"
-clv_export_date_str = "N/A"
-clv_amt_metric = "N/A"
-clv_seg_f1_str = "N/A"
-clv_seg_avail = "No"
+    if model_artifact:
+        class_status = "Loaded"
+        class_model_name = model_artifact.get('best_model_name', 'Dynamic Classification Model')
+        class_selection_metric = model_artifact.get('selection_metric', 'f1_macro')
+        class_entity_format = model_artifact.get('entity_type_format', 'string')
+        class_rfm_version = model_artifact.get('rfm_version', 'RFM_ES_3_EXPERT_AHP')
+        class_export_date_val = model_artifact.get('export_date', 'N/A')
 
-clv_art_local = clv_artifact if 'clv_artifact' in locals() or 'clv_artifact' in globals() else None
-
-if clv_art_local:
-    clv_status = "Loaded"
-    clv_amt_model = clv_art_local.get("best_amount_model_name", clv_art_local.get("best_model_name", "CLV Amount Model"))
-    clv_export_date_str = clv_art_local.get("export_date", "N/A")
-    
-    if "results" in clv_art_local:
-        res_df = clv_art_local["results"]
-        if isinstance(res_df, pd.DataFrame):
-            matching = res_df[res_df["model"] == clv_amt_model]
-            if len(matching) > 0:
-                metrics_found = []
-                for m in ["MAE", "mae", "R2", "r2", "RMSE", "rmse"]:
-                    if m in matching.columns:
-                        metrics_found.append(f"{m}: {matching[m].values[0]:.4f}")
-                if metrics_found:
-                    clv_amt_metric = ", ".join(metrics_found)
-                    
-    if "segment_model" in clv_art_local:
-        clv_seg_avail = "Yes"
-        clv_seg_model = clv_art_local.get("best_segment_model_name", "CLV Segment Classifier")
-        if "segment_results" in clv_art_local:
-            seg_res = clv_art_local["segment_results"]
-            if isinstance(seg_res, pd.DataFrame):
-                matching = seg_res[seg_res["model"] == clv_seg_model]
-                if len(matching) > 0:
+        if "results" in model_artifact:
+            results_df = model_artifact["results"]
+            if isinstance(results_df, pd.DataFrame):
+                matching_rows = results_df[results_df["model"] == class_model_name]
+                if len(matching_rows) > 0:
                     for f1_col in ["f1_macro", "f1", "accuracy", "F1"]:
-                        if f1_col in matching.columns:
-                            clv_seg_f1_str = f"{matching[f1_col].values[0]:.4f}"
+                        if f1_col in matching_rows.columns:
+                            class_f1_str = f"{matching_rows[f1_col].values[0]:.4f}"
                             break
-    else:
-        clv_seg_model = "N/A (Threshold-based)"
-        
-st.sidebar.markdown(f"""
-<div style='background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.2);
-            border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
-    <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>CLV Models</div>
-    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
-        <span class='side-panel-icon'>{icon_html("CLV")}</span>
-        <span style='font-size: 13px; font-weight: 700; color: #a78bfa; font-family: "JetBrains Mono", monospace;'>{clv_amt_model}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Status</span>
-        <span style='color: #cbd5e1; font-weight: 600;'>{clv_status}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Segment Model</span>
-        <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{clv_seg_model}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Segment Classifier</span>
-        <span style='color: #cbd5e1; font-weight: 600;'>{clv_seg_avail}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
-        <span style='color: #64748b;'>Amt Metric</span>
-        <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_amt_metric}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
-        <span style='color: #64748b;'>Seg F1-Macro</span>
-        <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_seg_f1_str}</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
-# ── Panel 3: Storage Backend ──
-is_pg = storage_manager.is_postgres_enabled()
-fallback_active, fallback_reason = storage_manager.get_fallback_status()
-
-if fallback_active:
-    backend_label = "Excel (Fallback)"
-    backend_color = "#f43f5e" # Rose/Red
-    backend_status_text = f"PostgreSQL failed: {fallback_reason[:30]}..."
-elif is_pg:
-    backend_label = "PostgreSQL"
-    backend_color = "#10b981" # Emerald/Green
-    backend_status_text = "Active & Connected"
-else:
-    backend_label = "Excel"
-    backend_color = "#cbd5e1" # Slate/Grey
-    backend_status_text = "Active & Local File"
-    
-st.sidebar.markdown(f"""
-<div style='background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
-            border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
-    <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Storage Backend</div>
-    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
-        <span class='side-panel-icon'>{icon_html("PostgreSQL")}</span>
-        <span style='font-size: 13px; font-weight: 700; color: {backend_color}; font-family: "JetBrains Mono", monospace;'>{backend_label}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
-        <span style='color: #64748b;'>Status</span>
-        <span style='color: {backend_color}; font-weight: 600; font-size: 10.5px;'>{backend_status_text}</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Panel 4: LLM Assistant ──
-from llm.llm_client import check_llm_available
-from llm.llm_config import is_llm_enabled, get_llm_model
-
-if not is_llm_enabled():
-    llm_label = "Disabled"
-    llm_color = "#94a3b8"  # Slate/Grey
-    llm_status_text = "OSMOS_LLM_ENABLED=false"
-else:
-    llm_avail, llm_reason = check_llm_available()
-    if llm_avail:
-        llm_label = "Enabled"
-        llm_color = "#34d399"  # Emerald/Green
-        llm_status_text = f"Connected: {get_llm_model()}"
-    else:
-        llm_label = "Unavailable"
-        llm_color = "#fb7185"  # Rose/Red
-        llm_status_text = llm_reason[:30]
-        
-st.sidebar.markdown(f"""
-<div style='background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2);
-            border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
-    <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>LLM Assistant</div>
-    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
-        <span class='side-panel-icon'>{icon_html("LLM")}</span>
-        <span style='font-size: 13px; font-weight: 700; color: {llm_color}; font-family: "JetBrains Mono", monospace;'>{llm_label}</span>
-    </div>
-    <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
-        <span style='color: #64748b;'>Status</span>
-        <span style='color: {llm_color}; font-weight: 600; font-size: 10.5px;'>{llm_status_text}</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-
-# ── Model Diagnostics Expander ──
-with st.sidebar.expander("Model Diagnostics"):
-    class_loaded_yesno = "Yes" if model_artifact else "No"
-    clv_loaded_yesno = "Yes" if clv_art_local else "No"
-    
-    class_feat_count = len(model_artifact.get("feature_columns", [])) if model_artifact else 0
-    clv_amt_feat_count = len(clv_art_local.get("amount_feature_columns", clv_art_local.get("feature_columns", []))) if clv_art_local else 0
-    clv_seg_feat_count = len(clv_art_local.get("segment_feature_columns", [])) if clv_art_local else 0
-    if clv_art_local and clv_seg_feat_count == 0:
-        clv_seg_feat_count = clv_amt_feat_count
-        
-    class_exp_date = class_export_date_val if model_artifact else "N/A"
-    clv_exp_date = clv_export_date_str if clv_art_local else "N/A"
-    
-    ent_type_fmt = class_entity_format if model_artifact else "N/A"
-    rfm_ver = class_rfm_version if model_artifact else "N/A"
-    
-    st.markdown(f"""
-    **Classification Loaded:** {class_loaded_yesno}
-    **CLV Loaded:** {clv_loaded_yesno}
-    **Class. Features:** {class_feat_count}
-    **CLV Amt Features:** {clv_amt_feat_count}
-    **CLV Seg Features:** {clv_seg_feat_count}
-    **Class. Export Date:** {class_exp_date}
-    **CLV Export Date:** {clv_exp_date}
-    **Entity Type Format:** {ent_type_fmt}
-    **RFM Version:** {rfm_ver}
-    """)
-    
-    missing_cols_class = st.session_state.get("missing_cols_class", [])
-    missing_cols_clv = st.session_state.get("missing_cols_clv", [])
-    if missing_cols_class:
-        st.warning(f"Missing classification columns: {', '.join(missing_cols_class)}")
-    if missing_cols_clv:
-        st.warning(f"Missing CLV columns: {', '.join(missing_cols_clv)}")
-        
-    st.markdown("<p style='font-size: 11px; color: #94a3b8; margin-top: 10px;'>After replacing model files, click Reload Models to avoid using cached artifacts.</p>", unsafe_allow_html=True)
-    if st.button("Reload Models", width="stretch"):
-        st.cache_resource.clear()
-        st.cache_data.clear()
-        st.rerun()
-
-st.sidebar.markdown("""
-<div class='privacy-card'>
-    <strong style='color:#fb7185;'>Privacy Notice</strong><br>
-    Email, Phone & Address are personal data stored for local prototype testing only.
-    Production deployments must enforce encrypted storage & access controls.
-</div>
-""", unsafe_allow_html=True)
-
-def render_clv_dashboard(df):
-    all_clients = df[df["entity_type"] == "Client"]
-    evaluated_count = len(all_clients)
-    
-    clients_with_val = all_clients[all_clients["predicted_clv_amount_mad"].notna()]
-    
-    avg_clv = clients_with_val["predicted_clv_amount_mad"].mean() if len(clients_with_val) > 0 else 0.0
-    total_clv = clients_with_val["predicted_clv_amount_mad"].sum() if len(clients_with_val) > 0 else 0.0
-    vh_count = len(all_clients[all_clients["predicted_clv_segment"] == "Very High Future Value"])
-    low_count = len(all_clients[all_clients["predicted_clv_segment"] == "Low Future Value"])
-    insufficient_count = len(all_clients[all_clients["predicted_clv_segment"] == "Insufficient History"])
-    
-    st.markdown(section_header_html("Customer Lifetime Value KPIs", "CLV"), unsafe_allow_html=True)
-    st.markdown(f"""
-    <div class='kpi-container'>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Chart")}</span>
-            <div class='kpi-val color-prospect'>{avg_clv:.2f} MAD</div>
-            <div class='kpi-label'>Average Final CLV</div>
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Dynamic Classification Model</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
+            <span class='side-panel-icon'>{icon_html("Model")}</span>
+            <span style='font-size: 13px; font-weight: 700; color: #22d3ee; font-family: "JetBrains Mono", monospace;'>{class_model_name}</span>
         </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Value")}</span>
-            <div class='kpi-val color-client'>{total_clv:.2f} MAD</div>
-            <div class='kpi-label'>Total Future Value</div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: #cbd5e1; font-weight: 600;'>{class_status}</span>
         </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Engagement")}</span>
-            <div class='kpi-val color-vip'>{vh_count}</div>
-            <div class='kpi-label'>Very High Value Clients</div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Selection Metric</span>
+            <span style='color: #cbd5e1; font-weight: 600;'>{class_selection_metric}</span>
         </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Chart")}</span>
-            <div class='kpi-val color-churn'>{low_count}</div>
-            <div class='kpi-label'>Low Value Clients</div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>F1-Macro</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{class_f1_str}</span>
         </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Prospect")}</span>
-            <div class='kpi-val color-cold'>{insufficient_count}</div>
-            <div class='kpi-label'>Insufficient History</div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Entity Type Format</span>
+            <span style='color: #cbd5e1; font-weight: 600;'>{class_entity_format}</span>
         </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Entities")}</span>
-            <div class='kpi-val color-total'>{evaluated_count}</div>
-            <div class='kpi-label'>Clients Evaluated</div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
+            <span style='color: #64748b;'>RFM Version</span>
+            <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{class_rfm_version}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Render segment distribution bar chart
-    st.markdown(section_header_html("CLV Segment Distribution", "Chart"), unsafe_allow_html=True)
-    with st.container(border=True):
-        seg_counts = df[df["entity_type"] == "Client"]["predicted_clv_segment"].value_counts().reset_index()
-        seg_counts.columns = ["CLV Segment", "Count"]
-        
-        # Ensure all segments are represented
-        all_segs = ["Low Future Value", "Medium Future Value", "High Future Value", "Very High Future Value", "Insufficient History"]
-        seg_counts = seg_counts.set_index("CLV Segment").reindex(all_segs, fill_value=0).reset_index()
-        
-        st.bar_chart(seg_counts.set_index("CLV Segment"), color="#f59e0b")
-        
-    # CLV Model Info Panel
-    amount_model_name = "N/A"
-    segment_model_name = "N/A"
-    clv_export_date = "N/A"
-    amount_feats = 0
-    segment_feats = 0
-    seg_class_avail = "No"
-    
+
+    # ── Panel 2: CLV Models ──
+    clv_status = "Missing"
+    clv_amt_model = "N/A"
+    clv_seg_model = "N/A"
+    clv_export_date_str = "N/A"
+    clv_amt_metric = "N/A"
+    clv_seg_f1_str = "N/A"
+    clv_seg_avail = "No"
+
     clv_art_local = clv_artifact if 'clv_artifact' in locals() or 'clv_artifact' in globals() else None
+
     if clv_art_local:
-        amount_model_name = clv_art_local.get("best_amount_model_name", clv_art_local.get("best_model_name", "CLV Amount Model"))
-        clv_export_date = clv_art_local.get("export_date", "N/A")
-        amount_feats = len(clv_art_local.get("amount_feature_columns", clv_art_local.get("feature_columns", [])))
-        
+        clv_status = "Loaded"
+        clv_amt_model = clv_art_local.get("best_amount_model_name", clv_art_local.get("best_model_name", "CLV Amount Model"))
+        clv_export_date_str = clv_art_local.get("export_date", "N/A")
+
+        if "results" in clv_art_local:
+            res_df = clv_art_local["results"]
+            if isinstance(res_df, pd.DataFrame):
+                matching = res_df[res_df["model"] == clv_amt_model]
+                if len(matching) > 0:
+                    metrics_found = []
+                    for m in ["MAE", "mae", "R2", "r2", "RMSE", "rmse"]:
+                        if m in matching.columns:
+                            metrics_found.append(f"{m}: {matching[m].values[0]:.4f}")
+                    if metrics_found:
+                        clv_amt_metric = ", ".join(metrics_found)
+
         if "segment_model" in clv_art_local:
-            seg_class_avail = "Yes"
-            segment_model_name = clv_art_local.get("best_segment_model_name", "CLV Segment Model")
-            segment_feats = len(clv_art_local.get("segment_feature_columns", []))
-            if segment_feats == 0:
-                segment_feats = amount_feats
+            clv_seg_avail = "Yes"
+            clv_seg_model = clv_art_local.get("best_segment_model_name", "CLV Segment Classifier")
+            if "segment_results" in clv_art_local:
+                seg_res = clv_art_local["segment_results"]
+                if isinstance(seg_res, pd.DataFrame):
+                    matching = seg_res[seg_res["model"] == clv_seg_model]
+                    if len(matching) > 0:
+                        for f1_col in ["f1_macro", "f1", "accuracy", "F1"]:
+                            if f1_col in matching.columns:
+                                clv_seg_f1_str = f"{matching[f1_col].values[0]:.4f}"
+                                break
         else:
-            segment_model_name = "N/A (Threshold-based)"
-            segment_feats = 0
-            
-    st.markdown(section_header_html("CLV Model Information", "Model"), unsafe_allow_html=True)
-    with st.container(border=True):
+            clv_seg_model = "N/A (Threshold-based)"
+
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>CLV Models</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
+            <span class='side-panel-icon'>{icon_html("CLV")}</span>
+            <span style='font-size: 13px; font-weight: 700; color: #a78bfa; font-family: "JetBrains Mono", monospace;'>{clv_amt_model}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: #cbd5e1; font-weight: 600;'>{clv_status}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Segment Model</span>
+            <span style='color: #cbd5e1; font-weight: 600; font-size: 10.5px;'>{clv_seg_model}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Segment Classifier</span>
+            <span style='color: #cbd5e1; font-weight: 600;'>{clv_seg_avail}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;'>
+            <span style='color: #64748b;'>Amt Metric</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_amt_metric}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
+            <span style='color: #64748b;'>Seg F1-Macro</span>
+            <span style='color: #10b981; font-weight: 700; font-family: "JetBrains Mono", monospace;'>{clv_seg_f1_str}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Panel 3: Storage Backend ──
+    is_pg = storage_manager.is_postgres_enabled()
+    fallback_active, fallback_reason = storage_manager.get_fallback_status()
+
+    if fallback_active:
+        backend_label = "Excel (Fallback)"
+        backend_color = "#f43f5e" # Rose/Red
+        backend_status_text = f"PostgreSQL failed: {fallback_reason[:30]}..."
+    elif is_pg:
+        backend_label = "PostgreSQL"
+        backend_color = "#10b981" # Emerald/Green
+        backend_status_text = "Active & Connected"
+    else:
+        backend_label = "Excel"
+        backend_color = "#cbd5e1" # Slate/Grey
+        backend_status_text = "Active & Local File"
+
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>Storage Backend</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
+            <span class='side-panel-icon'>{icon_html("PostgreSQL")}</span>
+            <span style='font-size: 13px; font-weight: 700; color: {backend_color}; font-family: "JetBrains Mono", monospace;'>{backend_label}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: {backend_color}; font-weight: 600; font-size: 10.5px;'>{backend_status_text}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Panel 4: LLM Assistant ──
+    from llm.llm_client import check_llm_available
+    from llm.llm_config import is_llm_enabled, get_llm_model
+
+    if not is_llm_enabled():
+        llm_label = "Disabled"
+        llm_color = "#94a3b8"  # Slate/Grey
+        llm_status_text = "OSMOS_LLM_ENABLED=false"
+    else:
+        llm_avail, llm_reason = check_llm_available()
+        if llm_avail:
+            llm_label = "Enabled"
+            llm_color = "#34d399"  # Emerald/Green
+            llm_status_text = f"Connected: {get_llm_model()}"
+        else:
+            llm_label = "Unavailable"
+            llm_color = "#fb7185"  # Rose/Red
+            llm_status_text = llm_reason[:30]
+
+    st.sidebar.markdown(f"""
+    <div style='background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2);
+                border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; backdrop-filter: blur(10px);'>
+        <div style='font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; font-weight: 700;'>LLM Assistant</div>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 10px;'>
+            <span class='side-panel-icon'>{icon_html("LLM")}</span>
+            <span style='font-size: 13px; font-weight: 700; color: {llm_color}; font-family: "JetBrains Mono", monospace;'>{llm_label}</span>
+        </div>
+        <div style='display: flex; justify-content: space-between; font-size: 11.5px;'>
+            <span style='color: #64748b;'>Status</span>
+            <span style='color: {llm_color}; font-weight: 600; font-size: 10.5px;'>{llm_status_text}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # ── Model Diagnostics Expander ──
+    with st.sidebar.expander("Model Diagnostics"):
+        class_loaded_yesno = "Yes" if model_artifact else "No"
+        clv_loaded_yesno = "Yes" if clv_art_local else "No"
+
+        class_feat_count = len(model_artifact.get("feature_columns", [])) if model_artifact else 0
+        clv_amt_feat_count = len(clv_art_local.get("amount_feature_columns", clv_art_local.get("feature_columns", []))) if clv_art_local else 0
+        clv_seg_feat_count = len(clv_art_local.get("segment_feature_columns", [])) if clv_art_local else 0
+        if clv_art_local and clv_seg_feat_count == 0:
+            clv_seg_feat_count = clv_amt_feat_count
+
+        class_exp_date = class_export_date_val if model_artifact else "N/A"
+        clv_exp_date = clv_export_date_str if clv_art_local else "N/A"
+
+        ent_type_fmt = class_entity_format if model_artifact else "N/A"
+        rfm_ver = class_rfm_version if model_artifact else "N/A"
+
         st.markdown(f"""
-        <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 4px;'>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>CLV Amount Model</span><br>
-                <strong style='color: #2dd4bf; font-family: JetBrains Mono, monospace; font-size: 12px;'>{amount_model_name}</strong>
+        **Classification Loaded:** {class_loaded_yesno}
+        **CLV Loaded:** {clv_loaded_yesno}
+        **Class. Features:** {class_feat_count}
+        **CLV Amt Features:** {clv_amt_feat_count}
+        **CLV Seg Features:** {clv_seg_feat_count}
+        **Class. Export Date:** {class_exp_date}
+        **CLV Export Date:** {clv_exp_date}
+        **Entity Type Format:** {ent_type_fmt}
+        **RFM Version:** {rfm_ver}
+        """)
+
+        missing_cols_class = st.session_state.get("missing_cols_class", [])
+        missing_cols_clv = st.session_state.get("missing_cols_clv", [])
+        if missing_cols_class:
+            st.warning(f"Missing classification columns: {', '.join(missing_cols_class)}")
+        if missing_cols_clv:
+            st.warning(f"Missing CLV columns: {', '.join(missing_cols_clv)}")
+
+        st.markdown("<p style='font-size: 11px; color: #94a3b8; margin-top: 10px;'>After replacing model files, click Reload Models to avoid using cached artifacts.</p>", unsafe_allow_html=True)
+        if st.button("Reload Models", width="stretch"):
+            st.cache_resource.clear()
+            st.cache_data.clear()
+            st.rerun()
+
+    st.sidebar.markdown("""
+    <div class='privacy-card'>
+        <strong style='color:#fb7185;'>Privacy Notice</strong><br>
+        Email, Phone & Address are personal data stored for local prototype testing only.
+        Production deployments must enforce encrypted storage & access controls.
+    </div>
+    """, unsafe_allow_html=True)
+
+    def render_clv_dashboard(df):
+        all_clients = df[df["entity_type"] == "Client"]
+        evaluated_count = len(all_clients)
+
+        clients_with_val = all_clients[all_clients["predicted_clv_amount_mad"].notna()]
+
+        avg_clv = clients_with_val["predicted_clv_amount_mad"].mean() if len(clients_with_val) > 0 else 0.0
+        total_clv = clients_with_val["predicted_clv_amount_mad"].sum() if len(clients_with_val) > 0 else 0.0
+        vh_count = len(all_clients[all_clients["predicted_clv_segment"] == "Very High Future Value"])
+        low_count = len(all_clients[all_clients["predicted_clv_segment"] == "Low Future Value"])
+        insufficient_count = len(all_clients[all_clients["predicted_clv_segment"] == "Insufficient History"])
+
+        st.markdown(section_header_html("Customer Lifetime Value KPIs", "CLV"), unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='kpi-container'>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Chart")}</span>
+                <div class='kpi-val color-prospect'>{avg_clv:.2f} MAD</div>
+                <div class='kpi-label'>Average Final CLV</div>
             </div>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>CLV Segment Model</span><br>
-                <strong style='color: #a78bfa; font-family: JetBrains Mono, monospace; font-size: 12px;'>{segment_model_name}</strong>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Value")}</span>
+                <div class='kpi-val color-client'>{total_clv:.2f} MAD</div>
+                <div class='kpi-label'>Total Future Value</div>
             </div>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>Segment Classifier Available</span><br>
-                <strong style='color: #34d399; font-size: 12px;'>{seg_class_avail}</strong>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Engagement")}</span>
+                <div class='kpi-val color-vip'>{vh_count}</div>
+                <div class='kpi-label'>Very High Value Clients</div>
             </div>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>Export Date</span><br>
-                <strong style='color: #cbd5e1; font-size: 12px;'>{clv_export_date}</strong>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Chart")}</span>
+                <div class='kpi-val color-churn'>{low_count}</div>
+                <div class='kpi-label'>Low Value Clients</div>
             </div>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>Amount Features</span><br>
-                <strong style='color: #cbd5e1; font-size: 12px;'>{amount_feats}</strong>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Prospect")}</span>
+                <div class='kpi-val color-cold'>{insufficient_count}</div>
+                <div class='kpi-label'>Insufficient History</div>
             </div>
-            <div>
-                <span style='color: #64748b; font-size: 11px;'>Segment Features</span><br>
-                <strong style='color: #cbd5e1; font-size: 12px;'>{segment_feats}</strong>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Entities")}</span>
+                <div class='kpi-val color-total'>{evaluated_count}</div>
+                <div class='kpi-label'>Clients Evaluated</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
+        # Render segment distribution bar chart
+        st.markdown(section_header_html("CLV Segment Distribution", "Chart"), unsafe_allow_html=True)
+        with st.container(border=True):
+            seg_counts = df[df["entity_type"] == "Client"]["predicted_clv_segment"].value_counts().reset_index()
+            seg_counts.columns = ["CLV Segment", "Count"]
 
-# ── Page 1: Dashboard Overview ────────────────────────────────
-if page == "Dashboard Overview":
-    # Header
-    render_page_header(
-        "OSMOS Digital Twin Dashboard",
-        f"Real-time customer intelligence powered by {active_model} classification.",
-        icon="Dashboard",
-        badge="Live Intelligence",
-    )
+            # Ensure all segments are represented
+            all_segs = ["Low Future Value", "Medium Future Value", "High Future Value", "Very High Future Value", "Insufficient History"]
+            seg_counts = seg_counts.set_index("CLV Segment").reindex(all_segs, fill_value=0).reset_index()
 
-    # ── Critical Action Alerts Widget ──
-    if storage_manager.is_postgres_enabled():
-        import database.action_recommendations_repository as action_repo
-        import analytics.clv_trend_alerts as clv_alerts
-        import analytics.segment_transitions as seg_trans
-        import analytics.prediction_drift as pred_drift
-        
-        # Fetch data safely (non-blocking)
-        try:
-            pending_actions = action_repo.get_pending_critical_actions(limit=5)
-            # CLV drop alerts of > 35% drop
-            high_clv_drops = clv_alerts.get_clv_trend_alerts(days=30, drop_threshold=0.35)
-            # Segment transitions with Risk Increase or Downgrade in last 90 days
-            transitions = seg_trans.get_segment_transitions(days=90)
-            risky_transitions = transitions[transitions["transition_type"].isin(["Downgrade", "Risk Increase"])] if not transitions.empty else pd.DataFrame()
-            # Drift alerts
-            drift_df = pred_drift.detect_prediction_drift()
-            high_drift_alerts = drift_df[drift_df["drift_level"] == "High"] if not drift_df.empty else pd.DataFrame()
-        except Exception as e:
-            pending_actions = []
-            high_clv_drops = pd.DataFrame()
-            risky_transitions = pd.DataFrame()
-            high_drift_alerts = pd.DataFrame()
+            st.bar_chart(seg_counts.set_index("CLV Segment"), color="#f59e0b")
 
-        total_alerts_count = len(pending_actions) + len(high_clv_drops) + len(risky_transitions) + len(high_drift_alerts)
-        
-        if total_alerts_count > 0:
+        # CLV Model Info Panel
+        amount_model_name = "N/A"
+        segment_model_name = "N/A"
+        clv_export_date = "N/A"
+        amount_feats = 0
+        segment_feats = 0
+        seg_class_avail = "No"
+
+        clv_art_local = clv_artifact if 'clv_artifact' in locals() or 'clv_artifact' in globals() else None
+        if clv_art_local:
+            amount_model_name = clv_art_local.get("best_amount_model_name", clv_art_local.get("best_model_name", "CLV Amount Model"))
+            clv_export_date = clv_art_local.get("export_date", "N/A")
+            amount_feats = len(clv_art_local.get("amount_feature_columns", clv_art_local.get("feature_columns", [])))
+
+            if "segment_model" in clv_art_local:
+                seg_class_avail = "Yes"
+                segment_model_name = clv_art_local.get("best_segment_model_name", "CLV Segment Model")
+                segment_feats = len(clv_art_local.get("segment_feature_columns", []))
+                if segment_feats == 0:
+                    segment_feats = amount_feats
+            else:
+                segment_model_name = "N/A (Threshold-based)"
+                segment_feats = 0
+
+        st.markdown(section_header_html("CLV Model Information", "Model"), unsafe_allow_html=True)
+        with st.container(border=True):
             st.markdown(f"""
-            <div style='background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); 
-                        border-radius: 8px; padding: 18px; margin-bottom: 24px;'>
-                <div style='font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
-                    {icon_html("Alert")} Critical Action Alerts - Admin Attention Required ({total_alerts_count})
+            <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 4px;'>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>CLV Amount Model</span><br>
+                    <strong style='color: #2dd4bf; font-family: JetBrains Mono, monospace; font-size: 12px;'>{amount_model_name}</strong>
                 </div>
-                <div style='display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #cbd5e1;'>
-            """, unsafe_allow_html=True)
-            
-            # Render CLV drops
-            if not high_clv_drops.empty:
-                for _, row in high_clv_drops.iterrows():
-                    st.markdown(f"""
-                    <div style='border-left: 3px solid #f87171; padding-left: 10px; margin-bottom: 4px;'>
-                        <strong style='color: #f87171;'>[CLV Drop Alert]</strong><br>
-                        <b>Client:</b> {row['entity_id']} | <b>Severity:</b> {row['alert_level']}<br>
-                        <b>Reason:</b> CLV dropped by {row['clv_change_percent']*100:.1f}% to {row['latest_clv_amount']:.2f} MAD (previously {row['previous_clv_amount']:.2f} MAD).<br>
-                        <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ CLV Alert Actions</i> to generate an explanation and recommended action.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Render Transitions
-            if not risky_transitions.empty:
-                for _, row in risky_transitions.iterrows():
-                    st.markdown(f"""
-                    <div style='border-left: 3px solid #fbbf24; padding-left: 10px; margin-bottom: 4px;'>
-                        <strong style='color: #fbbf24;'>[Segment Transition Alert]</strong><br>
-                        <b>Client:</b> {row['entity_id']} | <b>Severity:</b> High<br>
-                        <b>Reason:</b> Segment downgraded/changed from '{row['previous_segment']}' ({row['previous_persona']}) to '{row['latest_segment']}' ({row['latest_persona']}).<br>
-                        <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Segment Transition Actions</i> to generate an explanation and recommended action.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Render Drift
-            if not high_drift_alerts.empty:
-                for _, row in high_drift_alerts.iterrows():
-                    st.markdown(f"""
-                    <div style='border-left: 3px solid #fb7185; padding-left: 10px; margin-bottom: 4px;'>
-                        <strong style='color: #fb7185;'>[Prediction Drift Alert]</strong><br>
-                        <b>Class:</b> {row['dynamic_class']} | <b>Severity:</b> High<br>
-                        <b>Reason:</b> Distribution changed by {row['change_percent']*100:+.1f}% vs baseline.<br>
-                        <i>This means the proportion of this class changed significantly compared with the baseline period.</i><br>
-                        <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Prediction Drift Actions</i> to generate an explanation and recommended action.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-            # Render Pending LLM recommendations
-            if pending_actions:
-                for item in pending_actions:
-                    st.markdown(f"""
-                    <div style='border-left: 3px solid #2dd4bf; padding-left: 10px; margin-bottom: 4px;'>
-                        <strong style='color: #2dd4bf;'>[Pending LLM Recommendation]</strong><br>
-                        <b>Entity:</b> {item['entity_id'] or 'Platform'} | <b>Priority:</b> {item['priority']} | <b>Suggested Channel:</b> {item['suggested_channel']}<br>
-                        <b>Action Drafted (FR):</b> {item['recommended_action_fr']}<br>
-                        <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Review recommendation details and update status under <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Generated Recommendations</i>.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
-
-    # Small Closed-Loop Campaign Summary Banner
-    try:
-        from campaigns.campaign_repository import get_campaign_metrics
-        c_metrics = get_campaign_metrics()
-        st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
-            <span style='font-size: 13px; font-weight: 700; color: #38bdf8;'>{icon_html("Campaign")} Closed-Loop Campaign Simulation:</span>
-            <span style='font-size: 12.5px; color: #cbd5e1;'>Drafts: <b style='color:#facc15;'>{c_metrics['draft_campaigns']}</b> | Dispatches: <b style='color:#38bdf8;'>{c_metrics['simulated_dispatches']}</b> | Responses: <b style='color:#34d399;'>{c_metrics['total_responses']}</b></span>
-        </div>""", unsafe_allow_html=True)
-
-    except Exception:
-        pass
-
-
-
-
-    total_entities = len(df_data)
-    total_prospects = len(df_data[df_data["entity_type"] == "Prospect"])
-    total_clients   = len(df_data[df_data["entity_type"] == "Client"])
-    cold_prospects  = len(df_data[df_data["dynamic_class"] == "Cold Prospect"])
-    warm_prospects  = len(df_data[df_data["dynamic_class"] == "Warm Prospect"])
-    hot_prospects   = len(df_data[df_data["dynamic_class"] == "Hot Prospect"])
-    active_clients  = len(df_data[df_data["dynamic_class"] == "Active Client"])
-    vip_clients     = len(df_data[df_data["dynamic_class"] == "VIP Client"])
-    churn_risk_clients = len(df_data[df_data["dynamic_class"] == "Churn Risk Client"])
-
-    # KPI row
-    st.markdown(f"""
-    <div class='kpi-container'>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Entities")}</span>
-            <div class='kpi-val color-total'>{total_entities}</div>
-            <div class='kpi-label'>Total Entities</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Segment")}</span>
-            <div class='kpi-val color-prospect'>{total_prospects}</div>
-            <div class='kpi-label'>Prospects</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Success")}</span>
-            <div class='kpi-val color-client'>{total_clients}</div>
-            <div class='kpi-label'>Clients</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Prospect")}</span>
-            <div class='kpi-val color-cold'>{cold_prospects}</div>
-            <div class='kpi-label'>Cold Prospects</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Alert")}</span>
-            <div class='kpi-val color-warm'>{warm_prospects}</div>
-            <div class='kpi-label'>Warm Prospects</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Engagement")}</span>
-            <div class='kpi-val color-hot'>{hot_prospects}</div>
-            <div class='kpi-label'>Hot Prospects</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Success")}</span>
-            <div class='kpi-val color-active'>{active_clients}</div>
-            <div class='kpi-label'>Active Clients</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Value")}</span>
-            <div class='kpi-val color-vip'>{vip_clients}</div>
-            <div class='kpi-label'>VIP Clients</div>
-        </div>
-        <div class='kpi-card'>
-            <span class='kpi-icon'>{icon_html("Warning")}</span>
-            <div class='kpi-val color-churn'>{churn_risk_clients}</div>
-            <div class='kpi-label'>Churn Risk</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Charts row
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        st.markdown(section_header_html("Dynamic Class Distribution", "Chart"), unsafe_allow_html=True)
-        with st.container(border=True):
-            class_counts = df_data["dynamic_class"].value_counts().reset_index()
-            class_counts.columns = ["Dynamic Class", "Count"]
-            st.bar_chart(class_counts.set_index("Dynamic Class"), color="#2dd4bf")
-    
-    with col2:
-        st.markdown(section_header_html("Top Segments", "Segment"), unsafe_allow_html=True)
-        with st.container(border=True):
-            region_counts = df_data["region"].value_counts().head(5)
-            channel_counts = df_data["source_channel"].value_counts().head(4)
-
-            # Regions as inline bars
-            max_r = region_counts.max() if len(region_counts) > 0 else 1
-            for reg, cnt in region_counts.items():
-                pct = int(cnt / max_r * 100)
-                short = reg.split("-")[0] if "-" in reg else reg[:18]
-                st.markdown(f"""
-                <div class='score-bar-wrap'>
-                    <div class='score-bar-label'><span>{short}</span><span>{cnt}</span></div>
-                    <div class='score-bar-track'><div class='score-bar-fill fill-indigo' style='width:{pct}%'></div></div>
-                </div>""", unsafe_allow_html=True)
-
-            st.markdown("<div style='margin-top:14px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0; font-weight:600;'>Channels</div>", unsafe_allow_html=True)
-            max_c = channel_counts.max() if len(channel_counts) > 0 else 1
-            for ch, cnt in channel_counts.items():
-                pct = int(cnt / max_c * 100)
-                st.markdown(f"""
-                <div class='score-bar-wrap'>
-                    <div class='score-bar-label'><span>{ch[:20]}</span><span>{cnt}</span></div>
-                    <div class='score-bar-track'><div class='score-bar-fill fill-violet' style='width:{pct}%'></div></div>
-                </div>""", unsafe_allow_html=True)
-
-    # Render CLV KPIs & Chart on Dashboard
-    clv_art = load_clv_model_artifact()
-    if clv_art is not None:
-        render_clv_dashboard(df_data)
-
-    # Customer Segmentation Overview
-    st.markdown(section_header_html("Customer Segmentation Overview", "Segment"), unsafe_allow_html=True)
-    with st.container(border=True):
-        seg_col1, seg_col2, seg_col3 = st.columns([1, 1, 1])
-        
-        clients_df = df_data[df_data["entity_type"] == "Client"]
-        
-        with seg_col1:
-            st.markdown("<div style='font-size:12px; font-weight:700; color:#2dd4bf; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Segments</div>", unsafe_allow_html=True)
-            if len(clients_df) > 0:
-                top_segs = clients_df["customer_segment"].value_counts().head(5)
-                for seg_name, count in top_segs.items():
-                    st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{seg_name}</span><span style='color:#34d399; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
-            else:
-                st.caption("No clients available.")
-                
-        with seg_col2:
-            st.markdown("<div style='font-size:12px; font-weight:700; color:#a78bfa; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Personas</div>", unsafe_allow_html=True)
-            if len(clients_df) > 0:
-                top_pers = clients_df["customer_persona"].value_counts().head(5)
-                for pers_name, count in top_pers.items():
-                    st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{pers_name}</span><span style='color:#2dd4bf; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
-            else:
-                st.caption("No clients available.")
-                
-        with seg_col3:
-            st.markdown("<div style='font-size:12px; font-weight:700; color:#fb7185; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Key Segment Audits</div>", unsafe_allow_html=True)
-            at_risk_count = len(clients_df[clients_df["customer_segment"] == "At-Risk Premium Clients"])
-            loyalist_count = len(clients_df[clients_df["customer_segment"] == "High-Value Loyalists"])
-            dormant_count = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
-            st.markdown(f"""
-            <div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;'>
-                <span style='color:#cbd5e1;'>At-Risk Premium</span>
-                <span style='color:#f87171; font-weight:700;'>{at_risk_count}</span>
-            </div>
-            <div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;'>
-                <span style='color:#cbd5e1;'>High-Value Loyalists</span>
-                <span style='color:#34d399; font-weight:700;'>{loyalist_count}</span>
-            </div>
-            <div style='display:flex; justify-content:space-between; font-size:12.5px;'>
-                <span style='color:#cbd5e1;'>Dormant Clients</span>
-                <span style='color:#94a3b8; font-weight:700;'>{dormant_count}</span>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>CLV Segment Model</span><br>
+                    <strong style='color: #a78bfa; font-family: JetBrains Mono, monospace; font-size: 12px;'>{segment_model_name}</strong>
+                </div>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>Segment Classifier Available</span><br>
+                    <strong style='color: #34d399; font-size: 12px;'>{seg_class_avail}</strong>
+                </div>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>Export Date</span><br>
+                    <strong style='color: #cbd5e1; font-size: 12px;'>{clv_export_date}</strong>
+                </div>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>Amount Features</span><br>
+                    <strong style='color: #cbd5e1; font-size: 12px;'>{amount_feats}</strong>
+                </div>
+                <div>
+                    <span style='color: #64748b; font-size: 11px;'>Segment Features</span><br>
+                    <strong style='color: #cbd5e1; font-size: 12px;'>{segment_feats}</strong>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-    # Database table
-    st.markdown(section_header_html("Client & Prospect Database", "Entities"), unsafe_allow_html=True)
-    with st.container(border=True):
-        f_col1, f_col2, f_col3 = st.columns(3)
-        with f_col1:
-            type_filter = st.selectbox("Filter by Type", ["All", "Prospect", "Client"], key="db_type_filter")
-        with f_col2:
-            class_filter = st.selectbox("Filter by Class", ["All"] + sorted(df_data["dynamic_class"].dropna().unique().tolist()), key="db_class_filter")
-        with f_col3:
-            search_query = st.text_input("Search by ID or Region", key="db_search")
 
-        filtered_df = df_data.copy()
-        if type_filter != "All":
-            filtered_df = filtered_df[filtered_df["entity_type"] == type_filter]
-        if class_filter != "All":
-            filtered_df = filtered_df[filtered_df["dynamic_class"] == class_filter]
-        if search_query:
-            filtered_df = filtered_df[
-                filtered_df["entity_id"].astype(str).str.contains(search_query, case=False) |
-                filtered_df["region"].astype(str).str.contains(search_query, case=False)
-            ]
-
-        display_cols = [
-            "entity_id", "entity_type", "region", "source_channel",
-            "segment", "persona", "dynamic_class", "recency_days",
-            "visits_30d", "product_views_30d", "cart_additions_30d",
-            "purchases_90d", "total_spent_90d_mad", "conversion_probability",
-            "churn_risk_score", "decision_priority_score"
-        ]
-        st.dataframe(
-            filtered_df[display_cols].style.format({
-                "total_spent_90d_mad": "{:.2f} MAD",
-                "conversion_probability": "{:.3f}",
-                "churn_risk_score": "{:.3f}",
-                "decision_priority_score": "{:.3f}",
-                "recency_days": "{:.0f}",
-                "visits_30d": "{:.0f}",
-                "product_views_30d": "{:.0f}",
-                "cart_additions_30d": "{:.0f}",
-                "purchases_90d": "{:.0f}"
-            }),
-            width="stretch", hide_index=True
+    # ── Page 1: Dashboard Overview ────────────────────────────────
+    if page == "Dashboard Overview":
+        # Header
+        render_page_header(
+            "OSMOS Digital Twin Dashboard",
+            f"Real-time customer intelligence powered by {active_model} classification.",
+            icon="Dashboard",
+            badge="Live Intelligence",
         )
 
-# ── Page 2: Entity Profile ─────────────────────────────────────
-elif page == "Entity Profile":
-    render_page_header(
-        "Digital Twin Entity Profile",
-        "Deep-dive behavioral, predictive, and decision intelligence for any entity.",
-        icon="Entity",
-        badge="Entity Profile",
-    )
+        # ── Critical Action Alerts Widget ──
+        if storage_manager.is_postgres_enabled():
+            import database.action_recommendations_repository as action_repo
+            import analytics.clv_trend_alerts as clv_alerts
+            import analytics.segment_transitions as seg_trans
+            import analytics.prediction_drift as pred_drift
 
-    entity_id_list = sorted(df_data["entity_id"].unique())
-    selected_entity_id = st.selectbox("Select Entity ID", entity_id_list, key="profile_entity_sel")
-    entity_row = df_data[df_data["entity_id"] == selected_entity_id].iloc[0]
+            # Fetch data safely (non-blocking)
+            try:
+                pending_actions = action_repo.get_pending_critical_actions(limit=5)
+                # CLV drop alerts of > 35% drop
+                high_clv_drops = clv_alerts.get_clv_trend_alerts(days=30, drop_threshold=0.35)
+                # Segment transitions with Risk Increase or Downgrade in last 90 days
+                transitions = seg_trans.get_segment_transitions(days=90)
+                risky_transitions = transitions[transitions["transition_type"].isin(["Downgrade", "Risk Increase"])] if not transitions.empty else pd.DataFrame()
+                # Drift alerts
+                drift_df = pred_drift.detect_prediction_drift()
+                high_drift_alerts = drift_df[drift_df["drift_level"] == "High"] if not drift_df.empty else pd.DataFrame()
+            except Exception as e:
+                pending_actions = []
+                high_clv_drops = pd.DataFrame()
+                risky_transitions = pd.DataFrame()
+                high_drift_alerts = pd.DataFrame()
 
-    dyn_class = entity_row["dynamic_class"]
-    class_tag_class = "tag-cold"
-    if dyn_class == "Warm Prospect":     class_tag_class = "tag-warm"
-    elif dyn_class == "Hot Prospect":    class_tag_class = "tag-hot"
-    elif dyn_class == "New Client":      class_tag_class = "tag-new"
-    elif dyn_class == "Active Client":   class_tag_class = "tag-active"
-    elif dyn_class == "Loyal Client":    class_tag_class = "tag-loyal"
-    elif dyn_class == "VIP Client":      class_tag_class = "tag-vip"
-    elif dyn_class == "Dormant Client":  class_tag_class = "tag-dormant"
-    elif dyn_class == "Churn Risk Client": class_tag_class = "tag-churn"
+            total_alerts_count = len(pending_actions) + len(high_clv_drops) + len(risky_transitions) + len(high_drift_alerts)
 
-    is_client_entity  = str(entity_row.get("entity_type")).lower() == "client"
-    profile_complete_val = entity_row.get("completed_client_profile")
-    is_incomplete = is_client_entity and (pd.isna(profile_complete_val) or str(profile_complete_val).lower() != "true")
-
-    entity_type_val = entity_row.get("entity_type", "Prospect")
-    type_color = "#34d399" if entity_type_val == "Client" else "#2dd4bf"
-    incomplete_badge = "<span class='tag tag-churn' style='margin-left:12px;'>Profile Incomplete</span>" if is_incomplete else ""
-
-    st.markdown(f"""<div class='glass-card-accent' style='display:flex; align-items:center; gap:20px; flex-wrap:wrap;'>
-<div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Entity</div>
-<div style='font-family: JetBrains Mono, monospace; font-size:22px; font-weight:700; color:#e2e8f0;'>{selected_entity_id}</div>
-</div>
-<div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
-<div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Type</div>
-<div style='font-size:16px; font-weight:700; color:{type_color};'>{entity_type_val}</div>
-</div>
-<div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
-<div>
-<div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:6px;'>Classification</div>
-<span class='tag {class_tag_class}' style='font-size:14px; padding:6px 16px;'>{dyn_class}</span>
-{incomplete_badge}
-</div>
-</div>""", unsafe_allow_html=True)
-
-    # Score gauges row
-    rfm   = float(entity_row.get("rfm_score", 0))
-    conv  = float(entity_row.get("conversion_probability", 0))
-    churn = float(entity_row.get("churn_risk_score", 0))
-    beh   = float(entity_row.get("behavioral_engagement_score", 0))
-    pred  = float(entity_row.get("predictive_value_score", 0))
-    dec   = float(entity_row.get("decision_priority_score", 0))
-
-    def _bar(label, val, fill_cls, fmt="{:.1%}"):
-        formatted = fmt.format(val)
-        width = f"{val*100:.1f}%"
-        return (
-            f"<div class='score-bar-wrap'>"
-            f"<div class='score-bar-label'><span>{label}</span>"
-            f"<span style='color:#e2e8f0; font-weight:600;'>{formatted}</span></div>"
-            f"<div class='score-bar-track'><div class='score-bar-fill {fill_cls}' style='width:{width}'></div></div>"
-            f"</div>"
-        )
-
-    # Get weight values from entity_row
-    w_R = float(entity_row.get("ahp_weight_R", 0.0))
-    w_F = float(entity_row.get("ahp_weight_F", 0.0))
-    w_M = float(entity_row.get("ahp_weight_M", 0.0))
-    w_E = float(entity_row.get("ahp_weight_E", 0.0))
-    w_S = float(entity_row.get("ahp_weight_S", 0.0))
-    
-    if str(entity_row.get("entity_type")).lower() == "prospect":
-        w_M = 0.0
-
-    # Calculate CR for display using group decision logic
-    ahp_result = get_group_ahp_result()
-    client_cr = ahp_result["CR"]
-    expert_count = ahp_result["expert_count"]
-    
-    cr_status = "Group AHP matrix consistent" if client_cr <= 0.10 else "Warning: Group AHP matrix inconsistent"
-    cr_color = "#34d399" if client_cr <= 0.10 else "#fb7185"
-    
-    ahp_section_html = "".join([
-        "<div style='margin:10px 0;padding:10px;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.15);border-radius:8px;'>",
-        f"<div style='font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:6px;'>Group AHP Weights — {expert_count} Experts</div>",
-        "<div style='display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;margin-bottom:8px;'>",
-        f"<div><div style='font-size:15px;color:#64748b;'>R</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_R:.3f}</div></div>",
-        f"<div><div style='font-size:15px;color:#64748b;'>F</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_F:.3f}</div></div>",
-        f"<div><div style='font-size:15px;color:#64748b;'>M</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_M:.3f}</div></div>",
-        f"<div><div style='font-size:15px;color:#64748b;'>E</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_E:.3f}</div></div>",
-        f"<div><div style='font-size:15px;color:#64748b;'>S</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_S:.3f}</div></div>",
-        "</div>",
-        f"<div style='font-size:10px;color:{cr_color};font-weight:500;text-align:center;'>{cr_status} (CR = {client_cr:.4f})</div>",
-        "</div>",
-    ])
-
-    sc1, sc2, sc3 = st.columns(3)
-    visits_n = min(float(entity_row.get('visits_30d', 0)) / 50.0, 1.0)
-    views_n  = min(float(entity_row.get('product_views_30d', 0)) / 80.0, 1.0)
-    carts_n  = min(float(entity_row.get('cart_additions_30d', 0)) / 10.0, 1.0)
-    
-    # Pre-build all score bar HTML strings to avoid f-string conflicts
-    bar_rfm   = _bar("RFM Score", rfm, "fill-indigo")
-    bar_conv  = _bar("Conversion Probability", conv, "fill-green")
-    bar_churn = _bar("Churn Risk", churn, "fill-rose")
-    bar_beh   = _bar("Behavioral Engagement", beh, "fill-violet")
-    bar_pred  = _bar("Predictive Value", pred, "fill-cyan")
-    bar_dec   = _bar("Decision Priority", dec, "fill-amber")
-    
-    visits_val = int(entity_row.get('visits_30d', 0))
-    views_val  = int(entity_row.get('product_views_30d', 0))
-    carts_val  = int(entity_row.get('cart_additions_30d', 0))
-    visits_w   = f"{visits_n*100:.0f}%"
-    views_w    = f"{views_n*100:.0f}%"
-    carts_w    = f"{carts_n*100:.0f}%"
-
-    with sc1:
-        card1_html = "".join([
-            "<div class='glass-card'>",
-            section_header_html("Predictive Scores", "Chart"),
-            bar_rfm.strip(),
-            ahp_section_html.strip(),
-            bar_conv.strip(),
-            bar_churn.strip(),
-            "</div>"
-        ])
-        st.markdown(card1_html, unsafe_allow_html=True)
-    with sc2:
-        card2_html = (
-            "<div class='glass-card'>"
-            + section_header_html("Engagement & Priority", "Engagement")
-            + bar_beh
-            + bar_pred
-            + bar_dec
-            + "</div>"
-        )
-        st.markdown(card2_html, unsafe_allow_html=True)
-    with sc3:
-        activity_html = (
-            "<div class='glass-card'>"
-            + section_header_html("Activity (30d)", "Engagement")
-            + f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Visits</span><span style='color:#e2e8f0;font-weight:600;'>{visits_val}</span></div>"
-            f"<div class='score-bar-track'><div class='score-bar-fill fill-indigo' style='width:{visits_w}'></div></div></div>"
-            f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Product Views</span><span style='color:#e2e8f0;font-weight:600;'>{views_val}</span></div>"
-            f"<div class='score-bar-track'><div class='score-bar-fill fill-violet' style='width:{views_w}'></div></div></div>"
-            f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Cart Additions</span><span style='color:#e2e8f0;font-weight:600;'>{carts_val}</span></div>"
-            f"<div class='score-bar-track'><div class='score-bar-fill fill-cyan' style='width:{carts_w}'></div></div></div>"
-            "</div>"
-        )
-        st.markdown(activity_html, unsafe_allow_html=True)
-
-    prof_col1, prof_col2 = st.columns(2)
-    with prof_col1:
-        profile_rows = [
-            ("Entity ID", entity_row.get("entity_id")),
-            ("Entity Type", entity_row.get("entity_type")),
-            ("Region", entity_row.get("region")),
-            ("Source Channel", entity_row.get("source_channel")),
-            ("Segment", entity_row.get("segment")),
-            ("Persona", entity_row.get("persona")),
-            ("Age Group", entity_row.get("age_group")),
-            ("Preferred Device", entity_row.get("preferred_device")),
-            ("Preferred Category", entity_row.get("preferred_category")),
-            ("Marketing Consent", str(entity_row.get("marketing_consent"))),
-            ("Price Sensitivity", f"{entity_row.get('price_sensitivity',0):.3f}"),
-            ("Income Power", f"{entity_row.get('income_power_score',0):.3f}"),
-            ("Created", str(entity_row.get("created_at"))[:10] if entity_row.get("created_at") else "—"),
-        ]
-        rows_html = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in profile_rows])
-        st.markdown(f"""
-        <div class='glass-card'>
-            <div class='section-header'><span class='icon'>{icon_html("Info")}</span><span class='title'>Basic Profile</span></div>
-            {rows_html}
-        </div>""", unsafe_allow_html=True)
-
-    with prof_col2:
-        beh_rows = [
-            ("Recency", f"{entity_row.get('recency_days',0):.0f} days"),
-            ("Purchases (90d)", f"{entity_row.get('purchases_90d',0):.0f}"),
-            ("Total Spent (90d)", f"{entity_row.get('total_spent_90d_mad',0):.2f} MAD"),
-            ("Avg Order Value", f"{entity_row.get('avg_order_value_mad',0):.2f} MAD"),
-            ("Email Open Rate", f"{entity_row.get('email_open_rate',0)*100:.1f}%"),
-            ("Email Click Rate", f"{entity_row.get('email_click_rate',0)*100:.1f}%"),
-            ("Complaints (90d)", f"{entity_row.get('complaint_count_90d',0):.0f}"),
-            ("Avg Review Score", f"{entity_row.get('review_score_avg',0):.2f}" if not pd.isna(entity_row.get('review_score_avg')) else "No reviews"),
-            ("Social Mentions", f"{entity_row.get('social_mentions_30d',0):.0f}"),
-            ("Social Sentiment", f"{entity_row.get('social_sentiment_avg',0):.3f}"),
-        ]
-        rows_html2 = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in beh_rows])
-        st.markdown(f"""
-        <div class='glass-card'>
-            <div class='section-header'><span class='icon'>{icon_html("Engagement")}</span><span class='title'>Behavioral Data</span></div>
-            {rows_html2}
-        </div>""", unsafe_allow_html=True)
-
-    # Client demographics — uses native widgets so we use st.container
-    st.markdown(section_header_html("Client Demographic Profile", "Entity"), unsafe_allow_html=True)
-    with st.container(border=True):
-        if is_client_entity:
-            if is_incomplete:
-                st.warning("Client profile incomplete. Click **Edit** to complete demographics.")
-            dem_rows = [
-                ("Age", str(int(entity_row["age"])) if not pd.isna(entity_row.get("age")) else "Not completed"),
-                ("Sex", entity_row.get("sex") or "Not completed"),
-                ("Email", entity_row.get("email") or "Not completed"),
-                ("Customer Type", entity_row.get("customer_type") or "Not completed"),
-                ("Household Size", str(int(entity_row["household_size"])) if not pd.isna(entity_row.get("household_size")) else ("N/A (B2B)" if entity_row.get("customer_type") == "B2B" else "Not completed")),
-                ("Phone Number", entity_row.get("phone_number") or "Not completed"),
-                ("Company Name", entity_row.get("company_name") or ("N/A (B2C)" if entity_row.get("customer_type") == "B2C" else "Not completed")),
-                ("Job Title", entity_row.get("job_title") or ("N/A (B2C)" if entity_row.get("customer_type") == "B2C" else "Not completed")),
-                ("City", entity_row.get("city") or "Not completed"),
-                ("Address", entity_row.get("address") or "Not completed"),
-            ]
-            dem_html = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in dem_rows])
-            st.markdown(dem_html, unsafe_allow_html=True)
-            if st.button("Edit Client Information", key="edit_client_profile_btn"):
-                st.session_state["edit_form_open"] = True
-                st.session_state["pending_edit_entity_id"] = selected_entity_id
-                st.rerun()
-        else:
-            st.info("Client information will be available after this entity converts to a Client.")
-        
-    # Customer Lifetime Value (CLV) Prediction Section
-    def render_clv_card(row):
-        clv_val = row.get("predicted_clv_amount_mad")
-        clv_score = row.get("predicted_clv_score")
-        clv_seg = row.get("predicted_clv_segment")
-        clv_model = row.get("clv_model_name") or "—"
-        clv_seg_model = row.get("clv_segment_model_name") or "—"
-        clv_updated = row.get("clv_last_updated") or "—"
-        
-        ml_val = row.get("ml_predicted_clv_amount_mad")
-        math_val = row.get("math_clv_amount_mad")
-        method_used = row.get("clv_method_used")
-        pred_source = row.get("clv_segment_prediction_source") or "—"
-        confidence = row.get("clv_segment_confidence")
-        
-        st.markdown(section_header_html("Customer Lifetime Value", "CLV"), unsafe_allow_html=True)
-        with st.container(border=True):
-            if str(row.get("entity_type")).lower() == "prospect":
-                st.info("**CLV Estimation:** CLV will be estimated after conversion and enough purchase history.")
-            elif clv_seg == "Insufficient History" or pd.isna(clv_val):
-                st.warning("**CLV Estimation:** Insufficient History")
-            else:
-                seg_class = "tag-clv-low"
-                if clv_seg == "Medium Future Value":
-                    seg_class = "tag-clv-medium"
-                elif clv_seg == "High Future Value":
-                    seg_class = "tag-clv-high"
-                elif clv_seg == "Very High Future Value":
-                    seg_class = "tag-clv-veryhigh"
-                    
-                clv_amt_str = f"{float(clv_val):,.2f} MAD" if not pd.isna(clv_val) else "—"
-                clv_score_str = f"{float(clv_score):.1f} / 100" if not pd.isna(clv_score) else "—"
-                clv_seg_str = clv_seg if clv_seg else "—"
-                
-                ml_amt_str = f"{float(ml_val):,.2f} MAD" if not pd.isna(ml_val) and ml_val is not None else "—"
-                math_amt_str = f"{float(math_val):,.2f} MAD" if not pd.isna(math_val) and math_val is not None else "—"
-                confidence_str = f"{float(confidence):.1%}" if not pd.isna(confidence) and confidence is not None else "N/A"
-                method_str = method_used if method_used else clv_model
-                
+            if total_alerts_count > 0:
                 st.markdown(f"""
-                <div class='info-row'><span class='info-label'>Final CLV Amount</span><span class='info-value' style='font-size:14px;color:#ecfeff;font-weight:700;'>{clv_amt_str}</span></div>
-                <div class='info-row'><span class='info-label'>CLV Score</span><span class='info-value'>{clv_score_str}</span></div>
-                <div class='info-row'><span class='info-label'>Final CLV Segment</span><span class='info-value'><span class='tag {seg_class}'>{clv_seg_str}</span></span></div>
-                <div class='info-row'><span class='info-label'>CLV Amount Model</span><span class='info-value'>{clv_model}</span></div>
-                <div class='info-row'><span class='info-label'>CLV Segment Model</span><span class='info-value'>{clv_seg_model}</span></div>
-                <div class='info-row'><span class='info-label'>Segment Prediction Source</span><span class='info-value'>{pred_source}</span></div>
-                <div class='info-row'><span class='info-label'>Segment Confidence</span><span class='info-value'>{confidence_str}</span></div>
-                <div class='info-row'><span class='info-label'>ML CLV Amount</span><span class='info-value'>{ml_amt_str}</span></div>
-                <div class='info-row'><span class='info-label'>Mathematical CLV Amount</span><span class='info-value'>{math_amt_str}</span></div>
-                <div class='info-row'><span class='info-label'>Method Used</span><span class='info-value' style='color:#a5b4fc;font-weight:600;'>{method_str}</span></div>
-                <div class='info-row'><span class='info-label'>Last CLV Update</span><span class='info-value'>{clv_updated}</span></div>
-                """, unsafe_allow_html=True)
-                
-                # Top 3 distribution
-                top_3_val = row.get("clv_segment_top_3")
-                parsed_top_3 = None
-                if top_3_val:
-                    if isinstance(top_3_val, str):
-                        try:
-                            parsed_top_3 = json.loads(top_3_val)
-                        except Exception:
-                            pass
-                    elif isinstance(top_3_val, (list, tuple)):
-                        parsed_top_3 = top_3_val
-                        
-                if parsed_top_3:
-                    st.markdown("<div style='font-size:12px; font-weight:600; color:#2dd4bf; margin-top:14px; margin-bottom:6px;'>Segment Probability Distribution:</div>", unsafe_allow_html=True)
-                    for idx_top, item in enumerate(parsed_top_3):
-                        if isinstance(item, (list, tuple)) and len(item) >= 2:
-                            lbl = item[0]
-                            val_prob = float(item[1])
-                            st.markdown(f"""
-                            <div style='display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;'>
-                                <span style='color:#94a3b8;'>{idx_top+1}. {lbl}</span>
-                                <span style='color:#34d399; font-weight:700;'>{val_prob:.1%}</span>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                if method_used == "Hybrid CLV: Mathematical Fallback":
-                    st.warning("**Hybrid fallback used because ML CLV was inconsistent with current Digital Twin behavior.**")
-                    
-                if pred_source == "Segment Classifier":
-                    st.info("**CLV segment predicted directly using the segment classification model.**")
-                elif pred_source == "Score Thresholds":
-                    st.info("**CLV segment derived from percentile-based CLV score.**")
-                    
-                st.caption("**Interpretation Note:** The CLV segment represents the client's future value relative to your current customer base, predicted or derived from their behavioral digital twin history.")
-    
-    col_clv_card, col_seg_card = st.columns(2)
-    with col_clv_card:
-        render_clv_card(entity_row)
-    with col_seg_card:
-        st.markdown(section_header_html("Customer Segment & Persona", "Persona"), unsafe_allow_html=True)
-        with st.container(border=True):
-            if str(entity_row.get("entity_type")).lower() == "prospect":
-                st.info("**Persona Layer:** Persona will be created after conversion to Client.")
-            else:
-                seg = entity_row.get("customer_segment") or "Standard Active Clients"
-                persona = entity_row.get("customer_persona") or "Regular Buyer"
-                desc = entity_row.get("persona_description") or "Client with normal activity and moderate value."
-                act = entity_row.get("persona_recommended_action") or "Maintain engagement with personalized recommendations."
-                method = entity_row.get("segmentation_method") or "Rule-Based RFM-ES + CLV Segmentation"
-                updated = entity_row.get("segmentation_last_updated") or "—"
-                
-                seg_class = "tag-vip" if "High-Value" in seg or "Premium" in seg else ("tag-churn" if "Risk" in seg or "At-Risk" in seg else "tag-active")
-                
-                st.markdown(f"""
-                <div class='info-row'><span class='info-label'>Customer Segment</span><span class='info-value'><span class='tag {seg_class}'>{seg}</span></span></div>
-                <div class='info-row'><span class='info-label'>Customer Persona</span><span class='info-value' style='font-weight:700;color:#fb7185;'>{persona}</span></div>
-                <div class='info-row'><span class='info-label'>Description</span><span class='info-value' style='font-size:12.5px;color:#cbd5e1;white-space:normal;line-height:1.4;'>{desc}</span></div>
-                <div class='info-row'><span class='info-label'>Recommended Action</span><span class='info-value' style='font-size:12.5px;color:#34d399;font-weight:600;white-space:normal;line-height:1.4;'>{act}</span></div>
-                <div class='info-row'><span class='info-label'>Method</span><span class='info-value'>{method}</span></div>
-                <div class='info-row'><span class='info-label'>Last Updated</span><span class='info-value'>{updated}</span></div>
+                <div style='background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); 
+                            border-radius: 8px; padding: 18px; margin-bottom: 24px;'>
+                    <div style='font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+                        {icon_html("Alert")} Critical Action Alerts - Admin Attention Required ({total_alerts_count})
+                    </div>
+                    <div style='display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #cbd5e1;'>
                 """, unsafe_allow_html=True)
 
-    # Refresh CLV button — only shown for Clients
-    if str(entity_row.get("entity_type", "")).lower() == "client":
-        st.markdown("<div style='margin-top:4px;'>", unsafe_allow_html=True)
-        if st.button("Refresh CLV", key="btn_refresh_clv", help="Recalculate CLV prediction for this client using the latest data"):
-            clv_art = load_clv_model_artifact()
-            if clv_art is None:
-                st.error("CLV model artifact not found. Please ensure 'osmos_best_clv_model_artifact.pkl' is available.")
-            elif is_cold_start_client(df_data[df_data["entity_id"] == selected_entity_id].iloc[0]):
-                st.warning("This client has no purchase history. CLV cannot be estimated yet (cold-start).")
-            else:
-                with st.spinner("Recalculating CLV..."):
-                    df_data = update_client_clv(df_data, selected_entity_id, clv_art)
-                    df_data = update_customer_segmentation(df_data, selected_entity_id)
-                    _, history = get_data()
-                    # Save only this one entity row — not all 1508
-                    storage_manager.save_entity_snapshot(df_data, selected_entity_id, history)
-                    st.session_state["df"] = df_data
+                # Render CLV drops
+                if not high_clv_drops.empty:
+                    for _, row in high_clv_drops.iterrows():
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #f87171; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #f87171;'>[CLV Drop Alert]</strong><br>
+                            <b>Client:</b> {row['entity_id']} | <b>Severity:</b> {row['alert_level']}<br>
+                            <b>Reason:</b> CLV dropped by {row['clv_change_percent']*100:.1f}% to {row['latest_clv_amount']:.2f} MAD (previously {row['previous_clv_amount']:.2f} MAD).<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ CLV Alert Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                st.success("CLV and Customer Segment refreshed successfully!")
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+                # Render Transitions
+                if not risky_transitions.empty:
+                    for _, row in risky_transitions.iterrows():
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #fbbf24; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #fbbf24;'>[Segment Transition Alert]</strong><br>
+                            <b>Client:</b> {row['entity_id']} | <b>Severity:</b> High<br>
+                            <b>Reason:</b> Segment downgraded/changed from '{row['previous_segment']}' ({row['previous_persona']}) to '{row['latest_segment']}' ({row['latest_persona']}).<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Segment Transition Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # Render Drift
+                if not high_drift_alerts.empty:
+                    for _, row in high_drift_alerts.iterrows():
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #fb7185; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #fb7185;'>[Prediction Drift Alert]</strong><br>
+                            <b>Class:</b> {row['dynamic_class']} | <b>Severity:</b> High<br>
+                            <b>Reason:</b> Distribution changed by {row['change_percent']*100:+.1f}% vs baseline.<br>
+                            <i>This means the proportion of this class changed significantly compared with the baseline period.</i><br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Go to <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Prediction Drift Actions</i> to generate an explanation and recommended action.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # Render Pending LLM recommendations
+                if pending_actions:
+                    for item in pending_actions:
+                        st.markdown(f"""
+                        <div style='border-left: 3px solid #2dd4bf; padding-left: 10px; margin-bottom: 4px;'>
+                            <strong style='color: #2dd4bf;'>[Pending LLM Recommendation]</strong><br>
+                            <b>Entity:</b> {item['entity_id'] or 'Platform'} | <b>Priority:</b> {item['priority']} | <b>Suggested Channel:</b> {item['suggested_channel']}<br>
+                            <b>Action Drafted (FR):</b> {item['recommended_action_fr']}<br>
+                            <span style='color: #94a3b8; font-size: 12px;'><b>Recommended Next Step:</b> Review recommendation details and update status under <i>Database Intelligence ➔ LLM-Assisted Action Intelligence ➔ Generated Recommendations</i>.</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # Small Closed-Loop Campaign Summary Banner
+        try:
+            from campaigns.campaign_repository import get_campaign_metrics
+            c_metrics = get_campaign_metrics()
+            st.markdown(f"""<div style='background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
+                <span style='font-size: 13px; font-weight: 700; color: #38bdf8;'>{icon_html("Campaign")} Closed-Loop Campaign Simulation:</span>
+                <span style='font-size: 12.5px; color: #cbd5e1;'>Drafts: <b style='color:#facc15;'>{c_metrics['draft_campaigns']}</b> | Dispatches: <b style='color:#38bdf8;'>{c_metrics['simulated_dispatches']}</b> | Responses: <b style='color:#34d399;'>{c_metrics['total_responses']}</b></span>
+            </div>""", unsafe_allow_html=True)
+
+        except Exception:
+            pass
 
 
-        # ── Page: Customer Segments & Personas ─────────────────────────
-elif page == "Customer Segments & Personas":
-    render_page_header(
-        "Customer Segments & Personas",
-        "Explainable cohort segmentation, persona assignment, and ML clustering support.",
-        icon="Persona",
-        badge="Customer Cohorts",
-    )
-    
-    clients_df = df_data[df_data["entity_type"] == "Client"]
-    total_clients_cnt = len(clients_df)
-    unique_segments = clients_df["customer_segment"].nunique() if total_clients_cnt > 0 else 0
-    loyalists_cnt = len(clients_df[clients_df["customer_segment"] == "High-Value Loyalists"])
-    at_risk_cnt = len(clients_df[clients_df["customer_segment"] == "At-Risk Premium Clients"])
-    dormant_cnt = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
-
-    # ── Tabs ──────────────────────────────────────────────────────
-    tab_overview, tab_personas, tab_dynamic, tab_comparison = st.tabs([
-        "Cohort Overview", 
-        "Stable Persona Library", 
-        "Dynamic Personas", 
-        "Comparison"
-    ])
 
 
-    # ── TAB 1: OVERVIEW ───────────────────────────────────────────
-    with tab_overview:
-        # A. KPI Cards
+        total_entities = len(df_data)
+        total_prospects = len(df_data[df_data["entity_type"] == "Prospect"])
+        total_clients   = len(df_data[df_data["entity_type"] == "Client"])
+        cold_prospects  = len(df_data[df_data["dynamic_class"] == "Cold Prospect"])
+        warm_prospects  = len(df_data[df_data["dynamic_class"] == "Warm Prospect"])
+        hot_prospects   = len(df_data[df_data["dynamic_class"] == "Hot Prospect"])
+        active_clients  = len(df_data[df_data["dynamic_class"] == "Active Client"])
+        vip_clients     = len(df_data[df_data["dynamic_class"] == "VIP Client"])
+        churn_risk_clients = len(df_data[df_data["dynamic_class"] == "Churn Risk Client"])
+
+        # KPI row
         st.markdown(f"""
         <div class='kpi-container'>
             <div class='kpi-card'>
                 <span class='kpi-icon'>{icon_html("Entities")}</span>
-                <div class='kpi-val color-total'>{total_clients_cnt}</div>
-                <div class='kpi-label'>Total Clients</div>
+                <div class='kpi-val color-total'>{total_entities}</div>
+                <div class='kpi-label'>Total Entities</div>
             </div>
             <div class='kpi-card'>
-                <span class='kpi-icon'>{icon_html("Table")}</span>
-                <div class='kpi-val color-prospect'>{unique_segments}</div>
-                <div class='kpi-label'>Active Segments</div>
+                <span class='kpi-icon'>{icon_html("Segment")}</span>
+                <div class='kpi-val color-prospect'>{total_prospects}</div>
+                <div class='kpi-label'>Prospects</div>
             </div>
             <div class='kpi-card'>
-                <span class='kpi-icon'>{icon_html("Value")}</span>
-                <div class='kpi-val color-vip'>{loyalists_cnt}</div>
-                <div class='kpi-label'>High-Value Loyalists</div>
+                <span class='kpi-icon'>{icon_html("Success")}</span>
+                <div class='kpi-val color-client'>{total_clients}</div>
+                <div class='kpi-label'>Clients</div>
+            </div>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Prospect")}</span>
+                <div class='kpi-val color-cold'>{cold_prospects}</div>
+                <div class='kpi-label'>Cold Prospects</div>
             </div>
             <div class='kpi-card'>
                 <span class='kpi-icon'>{icon_html("Alert")}</span>
-                <div class='kpi-val color-churn'>{at_risk_cnt}</div>
-                <div class='kpi-label'>At-Risk Premium</div>
+                <div class='kpi-val color-warm'>{warm_prospects}</div>
+                <div class='kpi-label'>Warm Prospects</div>
             </div>
             <div class='kpi-card'>
-                <span class='kpi-icon'>{icon_html("History")}</span>
-                <div class='kpi-val color-cold'>{dormant_cnt}</div>
-                <div class='kpi-label'>Dormant Clients</div>
+                <span class='kpi-icon'>{icon_html("Engagement")}</span>
+                <div class='kpi-val color-hot'>{hot_prospects}</div>
+                <div class='kpi-label'>Hot Prospects</div>
+            </div>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Success")}</span>
+                <div class='kpi-val color-active'>{active_clients}</div>
+                <div class='kpi-label'>Active Clients</div>
+            </div>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Value")}</span>
+                <div class='kpi-val color-vip'>{vip_clients}</div>
+                <div class='kpi-label'>VIP Clients</div>
+            </div>
+            <div class='kpi-card'>
+                <span class='kpi-icon'>{icon_html("Warning")}</span>
+                <div class='kpi-val color-churn'>{churn_risk_clients}</div>
+                <div class='kpi-label'>Churn Risk</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # B & C. Distribution Charts
-        st.markdown(section_header_html("Segment & Persona Distribution", "Chart"), unsafe_allow_html=True)
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1:
+        # Charts row
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.markdown(section_header_html("Dynamic Class Distribution", "Chart"), unsafe_allow_html=True)
             with st.container(border=True):
-                st.markdown("<div style='font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Segment</div>", unsafe_allow_html=True)
-                if total_clients_cnt > 0:
-                    seg_counts = clients_df["customer_segment"].value_counts().reset_index()
-                    seg_counts.columns = ["Segment", "Count"]
-                    st.bar_chart(seg_counts.set_index("Segment"), color="#2dd4bf", height=200)
-                else:
-                    st.caption("No client data available.")
-        with chart_col2:
-            with st.container(border=True):
-                st.markdown("<div style='font-size:12px;font-weight:700;color:#fb7185;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Persona</div>", unsafe_allow_html=True)
-                if total_clients_cnt > 0:
-                    pers_counts = clients_df["customer_persona"].value_counts().reset_index()
-                    pers_counts.columns = ["Persona", "Count"]
-                    st.bar_chart(pers_counts.set_index("Persona"), color="#fb7185", height=200)
-                else:
-                    st.caption("No client data available.")
+                class_counts = df_data["dynamic_class"].value_counts().reset_index()
+                class_counts.columns = ["Dynamic Class", "Count"]
+                st.bar_chart(class_counts.set_index("Dynamic Class"), color="#2dd4bf")
 
-        # D & E. Interactive Filter and Segment Table
-        st.markdown(section_header_html("Interactive Cohort Table", "Search"), unsafe_allow_html=True)
+        with col2:
+            st.markdown(section_header_html("Top Segments", "Segment"), unsafe_allow_html=True)
+            with st.container(border=True):
+                region_counts = df_data["region"].value_counts().head(5)
+                channel_counts = df_data["source_channel"].value_counts().head(4)
+
+                # Regions as inline bars
+                max_r = region_counts.max() if len(region_counts) > 0 else 1
+                for reg, cnt in region_counts.items():
+                    pct = int(cnt / max_r * 100)
+                    short = reg.split("-")[0] if "-" in reg else reg[:18]
+                    st.markdown(f"""
+                    <div class='score-bar-wrap'>
+                        <div class='score-bar-label'><span>{short}</span><span>{cnt}</span></div>
+                        <div class='score-bar-track'><div class='score-bar-fill fill-indigo' style='width:{pct}%'></div></div>
+                    </div>""", unsafe_allow_html=True)
+
+                st.markdown("<div style='margin-top:14px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0; font-weight:600;'>Channels</div>", unsafe_allow_html=True)
+                max_c = channel_counts.max() if len(channel_counts) > 0 else 1
+                for ch, cnt in channel_counts.items():
+                    pct = int(cnt / max_c * 100)
+                    st.markdown(f"""
+                    <div class='score-bar-wrap'>
+                        <div class='score-bar-label'><span>{ch[:20]}</span><span>{cnt}</span></div>
+                        <div class='score-bar-track'><div class='score-bar-fill fill-violet' style='width:{pct}%'></div></div>
+                    </div>""", unsafe_allow_html=True)
+
+        # Render CLV KPIs & Chart on Dashboard
+        clv_art = load_clv_model_artifact()
+        if clv_art is not None:
+            render_clv_dashboard(df_data)
+
+        # Customer Segmentation Overview
+        st.markdown(section_header_html("Customer Segmentation Overview", "Segment"), unsafe_allow_html=True)
         with st.container(border=True):
-            f1, f2, f3, f4 = st.columns(4)
-            with f1:
-                all_segs = ["All"] + sorted(clients_df["customer_segment"].dropna().unique().tolist())
-                sel_seg = st.selectbox("Segment Filter", all_segs, key="filter_seg")
-            with f2:
-                all_pers = ["All"] + sorted(clients_df["customer_persona"].dropna().unique().tolist())
-                sel_pers = st.selectbox("Persona Filter", all_pers, key="filter_pers")
-            with f3:
-                all_clv_segs = ["All"] + sorted(clients_df["predicted_clv_segment"].dropna().unique().tolist())
-                sel_clv_seg = st.selectbox("CLV Segment", all_clv_segs, key="filter_clv_seg")
-            with f4:
-                all_classes = ["All"] + sorted(clients_df["dynamic_class"].dropna().unique().tolist())
-                sel_class = st.selectbox("Dynamic Class", all_classes, key="filter_class")
-            table_df = clients_df.copy()
-            if sel_seg != "All":
-                table_df = table_df[table_df["customer_segment"] == sel_seg]
-            if sel_pers != "All":
-                table_df = table_df[table_df["customer_persona"] == sel_pers]
-            if sel_clv_seg != "All":
-                table_df = table_df[table_df["predicted_clv_segment"] == sel_clv_seg]
-            if sel_class != "All":
-                table_df = table_df[table_df["dynamic_class"] == sel_class]
+            seg_col1, seg_col2, seg_col3 = st.columns([1, 1, 1])
+
+            clients_df = df_data[df_data["entity_type"] == "Client"]
+
+            with seg_col1:
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#2dd4bf; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Segments</div>", unsafe_allow_html=True)
+                if len(clients_df) > 0:
+                    top_segs = clients_df["customer_segment"].value_counts().head(5)
+                    for seg_name, count in top_segs.items():
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{seg_name}</span><span style='color:#34d399; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.caption("No clients available.")
+
+            with seg_col2:
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#a78bfa; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Top 5 Customer Personas</div>", unsafe_allow_html=True)
+                if len(clients_df) > 0:
+                    top_pers = clients_df["customer_persona"].value_counts().head(5)
+                    for pers_name, count in top_pers.items():
+                        st.markdown(f"<div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;'><span style='color:#cbd5e1;'>{pers_name}</span><span style='color:#2dd4bf; font-weight:700;'>{count}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.caption("No clients available.")
+
+            with seg_col3:
+                st.markdown("<div style='font-size:12px; font-weight:700; color:#fb7185; text-transform:uppercase; letter-spacing:0; margin-bottom:8px;'>Key Segment Audits</div>", unsafe_allow_html=True)
+                at_risk_count = len(clients_df[clients_df["customer_segment"] == "At-Risk Premium Clients"])
+                loyalist_count = len(clients_df[clients_df["customer_segment"] == "High-Value Loyalists"])
+                dormant_count = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
+                st.markdown(f"""
+                <div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;'>
+                    <span style='color:#cbd5e1;'>At-Risk Premium</span>
+                    <span style='color:#f87171; font-weight:700;'>{at_risk_count}</span>
+                </div>
+                <div style='display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;'>
+                    <span style='color:#cbd5e1;'>High-Value Loyalists</span>
+                    <span style='color:#34d399; font-weight:700;'>{loyalist_count}</span>
+                </div>
+                <div style='display:flex; justify-content:space-between; font-size:12.5px;'>
+                    <span style='color:#cbd5e1;'>Dormant Clients</span>
+                    <span style='color:#94a3b8; font-weight:700;'>{dormant_count}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # Database table
+        st.markdown(section_header_html("Client & Prospect Database", "Entities"), unsafe_allow_html=True)
+        with st.container(border=True):
+            f_col1, f_col2, f_col3 = st.columns(3)
+            with f_col1:
+                type_filter = st.selectbox("Filter by Type", ["All", "Prospect", "Client"], key="db_type_filter")
+            with f_col2:
+                class_filter = st.selectbox("Filter by Class", ["All"] + sorted(df_data["dynamic_class"].dropna().unique().tolist()), key="db_class_filter")
+            with f_col3:
+                search_query = st.text_input("Search by ID or Region", key="db_search")
+
+            filtered_df = df_data.copy()
+            if type_filter != "All":
+                filtered_df = filtered_df[filtered_df["entity_type"] == type_filter]
+            if class_filter != "All":
+                filtered_df = filtered_df[filtered_df["dynamic_class"] == class_filter]
+            if search_query:
+                filtered_df = filtered_df[
+                    filtered_df["entity_id"].astype(str).str.contains(search_query, case=False) |
+                    filtered_df["region"].astype(str).str.contains(search_query, case=False)
+                ]
+
             display_cols = [
-                "entity_id", "dynamic_class", "customer_segment", "customer_persona",
-                "predicted_clv_score", "predicted_clv_segment", "rfm_score",
-                "churn_risk_score", "recency_days", "persona_recommended_action"
+                "entity_id", "entity_type", "region", "source_channel",
+                "segment", "persona", "dynamic_class", "recency_days",
+                "visits_30d", "product_views_30d", "cart_additions_30d",
+                "purchases_90d", "total_spent_90d_mad", "conversion_probability",
+                "churn_risk_score", "decision_priority_score"
             ]
             st.dataframe(
-                table_df[display_cols].style.format({
-                    "predicted_clv_score": "{:.1f}",
-                    "rfm_score": "{:.3f}",
+                filtered_df[display_cols].style.format({
+                    "total_spent_90d_mad": "{:.2f} MAD",
+                    "conversion_probability": "{:.3f}",
                     "churn_risk_score": "{:.3f}",
-                    "recency_days": "{:.0f}"
+                    "decision_priority_score": "{:.3f}",
+                    "recency_days": "{:.0f}",
+                    "visits_30d": "{:.0f}",
+                    "product_views_30d": "{:.0f}",
+                    "cart_additions_30d": "{:.0f}",
+                    "purchases_90d": "{:.0f}"
                 }),
                 width="stretch", hide_index=True
             )
 
-        # F. Action buttons
-        act_col1, act_col2 = st.columns([1, 2])
-        with act_col1:
-            if st.button("Refresh Segmentation", key="btn_refresh_segmentation", width="stretch", help="Recalculate segments and personas for all clients"):
-                with st.spinner("Recalculating cohorts..."):
-                    df_data = update_customer_segmentation(df_data)
-                    _, history = get_data()
-                    save_data(df_data, history)
-                    st.session_state["df"] = df_data
-                st.success("Customer segments re-evaluated and saved!")
-                st.rerun()
+    # ── Page 2: Entity Profile ─────────────────────────────────────
+    elif page == "Entity Profile":
+        render_page_header(
+            "Digital Twin Entity Profile",
+            "Deep-dive behavioral, predictive, and decision intelligence for any entity.",
+            icon="Entity",
+            badge="Entity Profile",
+        )
 
-        # G. ML Clustering
-        with st.expander("Complementary ML Clustering Analytics", expanded=True):
-            st.markdown("""
-            This module runs a **KMeans Clustering** model over 16 behavioral, predictive, and engagement features
-            to discover hidden cohorts. It applies **PCA (Principal Component Analysis)** to project clusters into a 2D or 3D space.
-            """)
-            
-            clust_col1, clust_col2 = st.columns([1, 2])
-            with clust_col1:
-                n_clusters = st.slider("Select Number of Clusters", min_value=2, max_value=8, value=5, step=1, key="clust_n_clusters")
-                pca_dim = st.radio("PCA Visualization Dimensions:", ["2D Scatter Plot", "3D Spatial Projection"], horizontal=True, key="rad_pca_dim")
-                run_clust_btn = st.button("Run KMeans Clustering", type="primary", width="stretch", key="btn_run_kmeans")
-                
-            # Auto-run clustering if not in session state or if button clicked or if cluster count changed
-            if run_clust_btn or "pca_df" not in st.session_state or st.session_state.get("last_n_clusters") != n_clusters:
-                with st.spinner("Fitting KMeans and projecting PCA coordinates..."):
-                    df_data, pca_df_res, exp_var_res = run_customer_clustering(df_data, n_clusters=n_clusters)
-                    st.session_state["df"] = df_data
-                    st.session_state["pca_df"] = pca_df_res
-                    st.session_state["exp_var"] = exp_var_res
-                    st.session_state["last_n_clusters"] = n_clusters
+        entity_id_list = sorted(df_data["entity_id"].unique())
+        selected_entity_id = st.selectbox("Select Entity ID", entity_id_list, key="profile_entity_sel")
+        entity_row = df_data[df_data["entity_id"] == selected_entity_id].iloc[0]
 
-            pca_df = st.session_state.get("pca_df")
-            exp_var = st.session_state.get("exp_var", [0.0, 0.0, 0.0])
+        dyn_class = entity_row["dynamic_class"]
+        class_tag_class = "tag-cold"
+        if dyn_class == "Warm Prospect":     class_tag_class = "tag-warm"
+        elif dyn_class == "Hot Prospect":    class_tag_class = "tag-hot"
+        elif dyn_class == "New Client":      class_tag_class = "tag-new"
+        elif dyn_class == "Active Client":   class_tag_class = "tag-active"
+        elif dyn_class == "Loyal Client":    class_tag_class = "tag-loyal"
+        elif dyn_class == "VIP Client":      class_tag_class = "tag-vip"
+        elif dyn_class == "Dormant Client":  class_tag_class = "tag-dormant"
+        elif dyn_class == "Churn Risk Client": class_tag_class = "tag-churn"
 
-            if pca_df is not None and not pca_df.empty:
-                st.success(f"Grouped {len(pca_df)} clients into {n_clusters} behavioral clusters!")
-                
-                import plotly.express as px
-                import plotly.graph_objects as go
-                
-                tot_var = sum(exp_var[:2]) * 100
-                
-                if "2D" in pca_dim:
-                    fig = px.scatter(
-                        pca_df,
-                        x="PCA1",
-                        y="PCA2",
-                        color="cluster",
-                        symbol="cluster",
-                        hover_name="entity_id",
-                        hover_data={
-                            "PCA1": ":.2f",
-                            "PCA2": ":.2f",
-                            "dynamic_class": True,
-                            "customer_segment": True,
-                            "cluster_persona": True,
-                            "rfm_score": ":.2f",
-                            "predicted_clv_score": ":.1f",
-                            "total_spent_90d_mad": ":.2f"
-                        },
-                        title=f"KMeans Cluster Map (PCA 2D Space — {tot_var:.1f}% Variance Explained)",
-                        color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
-                    )
-                    
-                    # Compute centroids in 2D
-                    centroids = pca_df.groupby("cluster")[["PCA1", "PCA2"]].mean().reset_index()
-                    fig.add_trace(
-                        go.Scatter(
-                            x=centroids["PCA1"],
-                            y=centroids["PCA2"],
-                            mode="markers+text",
-                            marker=dict(size=14, symbol="diamond", color="#ffffff", line=dict(width=2, color="#000000")),
-                            text=centroids["cluster"],
-                            textposition="top center",
-                            name="Cluster Centroids"
-                        )
-                    )
-                    
-                    apply_plotly_theme(
-                        fig,
-                        get_theme(),
-                        height=480,
-                        margin=dict(l=20, r=20, t=40, b=20),
-                    )
-                    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-                    st.plotly_chart(fig, use_container_width=True)
-                    
+        is_client_entity  = str(entity_row.get("entity_type")).lower() == "client"
+        profile_complete_val = entity_row.get("completed_client_profile")
+        is_incomplete = is_client_entity and (pd.isna(profile_complete_val) or str(profile_complete_val).lower() != "true")
+
+        entity_type_val = entity_row.get("entity_type", "Prospect")
+        type_color = "#34d399" if entity_type_val == "Client" else "#2dd4bf"
+        incomplete_badge = "<span class='tag tag-churn' style='margin-left:12px;'>Profile Incomplete</span>" if is_incomplete else ""
+
+        st.markdown(f"""<div class='glass-card-accent' style='display:flex; align-items:center; gap:20px; flex-wrap:wrap;'>
+    <div>
+    <div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Entity</div>
+    <div style='font-family: JetBrains Mono, monospace; font-size:22px; font-weight:700; color:#e2e8f0;'>{selected_entity_id}</div>
+    </div>
+    <div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
+    <div>
+    <div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:4px;'>Type</div>
+    <div style='font-size:16px; font-weight:700; color:{type_color};'>{entity_type_val}</div>
+    </div>
+    <div style='width:1px; height:40px; background:rgba(255,255,255,0.1);'></div>
+    <div>
+    <div style='font-size:11px; text-transform:uppercase; letter-spacing:0; color:#64748b; margin-bottom:6px;'>Classification</div>
+    <span class='tag {class_tag_class}' style='font-size:14px; padding:6px 16px;'>{dyn_class}</span>
+    {incomplete_badge}
+    </div>
+    </div>""", unsafe_allow_html=True)
+
+        # Score gauges row
+        rfm   = float(entity_row.get("rfm_score", 0))
+        conv  = float(entity_row.get("conversion_probability", 0))
+        churn = float(entity_row.get("churn_risk_score", 0))
+        beh   = float(entity_row.get("behavioral_engagement_score", 0))
+        pred  = float(entity_row.get("predictive_value_score", 0))
+        dec   = float(entity_row.get("decision_priority_score", 0))
+
+        def _bar(label, val, fill_cls, fmt="{:.1%}"):
+            formatted = fmt.format(val)
+            width = f"{val*100:.1f}%"
+            return (
+                f"<div class='score-bar-wrap'>"
+                f"<div class='score-bar-label'><span>{label}</span>"
+                f"<span style='color:#e2e8f0; font-weight:600;'>{formatted}</span></div>"
+                f"<div class='score-bar-track'><div class='score-bar-fill {fill_cls}' style='width:{width}'></div></div>"
+                f"</div>"
+            )
+
+        # Get weight values from entity_row
+        w_R = float(entity_row.get("ahp_weight_R", 0.0))
+        w_F = float(entity_row.get("ahp_weight_F", 0.0))
+        w_M = float(entity_row.get("ahp_weight_M", 0.0))
+        w_E = float(entity_row.get("ahp_weight_E", 0.0))
+        w_S = float(entity_row.get("ahp_weight_S", 0.0))
+
+        if str(entity_row.get("entity_type")).lower() == "prospect":
+            w_M = 0.0
+
+        # Calculate CR for display using group decision logic
+        ahp_result = get_group_ahp_result()
+        client_cr = ahp_result["CR"]
+        expert_count = ahp_result["expert_count"]
+
+        cr_status = "Group AHP matrix consistent" if client_cr <= 0.10 else "Warning: Group AHP matrix inconsistent"
+        cr_color = "#34d399" if client_cr <= 0.10 else "#fb7185"
+
+        ahp_section_html = "".join([
+            "<div style='margin:10px 0;padding:10px;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.15);border-radius:8px;'>",
+            f"<div style='font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:6px;'>Group AHP Weights — {expert_count} Experts</div>",
+            "<div style='display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;margin-bottom:8px;'>",
+            f"<div><div style='font-size:15px;color:#64748b;'>R</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_R:.3f}</div></div>",
+            f"<div><div style='font-size:15px;color:#64748b;'>F</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_F:.3f}</div></div>",
+            f"<div><div style='font-size:15px;color:#64748b;'>M</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_M:.3f}</div></div>",
+            f"<div><div style='font-size:15px;color:#64748b;'>E</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_E:.3f}</div></div>",
+            f"<div><div style='font-size:15px;color:#64748b;'>S</div><div style='font-size:15px;font-weight:600;color:#e2e8f0;'>{w_S:.3f}</div></div>",
+            "</div>",
+            f"<div style='font-size:10px;color:{cr_color};font-weight:500;text-align:center;'>{cr_status} (CR = {client_cr:.4f})</div>",
+            "</div>",
+        ])
+
+        sc1, sc2, sc3 = st.columns(3)
+        visits_n = min(float(entity_row.get('visits_30d', 0)) / 50.0, 1.0)
+        views_n  = min(float(entity_row.get('product_views_30d', 0)) / 80.0, 1.0)
+        carts_n  = min(float(entity_row.get('cart_additions_30d', 0)) / 10.0, 1.0)
+
+        # Pre-build all score bar HTML strings to avoid f-string conflicts
+        bar_rfm   = _bar("RFM Score", rfm, "fill-indigo")
+        bar_conv  = _bar("Conversion Probability", conv, "fill-green")
+        bar_churn = _bar("Churn Risk", churn, "fill-rose")
+        bar_beh   = _bar("Behavioral Engagement", beh, "fill-violet")
+        bar_pred  = _bar("Predictive Value", pred, "fill-cyan")
+        bar_dec   = _bar("Decision Priority", dec, "fill-amber")
+
+        visits_val = int(entity_row.get('visits_30d', 0))
+        views_val  = int(entity_row.get('product_views_30d', 0))
+        carts_val  = int(entity_row.get('cart_additions_30d', 0))
+        visits_w   = f"{visits_n*100:.0f}%"
+        views_w    = f"{views_n*100:.0f}%"
+        carts_w    = f"{carts_n*100:.0f}%"
+
+        with sc1:
+            card1_html = "".join([
+                "<div class='glass-card'>",
+                section_header_html("Predictive Scores", "Chart"),
+                bar_rfm.strip(),
+                ahp_section_html.strip(),
+                bar_conv.strip(),
+                bar_churn.strip(),
+                "</div>"
+            ])
+            st.markdown(card1_html, unsafe_allow_html=True)
+        with sc2:
+            card2_html = (
+                "<div class='glass-card'>"
+                + section_header_html("Engagement & Priority", "Engagement")
+                + bar_beh
+                + bar_pred
+                + bar_dec
+                + "</div>"
+            )
+            st.markdown(card2_html, unsafe_allow_html=True)
+        with sc3:
+            activity_html = (
+                "<div class='glass-card'>"
+                + section_header_html("Activity (30d)", "Engagement")
+                + f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Visits</span><span style='color:#e2e8f0;font-weight:600;'>{visits_val}</span></div>"
+                f"<div class='score-bar-track'><div class='score-bar-fill fill-indigo' style='width:{visits_w}'></div></div></div>"
+                f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Product Views</span><span style='color:#e2e8f0;font-weight:600;'>{views_val}</span></div>"
+                f"<div class='score-bar-track'><div class='score-bar-fill fill-violet' style='width:{views_w}'></div></div></div>"
+                f"<div class='score-bar-wrap'><div class='score-bar-label'><span>Cart Additions</span><span style='color:#e2e8f0;font-weight:600;'>{carts_val}</span></div>"
+                f"<div class='score-bar-track'><div class='score-bar-fill fill-cyan' style='width:{carts_w}'></div></div></div>"
+                "</div>"
+            )
+            st.markdown(activity_html, unsafe_allow_html=True)
+
+        prof_col1, prof_col2 = st.columns(2)
+        with prof_col1:
+            profile_rows = [
+                ("Entity ID", entity_row.get("entity_id")),
+                ("Entity Type", entity_row.get("entity_type")),
+                ("Region", entity_row.get("region")),
+                ("Source Channel", entity_row.get("source_channel")),
+                ("Segment", entity_row.get("segment")),
+                ("Persona", entity_row.get("persona")),
+                ("Age Group", entity_row.get("age_group")),
+                ("Preferred Device", entity_row.get("preferred_device")),
+                ("Preferred Category", entity_row.get("preferred_category")),
+                ("Marketing Consent", str(entity_row.get("marketing_consent"))),
+                ("Price Sensitivity", f"{entity_row.get('price_sensitivity',0):.3f}"),
+                ("Income Power", f"{entity_row.get('income_power_score',0):.3f}"),
+                ("Created", str(entity_row.get("created_at"))[:10] if entity_row.get("created_at") else "—"),
+            ]
+            rows_html = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in profile_rows])
+            st.markdown(f"""
+            <div class='glass-card'>
+                <div class='section-header'><span class='icon'>{icon_html("Info")}</span><span class='title'>Basic Profile</span></div>
+                {rows_html}
+            </div>""", unsafe_allow_html=True)
+
+        with prof_col2:
+            beh_rows = [
+                ("Recency", f"{entity_row.get('recency_days',0):.0f} days"),
+                ("Purchases (90d)", f"{entity_row.get('purchases_90d',0):.0f}"),
+                ("Total Spent (90d)", f"{entity_row.get('total_spent_90d_mad',0):.2f} MAD"),
+                ("Avg Order Value", f"{entity_row.get('avg_order_value_mad',0):.2f} MAD"),
+                ("Email Open Rate", f"{entity_row.get('email_open_rate',0)*100:.1f}%"),
+                ("Email Click Rate", f"{entity_row.get('email_click_rate',0)*100:.1f}%"),
+                ("Complaints (90d)", f"{entity_row.get('complaint_count_90d',0):.0f}"),
+                ("Avg Review Score", f"{entity_row.get('review_score_avg',0):.2f}" if not pd.isna(entity_row.get('review_score_avg')) else "No reviews"),
+                ("Social Mentions", f"{entity_row.get('social_mentions_30d',0):.0f}"),
+                ("Social Sentiment", f"{entity_row.get('social_sentiment_avg',0):.3f}"),
+            ]
+            rows_html2 = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in beh_rows])
+            st.markdown(f"""
+            <div class='glass-card'>
+                <div class='section-header'><span class='icon'>{icon_html("Engagement")}</span><span class='title'>Behavioral Data</span></div>
+                {rows_html2}
+            </div>""", unsafe_allow_html=True)
+
+        # Client demographics — uses native widgets so we use st.container
+        st.markdown(section_header_html("Client Demographic Profile", "Entity"), unsafe_allow_html=True)
+        with st.container(border=True):
+            if is_client_entity:
+                if is_incomplete:
+                    st.warning("Client profile incomplete. Click **Edit** to complete demographics.")
+                dem_rows = [
+                    ("Age", str(int(entity_row["age"])) if not pd.isna(entity_row.get("age")) else "Not completed"),
+                    ("Sex", entity_row.get("sex") or "Not completed"),
+                    ("Email", entity_row.get("email") or "Not completed"),
+                    ("Customer Type", entity_row.get("customer_type") or "Not completed"),
+                    ("Household Size", str(int(entity_row["household_size"])) if not pd.isna(entity_row.get("household_size")) else ("N/A (B2B)" if entity_row.get("customer_type") == "B2B" else "Not completed")),
+                    ("Phone Number", entity_row.get("phone_number") or "Not completed"),
+                    ("Company Name", entity_row.get("company_name") or ("N/A (B2C)" if entity_row.get("customer_type") == "B2C" else "Not completed")),
+                    ("Job Title", entity_row.get("job_title") or ("N/A (B2C)" if entity_row.get("customer_type") == "B2C" else "Not completed")),
+                    ("City", entity_row.get("city") or "Not completed"),
+                    ("Address", entity_row.get("address") or "Not completed"),
+                ]
+                dem_html = "".join([f"<div class='info-row'><span class='info-label'>{k}</span><span class='info-value'>{v}</span></div>" for k,v in dem_rows])
+                st.markdown(dem_html, unsafe_allow_html=True)
+                if st.button("Edit Client Information", key="edit_client_profile_btn"):
+                    st.session_state["edit_form_open"] = True
+                    st.session_state["pending_edit_entity_id"] = selected_entity_id
+                    st.rerun()
+            else:
+                st.info("Client information will be available after this entity converts to a Client.")
+
+        # Customer Lifetime Value (CLV) Prediction Section
+        def render_clv_card(row):
+            clv_val = row.get("predicted_clv_amount_mad")
+            clv_score = row.get("predicted_clv_score")
+            clv_seg = row.get("predicted_clv_segment")
+            clv_model = row.get("clv_model_name") or "—"
+            clv_seg_model = row.get("clv_segment_model_name") or "—"
+            clv_updated = row.get("clv_last_updated") or "—"
+
+            ml_val = row.get("ml_predicted_clv_amount_mad")
+            math_val = row.get("math_clv_amount_mad")
+            method_used = row.get("clv_method_used")
+            pred_source = row.get("clv_segment_prediction_source") or "—"
+            confidence = row.get("clv_segment_confidence")
+
+            st.markdown(section_header_html("Customer Lifetime Value", "CLV"), unsafe_allow_html=True)
+            with st.container(border=True):
+                if str(row.get("entity_type")).lower() == "prospect":
+                    st.info("**CLV Estimation:** CLV will be estimated after conversion and enough purchase history.")
+                elif clv_seg == "Insufficient History" or pd.isna(clv_val):
+                    st.warning("**CLV Estimation:** Insufficient History")
                 else:
-                    tot_var_3d = sum(exp_var[:3]) * 100
-                    fig3d = px.scatter_3d(
-                        pca_df,
-                        x="PCA1",
-                        y="PCA2",
-                        z="PCA3",
-                        color="cluster",
-                        hover_name="entity_id",
-                        hover_data={
-                            "dynamic_class": True,
-                            "customer_segment": True,
-                            "cluster_persona": True,
-                            "rfm_score": ":.2f",
-                            "predicted_clv_score": ":.1f"
-                        },
-                        title=f"KMeans 3D Spatial Cluster Projection ({tot_var_3d:.1f}% Variance Explained)",
-                        color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
-                    )
-                    apply_plotly_theme(
-                        fig3d,
-                        get_theme(),
-                        height=540,
-                        margin=dict(l=10, r=10, t=40, b=10),
-                    )
-                    st.plotly_chart(fig3d, use_container_width=True)
+                    seg_class = "tag-clv-low"
+                    if clv_seg == "Medium Future Value":
+                        seg_class = "tag-clv-medium"
+                    elif clv_seg == "High Future Value":
+                        seg_class = "tag-clv-high"
+                    elif clv_seg == "Very High Future Value":
+                        seg_class = "tag-clv-veryhigh"
 
-                st.markdown("---")
-                
-                # 2. Cluster Profiles Summary & Metrics Breakdown
-                st.markdown(section_header_html("Cluster Cohort Characteristics & Profiles", "Chart"), unsafe_allow_html=True)
-                
-                col_m1, col_m2 = st.columns([1, 1])
-                with col_m1:
-                    st.markdown("<strong style='font-size:13px; color:#38bdf8;'>Entity Distribution across Clusters</strong>", unsafe_allow_html=True)
-                    counts_df = pca_df["cluster"].value_counts().reset_index()
-                    counts_df.columns = ["Cluster", "Count"]
-                    
-                    fig_bar = px.bar(
-                        counts_df,
-                        x="Cluster",
-                        y="Count",
-                        color="Cluster",
-                        text="Count",
-                        color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
-                    )
-                    apply_plotly_theme(
-                        fig_bar,
-                        get_theme(),
-                        height=260,
-                        showlegend=False,
-                        margin=dict(l=10, r=10, t=20, b=10),
-                    )
-                    st.plotly_chart(fig_bar, use_container_width=True)
+                    clv_amt_str = f"{float(clv_val):,.2f} MAD" if not pd.isna(clv_val) else "—"
+                    clv_score_str = f"{float(clv_score):.1f} / 100" if not pd.isna(clv_score) else "—"
+                    clv_seg_str = clv_seg if clv_seg else "—"
 
-                with col_m2:
-                    st.markdown("<strong style='font-size:13px; color:#34d399;'>Mean Metric Comparison by Cluster</strong>", unsafe_allow_html=True)
-                    cluster_means = pca_df.groupby("cluster")[["rfm_score", "predicted_clv_score", "churn_risk_score", "total_spent_90d_mad"]].mean().reset_index()
-                    cluster_means.columns = ["Cluster", "Avg RFM", "Avg CLV", "Avg Churn Risk", "Avg Spend (MAD)"]
-                    
+                    ml_amt_str = f"{float(ml_val):,.2f} MAD" if not pd.isna(ml_val) and ml_val is not None else "—"
+                    math_amt_str = f"{float(math_val):,.2f} MAD" if not pd.isna(math_val) and math_val is not None else "—"
+                    confidence_str = f"{float(confidence):.1%}" if not pd.isna(confidence) and confidence is not None else "N/A"
+                    method_str = method_used if method_used else clv_model
+
+                    st.markdown(f"""
+                    <div class='info-row'><span class='info-label'>Final CLV Amount</span><span class='info-value' style='font-size:14px;color:#ecfeff;font-weight:700;'>{clv_amt_str}</span></div>
+                    <div class='info-row'><span class='info-label'>CLV Score</span><span class='info-value'>{clv_score_str}</span></div>
+                    <div class='info-row'><span class='info-label'>Final CLV Segment</span><span class='info-value'><span class='tag {seg_class}'>{clv_seg_str}</span></span></div>
+                    <div class='info-row'><span class='info-label'>CLV Amount Model</span><span class='info-value'>{clv_model}</span></div>
+                    <div class='info-row'><span class='info-label'>CLV Segment Model</span><span class='info-value'>{clv_seg_model}</span></div>
+                    <div class='info-row'><span class='info-label'>Segment Prediction Source</span><span class='info-value'>{pred_source}</span></div>
+                    <div class='info-row'><span class='info-label'>Segment Confidence</span><span class='info-value'>{confidence_str}</span></div>
+                    <div class='info-row'><span class='info-label'>ML CLV Amount</span><span class='info-value'>{ml_amt_str}</span></div>
+                    <div class='info-row'><span class='info-label'>Mathematical CLV Amount</span><span class='info-value'>{math_amt_str}</span></div>
+                    <div class='info-row'><span class='info-label'>Method Used</span><span class='info-value' style='color:#a5b4fc;font-weight:600;'>{method_str}</span></div>
+                    <div class='info-row'><span class='info-label'>Last CLV Update</span><span class='info-value'>{clv_updated}</span></div>
+                    """, unsafe_allow_html=True)
+
+                    # Top 3 distribution
+                    top_3_val = row.get("clv_segment_top_3")
+                    parsed_top_3 = None
+                    if top_3_val:
+                        if isinstance(top_3_val, str):
+                            try:
+                                parsed_top_3 = json.loads(top_3_val)
+                            except Exception:
+                                pass
+                        elif isinstance(top_3_val, (list, tuple)):
+                            parsed_top_3 = top_3_val
+
+                    if parsed_top_3:
+                        st.markdown("<div style='font-size:12px; font-weight:600; color:#2dd4bf; margin-top:14px; margin-bottom:6px;'>Segment Probability Distribution:</div>", unsafe_allow_html=True)
+                        for idx_top, item in enumerate(parsed_top_3):
+                            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                                lbl = item[0]
+                                val_prob = float(item[1])
+                                st.markdown(f"""
+                                <div style='display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;'>
+                                    <span style='color:#94a3b8;'>{idx_top+1}. {lbl}</span>
+                                    <span style='color:#34d399; font-weight:700;'>{val_prob:.1%}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                    if method_used == "Hybrid CLV: Mathematical Fallback":
+                        st.warning("**Hybrid fallback used because ML CLV was inconsistent with current Digital Twin behavior.**")
+
+                    if pred_source == "Segment Classifier":
+                        st.info("**CLV segment predicted directly using the segment classification model.**")
+                    elif pred_source == "Score Thresholds":
+                        st.info("**CLV segment derived from percentile-based CLV score.**")
+
+                    st.caption("**Interpretation Note:** The CLV segment represents the client's future value relative to your current customer base, predicted or derived from their behavioral digital twin history.")
+
+        col_clv_card, col_seg_card = st.columns(2)
+        with col_clv_card:
+            render_clv_card(entity_row)
+        with col_seg_card:
+            st.markdown(section_header_html("Customer Segment & Persona", "Persona"), unsafe_allow_html=True)
+            with st.container(border=True):
+                if str(entity_row.get("entity_type")).lower() == "prospect":
+                    st.info("**Persona Layer:** Persona will be created after conversion to Client.")
+                else:
+                    seg = entity_row.get("customer_segment") or "Standard Active Clients"
+                    persona = entity_row.get("customer_persona") or "Regular Buyer"
+                    desc = entity_row.get("persona_description") or "Client with normal activity and moderate value."
+                    act = entity_row.get("persona_recommended_action") or "Maintain engagement with personalized recommendations."
+                    method = entity_row.get("segmentation_method") or "Rule-Based RFM-ES + CLV Segmentation"
+                    updated = entity_row.get("segmentation_last_updated") or "—"
+
+                    seg_class = "tag-vip" if "High-Value" in seg or "Premium" in seg else ("tag-churn" if "Risk" in seg or "At-Risk" in seg else "tag-active")
+
+                    st.markdown(f"""
+                    <div class='info-row'><span class='info-label'>Customer Segment</span><span class='info-value'><span class='tag {seg_class}'>{seg}</span></span></div>
+                    <div class='info-row'><span class='info-label'>Customer Persona</span><span class='info-value' style='font-weight:700;color:#fb7185;'>{persona}</span></div>
+                    <div class='info-row'><span class='info-label'>Description</span><span class='info-value' style='font-size:12.5px;color:#cbd5e1;white-space:normal;line-height:1.4;'>{desc}</span></div>
+                    <div class='info-row'><span class='info-label'>Recommended Action</span><span class='info-value' style='font-size:12.5px;color:#34d399;font-weight:600;white-space:normal;line-height:1.4;'>{act}</span></div>
+                    <div class='info-row'><span class='info-label'>Method</span><span class='info-value'>{method}</span></div>
+                    <div class='info-row'><span class='info-label'>Last Updated</span><span class='info-value'>{updated}</span></div>
+                    """, unsafe_allow_html=True)
+
+        # Refresh CLV button — only shown for Clients
+        if str(entity_row.get("entity_type", "")).lower() == "client":
+            st.markdown("<div style='margin-top:4px;'>", unsafe_allow_html=True)
+            if st.button("Refresh CLV", key="btn_refresh_clv", help="Recalculate CLV prediction for this client using the latest data"):
+                clv_art = load_clv_model_artifact()
+                if clv_art is None:
+                    st.error("CLV model artifact not found. Please ensure 'osmos_best_clv_model_artifact.pkl' is available.")
+                elif is_cold_start_client(df_data[df_data["entity_id"] == selected_entity_id].iloc[0]):
+                    st.warning("This client has no purchase history. CLV cannot be estimated yet (cold-start).")
+                else:
+                    with st.spinner("Recalculating CLV..."):
+                        df_data = update_client_clv(df_data, selected_entity_id, clv_art)
+                        df_data = update_customer_segmentation(df_data, selected_entity_id)
+                        _, history = get_data()
+                        # Save only this one entity row — not all 1508
+                        storage_manager.save_entity_snapshot(df_data, selected_entity_id, history)
+                        st.session_state["df"] = df_data
+
+                    st.success("CLV and Customer Segment refreshed successfully!")
+                    st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+
+            # ── Page: Customer Segments & Personas ─────────────────────────
+    elif page == "Customer Segments & Personas":
+        render_page_header(
+            "Customer Segments & Personas",
+            "Explainable cohort segmentation, persona assignment, and ML clustering support.",
+            icon="Persona",
+            badge="Customer Cohorts",
+        )
+
+        clients_df = df_data[df_data["entity_type"] == "Client"]
+        total_clients_cnt = len(clients_df)
+        unique_segments = clients_df["customer_segment"].nunique() if total_clients_cnt > 0 else 0
+        loyalists_cnt = len(clients_df[clients_df["customer_segment"] == "High-Value Loyalists"])
+        at_risk_cnt = len(clients_df[clients_df["customer_segment"] == "At-Risk Premium Clients"])
+        dormant_cnt = len(clients_df[clients_df["customer_segment"] == "Dormant Low-Value Clients"])
+
+        # ── Tabs ──────────────────────────────────────────────────────
+        tab_overview, tab_personas, tab_dynamic, tab_comparison = st.tabs([
+            "Cohort Overview", 
+            "Stable Persona Library", 
+            "Dynamic Personas", 
+            "Comparison"
+        ])
+
+
+        # ── TAB 1: OVERVIEW ───────────────────────────────────────────
+        with tab_overview:
+            # A. KPI Cards
+            st.markdown(f"""
+            <div class='kpi-container'>
+                <div class='kpi-card'>
+                    <span class='kpi-icon'>{icon_html("Entities")}</span>
+                    <div class='kpi-val color-total'>{total_clients_cnt}</div>
+                    <div class='kpi-label'>Total Clients</div>
+                </div>
+                <div class='kpi-card'>
+                    <span class='kpi-icon'>{icon_html("Table")}</span>
+                    <div class='kpi-val color-prospect'>{unique_segments}</div>
+                    <div class='kpi-label'>Active Segments</div>
+                </div>
+                <div class='kpi-card'>
+                    <span class='kpi-icon'>{icon_html("Value")}</span>
+                    <div class='kpi-val color-vip'>{loyalists_cnt}</div>
+                    <div class='kpi-label'>High-Value Loyalists</div>
+                </div>
+                <div class='kpi-card'>
+                    <span class='kpi-icon'>{icon_html("Alert")}</span>
+                    <div class='kpi-val color-churn'>{at_risk_cnt}</div>
+                    <div class='kpi-label'>At-Risk Premium</div>
+                </div>
+                <div class='kpi-card'>
+                    <span class='kpi-icon'>{icon_html("History")}</span>
+                    <div class='kpi-val color-cold'>{dormant_cnt}</div>
+                    <div class='kpi-label'>Dormant Clients</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # B & C. Distribution Charts
+            st.markdown(section_header_html("Segment & Persona Distribution", "Chart"), unsafe_allow_html=True)
+            chart_col1, chart_col2 = st.columns(2)
+            with chart_col1:
+                with st.container(border=True):
+                    st.markdown("<div style='font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Segment</div>", unsafe_allow_html=True)
+                    if total_clients_cnt > 0:
+                        seg_counts = clients_df["customer_segment"].value_counts().reset_index()
+                        seg_counts.columns = ["Segment", "Count"]
+                        st.bar_chart(seg_counts.set_index("Segment"), color="#2dd4bf", height=200)
+                    else:
+                        st.caption("No client data available.")
+            with chart_col2:
+                with st.container(border=True):
+                    st.markdown("<div style='font-size:12px;font-weight:700;color:#fb7185;text-transform:uppercase;letter-spacing:0;margin-bottom:8px;'>Clients per Persona</div>", unsafe_allow_html=True)
+                    if total_clients_cnt > 0:
+                        pers_counts = clients_df["customer_persona"].value_counts().reset_index()
+                        pers_counts.columns = ["Persona", "Count"]
+                        st.bar_chart(pers_counts.set_index("Persona"), color="#fb7185", height=200)
+                    else:
+                        st.caption("No client data available.")
+
+            # D & E. Interactive Filter and Segment Table
+            st.markdown(section_header_html("Interactive Cohort Table", "Search"), unsafe_allow_html=True)
+            with st.container(border=True):
+                f1, f2, f3, f4 = st.columns(4)
+                with f1:
+                    all_segs = ["All"] + sorted(clients_df["customer_segment"].dropna().unique().tolist())
+                    sel_seg = st.selectbox("Segment Filter", all_segs, key="filter_seg")
+                with f2:
+                    all_pers = ["All"] + sorted(clients_df["customer_persona"].dropna().unique().tolist())
+                    sel_pers = st.selectbox("Persona Filter", all_pers, key="filter_pers")
+                with f3:
+                    all_clv_segs = ["All"] + sorted(clients_df["predicted_clv_segment"].dropna().unique().tolist())
+                    sel_clv_seg = st.selectbox("CLV Segment", all_clv_segs, key="filter_clv_seg")
+                with f4:
+                    all_classes = ["All"] + sorted(clients_df["dynamic_class"].dropna().unique().tolist())
+                    sel_class = st.selectbox("Dynamic Class", all_classes, key="filter_class")
+                table_df = clients_df.copy()
+                if sel_seg != "All":
+                    table_df = table_df[table_df["customer_segment"] == sel_seg]
+                if sel_pers != "All":
+                    table_df = table_df[table_df["customer_persona"] == sel_pers]
+                if sel_clv_seg != "All":
+                    table_df = table_df[table_df["predicted_clv_segment"] == sel_clv_seg]
+                if sel_class != "All":
+                    table_df = table_df[table_df["dynamic_class"] == sel_class]
+                display_cols = [
+                    "entity_id", "dynamic_class", "customer_segment", "customer_persona",
+                    "predicted_clv_score", "predicted_clv_segment", "rfm_score",
+                    "churn_risk_score", "recency_days", "persona_recommended_action"
+                ]
+                st.dataframe(
+                    table_df[display_cols].style.format({
+                        "predicted_clv_score": "{:.1f}",
+                        "rfm_score": "{:.3f}",
+                        "churn_risk_score": "{:.3f}",
+                        "recency_days": "{:.0f}"
+                    }),
+                    width="stretch", hide_index=True
+                )
+
+            # F. Action buttons
+            act_col1, act_col2 = st.columns([1, 2])
+            with act_col1:
+                if st.button("Refresh Segmentation", key="btn_refresh_segmentation", width="stretch", help="Recalculate segments and personas for all clients"):
+                    with st.spinner("Recalculating cohorts..."):
+                        df_data = update_customer_segmentation(df_data)
+                        _, history = get_data()
+                        save_data(df_data, history)
+                        st.session_state["df"] = df_data
+                    st.success("Customer segments re-evaluated and saved!")
+                    st.rerun()
+
+            # G. ML Clustering
+            with st.expander("Complementary ML Clustering Analytics", expanded=True):
+                st.markdown("""
+                This module runs a **KMeans Clustering** model over 16 behavioral, predictive, and engagement features
+                to discover hidden cohorts. It applies **PCA (Principal Component Analysis)** to project clusters into a 2D or 3D space.
+                """)
+
+                clust_col1, clust_col2 = st.columns([1, 2])
+                with clust_col1:
+                    n_clusters = st.slider("Select Number of Clusters", min_value=2, max_value=8, value=5, step=1, key="clust_n_clusters")
+                    pca_dim = st.radio("PCA Visualization Dimensions:", ["2D Scatter Plot", "3D Spatial Projection"], horizontal=True, key="rad_pca_dim")
+                    run_clust_btn = st.button("Run KMeans Clustering", type="primary", width="stretch", key="btn_run_kmeans")
+
+                # Auto-run clustering if not in session state or if button clicked or if cluster count changed
+                if run_clust_btn or "pca_df" not in st.session_state or st.session_state.get("last_n_clusters") != n_clusters:
+                    with st.spinner("Fitting KMeans and projecting PCA coordinates..."):
+                        df_data, pca_df_res, exp_var_res = run_customer_clustering(df_data, n_clusters=n_clusters)
+                        st.session_state["df"] = df_data
+                        st.session_state["pca_df"] = pca_df_res
+                        st.session_state["exp_var"] = exp_var_res
+                        st.session_state["last_n_clusters"] = n_clusters
+
+                pca_df = st.session_state.get("pca_df")
+                exp_var = st.session_state.get("exp_var", [0.0, 0.0, 0.0])
+
+                if pca_df is not None and not pca_df.empty:
+                    st.success(f"Grouped {len(pca_df)} clients into {n_clusters} behavioral clusters!")
+
+                    import plotly.express as px
+                    import plotly.graph_objects as go
+
+                    tot_var = sum(exp_var[:2]) * 100
+
+                    if "2D" in pca_dim:
+                        fig = px.scatter(
+                            pca_df,
+                            x="PCA1",
+                            y="PCA2",
+                            color="cluster",
+                            symbol="cluster",
+                            hover_name="entity_id",
+                            hover_data={
+                                "PCA1": ":.2f",
+                                "PCA2": ":.2f",
+                                "dynamic_class": True,
+                                "customer_segment": True,
+                                "cluster_persona": True,
+                                "rfm_score": ":.2f",
+                                "predicted_clv_score": ":.1f",
+                                "total_spent_90d_mad": ":.2f"
+                            },
+                            title=f"KMeans Cluster Map (PCA 2D Space — {tot_var:.1f}% Variance Explained)",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+
+                        # Compute centroids in 2D
+                        centroids = pca_df.groupby("cluster")[["PCA1", "PCA2"]].mean().reset_index()
+                        fig.add_trace(
+                            go.Scatter(
+                                x=centroids["PCA1"],
+                                y=centroids["PCA2"],
+                                mode="markers+text",
+                                marker=dict(size=14, symbol="diamond", color="#ffffff", line=dict(width=2, color="#000000")),
+                                text=centroids["cluster"],
+                                textposition="top center",
+                                name="Cluster Centroids"
+                            )
+                        )
+
+                        apply_plotly_theme(
+                            fig,
+                            get_theme(),
+                            height=480,
+                            margin=dict(l=20, r=20, t=40, b=20),
+                        )
+                        fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    else:
+                        tot_var_3d = sum(exp_var[:3]) * 100
+                        fig3d = px.scatter_3d(
+                            pca_df,
+                            x="PCA1",
+                            y="PCA2",
+                            z="PCA3",
+                            color="cluster",
+                            hover_name="entity_id",
+                            hover_data={
+                                "dynamic_class": True,
+                                "customer_segment": True,
+                                "cluster_persona": True,
+                                "rfm_score": ":.2f",
+                                "predicted_clv_score": ":.1f"
+                            },
+                            title=f"KMeans 3D Spatial Cluster Projection ({tot_var_3d:.1f}% Variance Explained)",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+                        apply_plotly_theme(
+                            fig3d,
+                            get_theme(),
+                            height=540,
+                            margin=dict(l=10, r=10, t=40, b=10),
+                        )
+                        st.plotly_chart(fig3d, use_container_width=True)
+
+                    st.markdown("---")
+
+                    # 2. Cluster Profiles Summary & Metrics Breakdown
+                    st.markdown(section_header_html("Cluster Cohort Characteristics & Profiles", "Chart"), unsafe_allow_html=True)
+
+                    col_m1, col_m2 = st.columns([1, 1])
+                    with col_m1:
+                        st.markdown("<strong style='font-size:13px; color:#38bdf8;'>Entity Distribution across Clusters</strong>", unsafe_allow_html=True)
+                        counts_df = pca_df["cluster"].value_counts().reset_index()
+                        counts_df.columns = ["Cluster", "Count"]
+
+                        fig_bar = px.bar(
+                            counts_df,
+                            x="Cluster",
+                            y="Count",
+                            color="Cluster",
+                            text="Count",
+                            color_discrete_sequence=["#38bdf8", "#34d399", "#facc15", "#f87171", "#c084fc", "#fb923c", "#a7f3d0", "#e879f9"]
+                        )
+                        apply_plotly_theme(
+                            fig_bar,
+                            get_theme(),
+                            height=260,
+                            showlegend=False,
+                            margin=dict(l=10, r=10, t=20, b=10),
+                        )
+                        st.plotly_chart(fig_bar, use_container_width=True)
+
+                    with col_m2:
+                        st.markdown("<strong style='font-size:13px; color:#34d399;'>Mean Metric Comparison by Cluster</strong>", unsafe_allow_html=True)
+                        cluster_means = pca_df.groupby("cluster")[["rfm_score", "predicted_clv_score", "churn_risk_score", "total_spent_90d_mad"]].mean().reset_index()
+                        cluster_means.columns = ["Cluster", "Avg RFM", "Avg CLV", "Avg Churn Risk", "Avg Spend (MAD)"]
+
+                        st.dataframe(
+                            cluster_means.style.format({
+                                "Avg RFM": "{:.2f}",
+                                "Avg CLV": "{:.1f}",
+                                "Avg Churn Risk": "{:.2f}",
+                                "Avg Spend (MAD)": "{:.2f}"
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                    # 3. Cluster Entity Inspector
+                    st.markdown(section_header_html("Cluster Entity Inspector", "Search"), unsafe_allow_html=True)
+                    sel_clust_inspect = st.selectbox("Select Cluster to inspect entities:", sorted(pca_df["cluster"].unique()), key="sb_clust_inspect")
+
+                    clust_entities = pca_df[pca_df["cluster"] == sel_clust_inspect]
                     st.dataframe(
-                        cluster_means.style.format({
-                            "Avg RFM": "{:.2f}",
-                            "Avg CLV": "{:.1f}",
-                            "Avg Churn Risk": "{:.2f}",
-                            "Avg Spend (MAD)": "{:.2f}"
-                        }),
+                        clust_entities[["entity_id", "dynamic_class", "customer_segment", "cluster_persona", "rfm_score", "predicted_clv_score", "total_spent_90d_mad"]],
                         use_container_width=True,
                         hide_index=True
                     )
-
-                # 3. Cluster Entity Inspector
-                st.markdown(section_header_html("Cluster Entity Inspector", "Search"), unsafe_allow_html=True)
-                sel_clust_inspect = st.selectbox("Select Cluster to inspect entities:", sorted(pca_df["cluster"].unique()), key="sb_clust_inspect")
-                
-                clust_entities = pca_df[pca_df["cluster"] == sel_clust_inspect]
-                st.dataframe(
-                    clust_entities[["entity_id", "dynamic_class", "customer_segment", "cluster_persona", "rfm_score", "predicted_clv_score", "total_spent_90d_mad"]],
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.error("Insufficient client data to run KMeans clustering.")
+                else:
+                    st.error("Insufficient client data to run KMeans clustering.")
 
 
-    # ── TAB 2: PERSONAS EXPLORER ──────────────────────────────────
-    with tab_personas:
-        st.markdown("""
-        <style>
-        .persona-card {
-            position: relative;
-            overflow: hidden;
-            min-height: 100%;
-            margin-bottom: 16px;
-            padding: 22px 22px 18px 22px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018)), var(--panel-2) !important;
-            border: 1px solid var(--line) !important;
-            border-left: 4px solid var(--teal) !important;
-            border-radius: var(--radius) !important;
-            box-shadow: var(--shadow) !important;
-            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-        }
-        .persona-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--line-strong) !important;
-            background: var(--panel-3) !important;
-        }
-        .persona-icon-badge { font-size: 32px; line-height: 1; display: inline-block; margin-bottom: 8px; opacity: 0.9; }
-        .persona-name {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 19px; font-weight: 800; color: var(--text); margin: 4px 0 4px 0;
-        }
-        .persona-segment-tag {
-            display: inline-block; font-size: 11px; font-weight: 800;
-            padding: 4px 10px; border-radius: 999px; letter-spacing: 0; margin-bottom: 12px;
-        }
-        .persona-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
-        .persona-metric-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-        .persona-metric-chip {
-            background: rgba(255,255,255,0.035);
-            border: 1px solid rgba(148,163,184,0.16);
-            border-radius: var(--radius); padding: 6px 10px; font-size: 12px; color: var(--muted);
-        }
-        .persona-metric-chip strong { color: var(--teal); font-family: 'JetBrains Mono', monospace; }
-        .persona-action-box {
-            background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.24);
-            border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--green); margin-bottom: 10px;
-        }
-        .persona-rule-box {
-            background: #0b1118; border: 1px solid rgba(148,163,184,0.16);
-            border-radius: var(--radius); padding: 9px 12px; font-size: 11.5px; color: var(--teal);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .persona-client-count {
-            position: absolute; top: 14px; right: 14px;
-            background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.30);
-            border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800;
-            color: var(--teal); font-family: 'Space Grotesk', sans-serif;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+        # ── TAB 2: PERSONAS EXPLORER ──────────────────────────────────
+        with tab_personas:
+            st.markdown("""
+            <style>
+            .persona-card {
+                position: relative;
+                overflow: hidden;
+                min-height: 100%;
+                margin-bottom: 16px;
+                padding: 22px 22px 18px 22px;
+                background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018)), var(--panel-2) !important;
+                border: 1px solid var(--line) !important;
+                border-left: 4px solid var(--teal) !important;
+                border-radius: var(--radius) !important;
+                box-shadow: var(--shadow) !important;
+                transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+            }
+            .persona-card:hover {
+                transform: translateY(-3px);
+                border-color: var(--line-strong) !important;
+                background: var(--panel-3) !important;
+            }
+            .persona-icon-badge { font-size: 32px; line-height: 1; display: inline-block; margin-bottom: 8px; opacity: 0.9; }
+            .persona-name {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 19px; font-weight: 800; color: var(--text); margin: 4px 0 4px 0;
+            }
+            .persona-segment-tag {
+                display: inline-block; font-size: 11px; font-weight: 800;
+                padding: 4px 10px; border-radius: 999px; letter-spacing: 0; margin-bottom: 12px;
+            }
+            .persona-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+            .persona-metric-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+            .persona-metric-chip {
+                background: rgba(255,255,255,0.035);
+                border: 1px solid rgba(148,163,184,0.16);
+                border-radius: var(--radius); padding: 6px 10px; font-size: 12px; color: var(--muted);
+            }
+            .persona-metric-chip strong { color: var(--teal); font-family: 'JetBrains Mono', monospace; }
+            .persona-action-box {
+                background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.24);
+                border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--green); margin-bottom: 10px;
+            }
+            .persona-rule-box {
+                background: #0b1118; border: 1px solid rgba(148,163,184,0.16);
+                border-radius: var(--radius); padding: 9px 12px; font-size: 11.5px; color: var(--teal);
+                font-family: 'JetBrains Mono', monospace;
+            }
+            .persona-client-count {
+                position: absolute; top: 14px; right: 14px;
+                background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.30);
+                border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800;
+                color: var(--teal); font-family: 'Space Grotesk', sans-serif;
+            }
+            </style>
+            """, unsafe_allow_html=True)
 
-        PERSONA_CATALOG = [
-            {
-                "persona": "Premium Loyalist",
-                "segment": "High-Value Loyalists",
-                "icon": "Value",
-                "tag_style": "background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);",
-                "description": "Your most valuable and loyal clients. They buy frequently, spend significantly, and show no signs of leaving. They form the backbone of long-term revenue.",
-                "action": "Reward with VIP offers, exclusive early access, and premium white-glove service. Invite to loyalty programs and ambassador initiatives.",
-                "trigger": "rfm_score ≥ 0.75 AND predicted_clv_score ≥ 75 AND churn_risk_score < 0.35",
-                "metrics_focus": ["rfm_score", "predicted_clv_score", "churn_risk_score", "purchases_90d"],
-            },
-            {
-                "persona": "Silent VIP at Risk",
-                "segment": "At-Risk Premium Clients",
-                "icon": "Alert",
-                "tag_style": "background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);",
-                "description": "High-value clients who are beginning to disengage. Their CLV is still strong but churn signals are rising — inaction here is costly.",
-                "action": "Trigger immediate retention campaign. Send personalized follow-up, exclusive discounts, or direct account manager outreach.",
-                "trigger": "predicted_clv_score ≥ 70 AND churn_risk_score ≥ 0.50",
-                "metrics_focus": ["predicted_clv_score", "churn_risk_score", "recency_days", "rfm_score"],
-            },
-            {
-                "persona": "Emerging Loyalist",
-                "segment": "Growth Potential Clients",
-                "icon": "Campaign",
-                "tag_style": "background:rgba(34,211,238,0.15);color:#22d3ee;border:1px solid rgba(34,211,238,0.3);",
-                "description": "Clients with above-average engagement and spending trajectories. With the right nudge, they can become your next Premium Loyalists.",
-                "action": "Use cross-selling strategies, loyalty tier upgrades, bundle deals, and behavior-based product recommendations.",
-                "trigger": "predicted_clv_score ≥ 50 AND rfm_score ≥ 0.55 AND behavioral_engagement_score ≥ 0.50",
-                "metrics_focus": ["predicted_clv_score", "rfm_score", "behavioral_engagement_score", "purchases_90d"],
-            },
-            {
-                "persona": "Deal Seeker",
-                "segment": "Price-Sensitive Occasional Buyers",
-                "icon": "Segment",
-                "tag_style": "background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);",
-                "description": "Clients who buy primarily when there are promotions or discounts. Their frequency is event-driven and price sensitivity is their defining trait.",
-                "action": "Target with flash sales, limited-time offers, loyalty points, and promotional sequences tied to seasonal events.",
-                "trigger": "price_sensitivity ≥ 0.70 AND predicted_clv_score < 60",
-                "metrics_focus": ["price_sensitivity", "predicted_clv_score", "purchases_90d", "avg_order_value_mad"],
-            },
-            {
-                "persona": "Frustrated Client",
-                "segment": "Complaint-Driven Risk Clients",
-                "icon": "Warning",
-                "tag_style": "background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);",
-                "description": "Clients expressing dissatisfaction through complaints or negative social signals. Left unaddressed, they will churn and damage brand reputation.",
-                "action": "Escalate to support immediately. Offer service recovery incentives. Monitor sentiment and follow up post-resolution.",
-                "trigger": "complaint_count_90d ≥ 1 OR social_sentiment_avg < 0.35",
-                "metrics_focus": ["complaint_count_90d", "social_sentiment_avg", "churn_risk_score", "recency_days"],
-            },
-            {
-                "persona": "Sleeping Client",
-                "segment": "Dormant Low-Value Clients",
-                "icon": "History",
-                "tag_style": "background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);",
-                "description": "Clients who haven't engaged or purchased in a long time. Engagement is near zero. Re-engagement ROI must be carefully evaluated.",
-                "action": "Launch low-cost win-back campaigns. Consider sunset sequences if no engagement. Reduce marketing spend allocation.",
-                "trigger": "recency_days ≥ 60 AND behavioral_engagement_score < 0.30",
-                "metrics_focus": ["recency_days", "behavioral_engagement_score", "rfm_score", "churn_risk_score"],
-            },
-            {
-                "persona": "Brand Advocate",
-                "segment": "Social Advocates",
-                "icon": "Campaign",
-                "tag_style": "background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3);",
-                "description": "Clients who actively talk positively about your brand online and respond enthusiastically to email campaigns. Natural brand amplifiers.",
-                "action": "Invite to referral programs and ambassador campaigns. Leverage their reach with co-created content and exclusive previews.",
-                "trigger": "social_sentiment_avg ≥ 0.75 AND email_click_rate ≥ 0.30",
-                "metrics_focus": ["social_sentiment_avg", "email_click_rate", "email_open_rate", "behavioral_engagement_score"],
-            },
-            {
-                "persona": "New Explorer",
-                "segment": "New Customers",
-                "icon": "Journey",
-                "tag_style": "background:rgba(45,212,191,0.15);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);",
-                "description": "Recently acquired clients in their discovery phase. The first 90 days are critical — the right experience here determines long-term retention.",
-                "action": "Send onboarding sequences, highlight top products, offer first-purchase follow-up discounts, and invite feedback.",
-                "trigger": "purchases_90d ≤ 1 OR predicted_clv_segment == 'Insufficient History'",
-                "metrics_focus": ["purchases_90d", "recency_days", "email_open_rate", "behavioral_engagement_score"],
-            },
-            {
-                "persona": "Regular Buyer",
-                "segment": "Standard Active Clients",
-                "icon": "Entities",
-                "tag_style": "background:rgba(71,85,105,0.20);color:#94a3b8;border:1px solid rgba(71,85,105,0.35);",
-                "description": "Clients with steady, average purchase behavior. No strong signals in either direction — a stable base that benefits from continued personalization.",
-                "action": "Maintain consistent engagement with personalized product recommendations and periodic check-in offers.",
-                "trigger": "Default — no other conditions met",
-                "metrics_focus": ["rfm_score", "behavioral_engagement_score", "predicted_clv_score", "recency_days"],
-            },
-        ]
+            PERSONA_CATALOG = [
+                {
+                    "persona": "Premium Loyalist",
+                    "segment": "High-Value Loyalists",
+                    "icon": "Value",
+                    "tag_style": "background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);",
+                    "description": "Your most valuable and loyal clients. They buy frequently, spend significantly, and show no signs of leaving. They form the backbone of long-term revenue.",
+                    "action": "Reward with VIP offers, exclusive early access, and premium white-glove service. Invite to loyalty programs and ambassador initiatives.",
+                    "trigger": "rfm_score ≥ 0.75 AND predicted_clv_score ≥ 75 AND churn_risk_score < 0.35",
+                    "metrics_focus": ["rfm_score", "predicted_clv_score", "churn_risk_score", "purchases_90d"],
+                },
+                {
+                    "persona": "Silent VIP at Risk",
+                    "segment": "At-Risk Premium Clients",
+                    "icon": "Alert",
+                    "tag_style": "background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);",
+                    "description": "High-value clients who are beginning to disengage. Their CLV is still strong but churn signals are rising — inaction here is costly.",
+                    "action": "Trigger immediate retention campaign. Send personalized follow-up, exclusive discounts, or direct account manager outreach.",
+                    "trigger": "predicted_clv_score ≥ 70 AND churn_risk_score ≥ 0.50",
+                    "metrics_focus": ["predicted_clv_score", "churn_risk_score", "recency_days", "rfm_score"],
+                },
+                {
+                    "persona": "Emerging Loyalist",
+                    "segment": "Growth Potential Clients",
+                    "icon": "Campaign",
+                    "tag_style": "background:rgba(34,211,238,0.15);color:#22d3ee;border:1px solid rgba(34,211,238,0.3);",
+                    "description": "Clients with above-average engagement and spending trajectories. With the right nudge, they can become your next Premium Loyalists.",
+                    "action": "Use cross-selling strategies, loyalty tier upgrades, bundle deals, and behavior-based product recommendations.",
+                    "trigger": "predicted_clv_score ≥ 50 AND rfm_score ≥ 0.55 AND behavioral_engagement_score ≥ 0.50",
+                    "metrics_focus": ["predicted_clv_score", "rfm_score", "behavioral_engagement_score", "purchases_90d"],
+                },
+                {
+                    "persona": "Deal Seeker",
+                    "segment": "Price-Sensitive Occasional Buyers",
+                    "icon": "Segment",
+                    "tag_style": "background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);",
+                    "description": "Clients who buy primarily when there are promotions or discounts. Their frequency is event-driven and price sensitivity is their defining trait.",
+                    "action": "Target with flash sales, limited-time offers, loyalty points, and promotional sequences tied to seasonal events.",
+                    "trigger": "price_sensitivity ≥ 0.70 AND predicted_clv_score < 60",
+                    "metrics_focus": ["price_sensitivity", "predicted_clv_score", "purchases_90d", "avg_order_value_mad"],
+                },
+                {
+                    "persona": "Frustrated Client",
+                    "segment": "Complaint-Driven Risk Clients",
+                    "icon": "Warning",
+                    "tag_style": "background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);",
+                    "description": "Clients expressing dissatisfaction through complaints or negative social signals. Left unaddressed, they will churn and damage brand reputation.",
+                    "action": "Escalate to support immediately. Offer service recovery incentives. Monitor sentiment and follow up post-resolution.",
+                    "trigger": "complaint_count_90d ≥ 1 OR social_sentiment_avg < 0.35",
+                    "metrics_focus": ["complaint_count_90d", "social_sentiment_avg", "churn_risk_score", "recency_days"],
+                },
+                {
+                    "persona": "Sleeping Client",
+                    "segment": "Dormant Low-Value Clients",
+                    "icon": "History",
+                    "tag_style": "background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);",
+                    "description": "Clients who haven't engaged or purchased in a long time. Engagement is near zero. Re-engagement ROI must be carefully evaluated.",
+                    "action": "Launch low-cost win-back campaigns. Consider sunset sequences if no engagement. Reduce marketing spend allocation.",
+                    "trigger": "recency_days ≥ 60 AND behavioral_engagement_score < 0.30",
+                    "metrics_focus": ["recency_days", "behavioral_engagement_score", "rfm_score", "churn_risk_score"],
+                },
+                {
+                    "persona": "Brand Advocate",
+                    "segment": "Social Advocates",
+                    "icon": "Campaign",
+                    "tag_style": "background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3);",
+                    "description": "Clients who actively talk positively about your brand online and respond enthusiastically to email campaigns. Natural brand amplifiers.",
+                    "action": "Invite to referral programs and ambassador campaigns. Leverage their reach with co-created content and exclusive previews.",
+                    "trigger": "social_sentiment_avg ≥ 0.75 AND email_click_rate ≥ 0.30",
+                    "metrics_focus": ["social_sentiment_avg", "email_click_rate", "email_open_rate", "behavioral_engagement_score"],
+                },
+                {
+                    "persona": "New Explorer",
+                    "segment": "New Customers",
+                    "icon": "Journey",
+                    "tag_style": "background:rgba(45,212,191,0.15);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);",
+                    "description": "Recently acquired clients in their discovery phase. The first 90 days are critical — the right experience here determines long-term retention.",
+                    "action": "Send onboarding sequences, highlight top products, offer first-purchase follow-up discounts, and invite feedback.",
+                    "trigger": "purchases_90d ≤ 1 OR predicted_clv_segment == 'Insufficient History'",
+                    "metrics_focus": ["purchases_90d", "recency_days", "email_open_rate", "behavioral_engagement_score"],
+                },
+                {
+                    "persona": "Regular Buyer",
+                    "segment": "Standard Active Clients",
+                    "icon": "Entities",
+                    "tag_style": "background:rgba(71,85,105,0.20);color:#94a3b8;border:1px solid rgba(71,85,105,0.35);",
+                    "description": "Clients with steady, average purchase behavior. No strong signals in either direction — a stable base that benefits from continued personalization.",
+                    "action": "Maintain consistent engagement with personalized product recommendations and periodic check-in offers.",
+                    "trigger": "Default — no other conditions met",
+                    "metrics_focus": ["rfm_score", "behavioral_engagement_score", "predicted_clv_score", "recency_days"],
+                },
+            ]
 
-        METRIC_LABELS = {
-            "rfm_score": "Avg RFM Score",
-            "predicted_clv_score": "Avg CLV Score",
-            "churn_risk_score": "Avg Churn Risk",
-            "behavioral_engagement_score": "Avg Engagement",
-            "purchases_90d": "Avg Purchases (90d)",
-            "recency_days": "Avg Recency (days)",
-            "price_sensitivity": "Avg Price Sensitivity",
-            "complaint_count_90d": "Avg Complaints (90d)",
-            "social_sentiment_avg": "Avg Social Sentiment",
-            "email_click_rate": "Avg Email Click Rate",
-            "email_open_rate": "Avg Email Open Rate",
-            "avg_order_value_mad": "Avg Order Value (MAD)",
-        }
+            METRIC_LABELS = {
+                "rfm_score": "Avg RFM Score",
+                "predicted_clv_score": "Avg CLV Score",
+                "churn_risk_score": "Avg Churn Risk",
+                "behavioral_engagement_score": "Avg Engagement",
+                "purchases_90d": "Avg Purchases (90d)",
+                "recency_days": "Avg Recency (days)",
+                "price_sensitivity": "Avg Price Sensitivity",
+                "complaint_count_90d": "Avg Complaints (90d)",
+                "social_sentiment_avg": "Avg Social Sentiment",
+                "email_click_rate": "Avg Email Click Rate",
+                "email_open_rate": "Avg Email Open Rate",
+                "avg_order_value_mad": "Avg Order Value (MAD)",
+            }
 
-        st.markdown("""
-        <div style='margin-bottom:20px;'>
-            <p style='color:#64748b; font-size:13px; line-height:1.6;'>
-                Each card below represents a distinct behavioral archetype derived from your rule-based RFM-ES + CLV segmentation.
-                Live metrics and client counts are computed from your current database.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        for i in range(0, len(PERSONA_CATALOG), 2):
-            row_cols = st.columns(2)
-            for j, col in enumerate(row_cols):
-                if i + j >= len(PERSONA_CATALOG):
-                    break
-                p = PERSONA_CATALOG[i + j]
-
-                # Compute live metrics for this persona's clients
-                grp_df = clients_df[clients_df["customer_persona"] == p["persona"]]
-                client_count = len(grp_df)
-
-                chips_html = ""
-                for col_name in p["metrics_focus"]:
-                    label = METRIC_LABELS.get(col_name, col_name)
-                    if col_name in grp_df.columns and client_count > 0:
-                        vals = pd.to_numeric(grp_df[col_name], errors="coerce").dropna()
-                        val_str = f"{float(vals.mean()):.3f}" if len(vals) > 0 else "—"
-                    else:
-                        val_str = "—"
-                    chips_html += f"<div class='persona-metric-chip'>{label}: <strong>{val_str}</strong></div>"
-
-                with col:
-                    st.markdown(f"""
-                    <div class='persona-card'>
-                        <div class='persona-client-count'>{client_count} clients</div>
-                        <div class='persona-icon-badge'>{icon_html(p["icon"])}</div>
-                        <div class='persona-name'>{p["persona"]}</div>
-                        <div style='margin-bottom:10px;'>
-                            <span class='persona-segment-tag' style='{p["tag_style"]}'>{p["segment"]}</span>
-                        </div>
-                        <div class='persona-desc'>{p["description"]}</div>
-                        <div class='persona-metric-row'>{chips_html}</div>
-                        <div class='persona-action-box'>
-                            <strong style='color:#6ee7b7;font-size:11px;text-transform:uppercase;letter-spacing:0;'>Recommended Action</strong><br>
-                            {p["action"]}
-                        </div>
-                        <div class='persona-rule-box'>
-                            <span style='color:#64748b;font-size:10px;'>TRIGGER: </span>{p["trigger"]}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    if client_count > 0:
-                        with st.expander(f"View {min(client_count, 20)} clients in this persona"):
-                            show_cols = ["entity_id", "dynamic_class", "predicted_clv_score",
-                                         "rfm_score", "churn_risk_score", "recency_days"]
-                            avail_cols = [c for c in show_cols if c in grp_df.columns]
-                            st.dataframe(
-                                grp_df[avail_cols].head(20).style.format({
-                                    "predicted_clv_score": "{:.1f}",
-                                    "rfm_score": "{:.3f}",
-                                    "churn_risk_score": "{:.3f}",
-                                    "recency_days": "{:.0f}"
-                                }),
-                                hide_index=True, width="stretch"
-                            )
-
-    # ── TAB 3: DYNAMIC PERSONAS ──────────────────────────────────
-    with tab_dynamic:
-        from personas.persona_dashboard import render_dynamic_personas_tab
-        render_dynamic_personas_tab(df_data)
-
-    # ── TAB 4: COMPARISON ─────────────────────────────────────────
-    with tab_comparison:
-        from personas.persona_dashboard import render_persona_comparison_tab
-        render_persona_comparison_tab()
-
-# ── Page 3: Simulate Event ────────────────────────────────────
-
-elif page == "Simulate Event":
-    render_page_header(
-        "Real-time Event Simulation",
-        "Trigger behavioral events and watch the Digital Twin classification update instantly.",
-        icon="Run",
-        badge="Simulated Only",
-    )
-
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    sim_col1, sim_col2 = st.columns([1, 1])
-
-    with sim_col1:
-        st.markdown(section_header_html("Event Configuration", "Run"), unsafe_allow_html=True)
-        entity_id_list = sorted(df_data["entity_id"].unique())
-        selected_id = st.selectbox("Target Entity ID", entity_id_list, key="sim_entity")
-
-        ent_details = df_data[df_data["entity_id"] == selected_id].iloc[0]
-        ent_type = ent_details['entity_type']
-        ent_class = ent_details['dynamic_class']
-        type_color_sim = "#34d399" if ent_type == "Client" else "#2dd4bf"
-        st.markdown(f"""
-        <div style='background:rgba(45,212,191,0.08); border:1px solid rgba(45,212,191,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px;'>
-            <div style='display:flex; gap:20px; flex-wrap:wrap;'>
-                <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Type</div>
-                <div style='font-weight:700;color:{type_color_sim};font-size:14px;'>{ent_type}</div></div>
-                <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Current Class</div>
-                <div style='font-weight:600;color:#e2e8f0;font-size:14px;font-family:JetBrains Mono,monospace;'>{ent_class}</div></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        event_types = [
-            ("page_visit",              "Page Visit"),
-            ("product_view",            "Product View"),
-            ("add_to_cart",             "Add to Cart"),
-            ("purchase",                "Purchase"),
-            ("email_open",              "Email Open"),
-            ("email_click",             "Email Click"),
-            ("complaint",               "Customer Complaint"),
-            ("positive_review",         "Positive Review"),
-            ("negative_review",         "Negative Review"),
-            ("inactivity_period",       "Inactivity Period"),
-            ("social_positive_mention", "Social Positive Mention"),
-            ("social_negative_mention", "Social Negative Mention"),
-        ]
-        selected_event = st.selectbox(
-            "Event Type",
-            [e[0] for e in event_types],
-            format_func=lambda x: next(item[1] for item in event_types if item[0] == x),
-            key="sim_event_type"
-        )
-
-        val_input = None
-        if selected_event == "purchase":
-            val_input = st.number_input("Purchase Amount (MAD)", min_value=1.0, max_value=50000.0, value=250.0, step=50.0)
-        elif selected_event == "inactivity_period":
-            val_input = st.number_input("Inactivity Duration (Days)", min_value=1.0, max_value=90.0, value=15.0, step=5.0)
-
-        submit_btn = st.button("Run Simulation", type="primary")
-        
-    with sim_col2:
-        st.markdown(section_header_html("Dynamic Classification Output", "Model"), unsafe_allow_html=True)
-
-        if submit_btn:
-            df_data, df_history, before, after, old_c, new_c, pred_result, is_conv, ev_id = simulate_event(
-                df_data, df_history, selected_id, selected_event, val_input
-            )
-            st.success("Event processed and saved to Excel workbook.")
-
-            if is_conv:
-                st.session_state["pending_conversion_entity_id"] = selected_id
-                st.session_state["conversion_form_open"] = True
-                st.session_state["conversion_event_id"] = ev_id
-                st.session_state["profile_completed"] = False
-                st.markdown("<div class='conversion-banner'><strong style='color:#34d399;'>Prospect converted to Client!</strong><br><span style='font-size:13px;color:#94a3b8;'>Complete the demographic profile in the popup form.</span></div>", unsafe_allow_html=True)
-
-            conf = pred_result["confidence"]
-            top_3 = pred_result["top_3"]
-            class_changed = old_c != new_c
-
-            # Main result card
-            result_border = "#34d399" if not class_changed else "#2dd4bf"
-            st.markdown(f"""
-            <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.10));
-                        border:2px solid {result_border}; border-radius:8px; padding:20px;
-                        text-align:center; margin-bottom:16px;
-                        box-shadow: 0 8px 30px rgba(45,212,191,0.2);'>
-                <div style='font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#64748b;margin-bottom:8px;font-weight:600;'>{active_model} Prediction</div>
-                <div style='font-size:26px;font-weight:800;color:#e2e8f0;font-family:Space Grotesk,sans-serif;'>{new_c}</div>
-                <div style='font-size:15px;font-weight:700;color:#2dd4bf;margin-top:6px;'>Confidence: {conf*100:.1f}%</div>
-                <div style='font-size:12px;color:#64748b;margin-top:4px;'>{'✨ Classification Changed' if class_changed else '• Same Classification'}</div>
+            st.markdown("""
+            <div style='margin-bottom:20px;'>
+                <p style='color:#64748b; font-size:13px; line-height:1.6;'>
+                    Each card below represents a distinct behavioral archetype derived from your rule-based RFM-ES + CLV segmentation.
+                    Live metrics and client counts are computed from your current database.
+                </p>
             </div>
             """, unsafe_allow_html=True)
 
-            # Transition metrics
-            m1, m2 = st.columns(2)
-            with m1:
-                st.metric("Entity Type", after["entity_type"], delta="Converted" if is_conv else None)
-            with m2:
-                st.metric("Class", new_c, delta="Changed ↑" if class_changed else None)
+            for i in range(0, len(PERSONA_CATALOG), 2):
+                row_cols = st.columns(2)
+                for j, col in enumerate(row_cols):
+                    if i + j >= len(PERSONA_CATALOG):
+                        break
+                    p = PERSONA_CATALOG[i + j]
 
-            # Top 3 probabilities
-            st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Probability Distribution</div>", unsafe_allow_html=True)
-            for rank, (cls_name, prob_val) in enumerate(top_3):
-                bar_fill = "fill-indigo" if rank == 0 else ("fill-violet" if rank == 1 else "fill-cyan")
-                label_color = "#2dd4bf" if rank == 0 else "#94a3b8"
+                    # Compute live metrics for this persona's clients
+                    grp_df = clients_df[clients_df["customer_persona"] == p["persona"]]
+                    client_count = len(grp_df)
+
+                    chips_html = ""
+                    for col_name in p["metrics_focus"]:
+                        label = METRIC_LABELS.get(col_name, col_name)
+                        if col_name in grp_df.columns and client_count > 0:
+                            vals = pd.to_numeric(grp_df[col_name], errors="coerce").dropna()
+                            val_str = f"{float(vals.mean()):.3f}" if len(vals) > 0 else "—"
+                        else:
+                            val_str = "—"
+                        chips_html += f"<div class='persona-metric-chip'>{label}: <strong>{val_str}</strong></div>"
+
+                    with col:
+                        st.markdown(f"""
+                        <div class='persona-card'>
+                            <div class='persona-client-count'>{client_count} clients</div>
+                            <div class='persona-icon-badge'>{icon_html(p["icon"])}</div>
+                            <div class='persona-name'>{p["persona"]}</div>
+                            <div style='margin-bottom:10px;'>
+                                <span class='persona-segment-tag' style='{p["tag_style"]}'>{p["segment"]}</span>
+                            </div>
+                            <div class='persona-desc'>{p["description"]}</div>
+                            <div class='persona-metric-row'>{chips_html}</div>
+                            <div class='persona-action-box'>
+                                <strong style='color:#6ee7b7;font-size:11px;text-transform:uppercase;letter-spacing:0;'>Recommended Action</strong><br>
+                                {p["action"]}
+                            </div>
+                            <div class='persona-rule-box'>
+                                <span style='color:#64748b;font-size:10px;'>TRIGGER: </span>{p["trigger"]}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        if client_count > 0:
+                            with st.expander(f"View {min(client_count, 20)} clients in this persona"):
+                                show_cols = ["entity_id", "dynamic_class", "predicted_clv_score",
+                                             "rfm_score", "churn_risk_score", "recency_days"]
+                                avail_cols = [c for c in show_cols if c in grp_df.columns]
+                                st.dataframe(
+                                    grp_df[avail_cols].head(20).style.format({
+                                        "predicted_clv_score": "{:.1f}",
+                                        "rfm_score": "{:.3f}",
+                                        "churn_risk_score": "{:.3f}",
+                                        "recency_days": "{:.0f}"
+                                    }),
+                                    hide_index=True, width="stretch"
+                                )
+
+        # ── TAB 3: DYNAMIC PERSONAS ──────────────────────────────────
+        with tab_dynamic:
+            from personas.persona_dashboard import render_dynamic_personas_tab
+            render_dynamic_personas_tab(df_data)
+
+        # ── TAB 4: COMPARISON ─────────────────────────────────────────
+        with tab_comparison:
+            from personas.persona_dashboard import render_persona_comparison_tab
+            render_persona_comparison_tab()
+
+    # ── Page 3: Simulate Event ────────────────────────────────────
+
+    elif page == "Simulate Event":
+        render_page_header(
+            "Real-time Event Simulation",
+            "Trigger behavioral events and watch the Digital Twin classification update instantly.",
+            icon="Run",
+            badge="Simulated Only",
+        )
+
+        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+        sim_col1, sim_col2 = st.columns([1, 1])
+
+        with sim_col1:
+            st.markdown(section_header_html("Event Configuration", "Run"), unsafe_allow_html=True)
+            entity_id_list = sorted(df_data["entity_id"].unique())
+            selected_id = st.selectbox("Target Entity ID", entity_id_list, key="sim_entity")
+
+            ent_details = df_data[df_data["entity_id"] == selected_id].iloc[0]
+            ent_type = ent_details['entity_type']
+            ent_class = ent_details['dynamic_class']
+            type_color_sim = "#34d399" if ent_type == "Client" else "#2dd4bf"
+            st.markdown(f"""
+            <div style='background:rgba(45,212,191,0.08); border:1px solid rgba(45,212,191,0.2); border-radius:8px; padding:12px 16px; margin-bottom:16px;'>
+                <div style='display:flex; gap:20px; flex-wrap:wrap;'>
+                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Type</div>
+                    <div style='font-weight:700;color:{type_color_sim};font-size:14px;'>{ent_type}</div></div>
+                    <div><div style='font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0;'>Current Class</div>
+                    <div style='font-weight:600;color:#e2e8f0;font-size:14px;font-family:JetBrains Mono,monospace;'>{ent_class}</div></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            event_types = [
+                ("page_visit",              "Page Visit"),
+                ("product_view",            "Product View"),
+                ("add_to_cart",             "Add to Cart"),
+                ("purchase",                "Purchase"),
+                ("email_open",              "Email Open"),
+                ("email_click",             "Email Click"),
+                ("complaint",               "Customer Complaint"),
+                ("positive_review",         "Positive Review"),
+                ("negative_review",         "Negative Review"),
+                ("inactivity_period",       "Inactivity Period"),
+                ("social_positive_mention", "Social Positive Mention"),
+                ("social_negative_mention", "Social Negative Mention"),
+            ]
+            selected_event = st.selectbox(
+                "Event Type",
+                [e[0] for e in event_types],
+                format_func=lambda x: next(item[1] for item in event_types if item[0] == x),
+                key="sim_event_type"
+            )
+
+            val_input = None
+            if selected_event == "purchase":
+                val_input = st.number_input("Purchase Amount (MAD)", min_value=1.0, max_value=50000.0, value=250.0, step=50.0)
+            elif selected_event == "inactivity_period":
+                val_input = st.number_input("Inactivity Duration (Days)", min_value=1.0, max_value=90.0, value=15.0, step=5.0)
+
+            submit_btn = st.button("Run Simulation", type="primary")
+
+        with sim_col2:
+            st.markdown(section_header_html("Dynamic Classification Output", "Model"), unsafe_allow_html=True)
+
+            if submit_btn:
+                df_data, df_history, before, after, old_c, new_c, pred_result, is_conv, ev_id = simulate_event(
+                    df_data, df_history, selected_id, selected_event, val_input
+                )
+                st.success("Event processed and saved to Excel workbook.")
+
+                if is_conv:
+                    st.session_state["pending_conversion_entity_id"] = selected_id
+                    st.session_state["conversion_form_open"] = True
+                    st.session_state["conversion_event_id"] = ev_id
+                    st.session_state["profile_completed"] = False
+                    st.markdown("<div class='conversion-banner'><strong style='color:#34d399;'>Prospect converted to Client!</strong><br><span style='font-size:13px;color:#94a3b8;'>Complete the demographic profile in the popup form.</span></div>", unsafe_allow_html=True)
+
+                conf = pred_result["confidence"]
+                top_3 = pred_result["top_3"]
+                class_changed = old_c != new_c
+
+                # Main result card
+                result_border = "#34d399" if not class_changed else "#2dd4bf"
                 st.markdown(f"""
-                <div class='score-bar-wrap'>
-                    <div class='score-bar-label'>
-                        <span style='color:{label_color};font-weight:{"700" if rank==0 else "500"};'>
-                            {'🥇' if rank==0 else ('🥈' if rank==1 else '🥉')} {cls_name}
-                        </span>
-                        <span style='color:#e2e8f0;font-weight:700;'>{prob_val*100:.1f}%</span>
-                    </div>
-                    <div class='score-bar-track'><div class='score-bar-fill {bar_fill}' style='width:{prob_val*100:.1f}%'></div></div>
+                <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.10));
+                            border:2px solid {result_border}; border-radius:8px; padding:20px;
+                            text-align:center; margin-bottom:16px;
+                            box-shadow: 0 8px 30px rgba(45,212,191,0.2);'>
+                    <div style='font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#64748b;margin-bottom:8px;font-weight:600;'>{active_model} Prediction</div>
+                    <div style='font-size:26px;font-weight:800;color:#e2e8f0;font-family:Space Grotesk,sans-serif;'>{new_c}</div>
+                    <div style='font-size:15px;font-weight:700;color:#2dd4bf;margin-top:6px;'>Confidence: {conf*100:.1f}%</div>
+                    <div style='font-size:12px;color:#64748b;margin-top:4px;'>{'✨ Classification Changed' if class_changed else '• Same Classification'}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Variable delta table
-            st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Changed Variables</div>", unsafe_allow_html=True)
-            comp_cols = [
-                "recency_days", "visits_30d", "product_views_30d", "cart_additions_30d",
-                "purchases_90d", "total_spent_90d_mad", "avg_order_value_mad", "email_open_rate",
-                "email_click_rate", "complaint_count_90d", "review_score_avg", "social_mentions_30d",
-                "social_sentiment_avg", "rfm_score", "conversion_probability", "churn_risk_score",
-                "behavioral_engagement_score", "predictive_value_score", "decision_priority_score",
-                "predicted_clv_amount_mad", "predicted_clv_score", "predicted_clv_segment",
-                "clv_model_name", "clv_segment_model_name", "clv_method_used",
-                "clv_segment_prediction_source", "clv_segment_confidence",
-                "ml_predicted_clv_amount_mad", "math_clv_amount_mad",
-                "customer_segment", "customer_persona", "persona_recommended_action"
-            ]
-            comp_rows = []
-            for col in comp_cols:
-                b_val = before.get(col)
-                a_val = after.get(col)
-                has_changed = False
-                if pd.isna(b_val) and pd.isna(a_val): has_changed = False
-                elif pd.isna(b_val) or pd.isna(a_val): has_changed = True
-                else:
-                    try: has_changed = round(float(b_val),4) != round(float(a_val),4)
-                    except: has_changed = str(b_val) != str(a_val)
-                if has_changed:
-                    if col in ["total_spent_90d_mad", "avg_order_value_mad", "predicted_clv_amount_mad", "ml_predicted_clv_amount_mad", "math_clv_amount_mad"]: 
-                        b_str = f"{float(b_val):.2f} MAD" if not pd.isna(b_val) and b_val is not None else "—"
-                        a_str = f"{float(a_val):.2f} MAD" if not pd.isna(a_val) and a_val is not None else "—"
-                    elif col in ["email_open_rate", "email_click_rate"]: 
-                        b_str, a_str = f"{float(b_val)*100:.1f}%", f"{float(a_val)*100:.1f}%"
-                    elif col in ["conversion_probability", "churn_risk_score", "rfm_score", "behavioral_engagement_score", "predictive_value_score", "decision_priority_score", "social_sentiment_avg"]: 
-                        b_str, a_str = f"{float(b_val):.3f}", f"{float(a_val):.3f}"
-                    elif col == "predicted_clv_score":
-                        b_str = f"{float(b_val):.1f}" if not pd.isna(b_val) else "—"
-                        a_str = f"{float(a_val):.1f}" if not pd.isna(a_val) else "—"
-                    elif col == "clv_segment_confidence":
-                        b_str = f"{float(b_val)*100:.1f}%" if not pd.isna(b_val) and b_val is not None else "N/A"
-                        a_str = f"{float(a_val)*100:.1f}%" if not pd.isna(a_val) and a_val is not None else "N/A"
-                    elif col == "review_score_avg": 
-                        b_str, a_str = (f"{float(b_val):.2f}" if not pd.isna(b_val) else "N/A"), (f"{float(a_val):.2f}" if not pd.isna(a_val) else "N/A")
-                    else: 
-                        b_str = str(b_val) if not pd.isna(b_val) and b_val is not None else "—"
-                        a_str = str(a_val) if not pd.isna(a_val) and a_val is not None else "—"
-                    comp_rows.append({"Variable": col, "Before": b_str, "After": a_str})
-            if comp_rows:
-                st.dataframe(pd.DataFrame(comp_rows), width="stretch", hide_index=True)
-            else:
-                st.info("No variable values changed by this event.")
+                # Transition metrics
+                m1, m2 = st.columns(2)
+                with m1:
+                    st.metric("Entity Type", after["entity_type"], delta="Converted" if is_conv else None)
+                with m2:
+                    st.metric("Class", new_c, delta="Changed ↑" if class_changed else None)
 
-            if is_conv:
-                st.rerun()
-        else:
-            st.markdown("""
-            <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;
-                        height:300px; opacity:0.5;'>
-                <div style='font-size:28px; margin-bottom:16px; color:var(--osmos-primary);'>{icon_html("Run")}</div>
-                <div style='font-size:15px; color:#64748b; text-align:center;'>Configure an event on the left<br>and click <strong>Run Simulation</strong></div>
+                # Top 3 probabilities
+                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Probability Distribution</div>", unsafe_allow_html=True)
+                for rank, (cls_name, prob_val) in enumerate(top_3):
+                    bar_fill = "fill-indigo" if rank == 0 else ("fill-violet" if rank == 1 else "fill-cyan")
+                    label_color = "#2dd4bf" if rank == 0 else "#94a3b8"
+                    st.markdown(f"""
+                    <div class='score-bar-wrap'>
+                        <div class='score-bar-label'>
+                            <span style='color:{label_color};font-weight:{"700" if rank==0 else "500"};'>
+                                {'🥇' if rank==0 else ('🥈' if rank==1 else '🥉')} {cls_name}
+                            </span>
+                            <span style='color:#e2e8f0;font-weight:700;'>{prob_val*100:.1f}%</span>
+                        </div>
+                        <div class='score-bar-track'><div class='score-bar-fill {bar_fill}' style='width:{prob_val*100:.1f}%'></div></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Variable delta table
+                st.markdown("<div style='margin:16px 0 8px; font-size:13px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0;'>Changed Variables</div>", unsafe_allow_html=True)
+                comp_cols = [
+                    "recency_days", "visits_30d", "product_views_30d", "cart_additions_30d",
+                    "purchases_90d", "total_spent_90d_mad", "avg_order_value_mad", "email_open_rate",
+                    "email_click_rate", "complaint_count_90d", "review_score_avg", "social_mentions_30d",
+                    "social_sentiment_avg", "rfm_score", "conversion_probability", "churn_risk_score",
+                    "behavioral_engagement_score", "predictive_value_score", "decision_priority_score",
+                    "predicted_clv_amount_mad", "predicted_clv_score", "predicted_clv_segment",
+                    "clv_model_name", "clv_segment_model_name", "clv_method_used",
+                    "clv_segment_prediction_source", "clv_segment_confidence",
+                    "ml_predicted_clv_amount_mad", "math_clv_amount_mad",
+                    "customer_segment", "customer_persona", "persona_recommended_action"
+                ]
+                comp_rows = []
+                for col in comp_cols:
+                    b_val = before.get(col)
+                    a_val = after.get(col)
+                    has_changed = False
+                    if pd.isna(b_val) and pd.isna(a_val): has_changed = False
+                    elif pd.isna(b_val) or pd.isna(a_val): has_changed = True
+                    else:
+                        try: has_changed = round(float(b_val),4) != round(float(a_val),4)
+                        except: has_changed = str(b_val) != str(a_val)
+                    if has_changed:
+                        if col in ["total_spent_90d_mad", "avg_order_value_mad", "predicted_clv_amount_mad", "ml_predicted_clv_amount_mad", "math_clv_amount_mad"]: 
+                            b_str = f"{float(b_val):.2f} MAD" if not pd.isna(b_val) and b_val is not None else "—"
+                            a_str = f"{float(a_val):.2f} MAD" if not pd.isna(a_val) and a_val is not None else "—"
+                        elif col in ["email_open_rate", "email_click_rate"]: 
+                            b_str, a_str = f"{float(b_val)*100:.1f}%", f"{float(a_val)*100:.1f}%"
+                        elif col in ["conversion_probability", "churn_risk_score", "rfm_score", "behavioral_engagement_score", "predictive_value_score", "decision_priority_score", "social_sentiment_avg"]: 
+                            b_str, a_str = f"{float(b_val):.3f}", f"{float(a_val):.3f}"
+                        elif col == "predicted_clv_score":
+                            b_str = f"{float(b_val):.1f}" if not pd.isna(b_val) else "—"
+                            a_str = f"{float(a_val):.1f}" if not pd.isna(a_val) else "—"
+                        elif col == "clv_segment_confidence":
+                            b_str = f"{float(b_val)*100:.1f}%" if not pd.isna(b_val) and b_val is not None else "N/A"
+                            a_str = f"{float(a_val)*100:.1f}%" if not pd.isna(a_val) and a_val is not None else "N/A"
+                        elif col == "review_score_avg": 
+                            b_str, a_str = (f"{float(b_val):.2f}" if not pd.isna(b_val) else "N/A"), (f"{float(a_val):.2f}" if not pd.isna(a_val) else "N/A")
+                        else: 
+                            b_str = str(b_val) if not pd.isna(b_val) and b_val is not None else "—"
+                            a_str = str(a_val) if not pd.isna(a_val) and a_val is not None else "—"
+                        comp_rows.append({"Variable": col, "Before": b_str, "After": a_str})
+                if comp_rows:
+                    st.dataframe(pd.DataFrame(comp_rows), width="stretch", hide_index=True)
+                else:
+                    st.info("No variable values changed by this event.")
+
+                if is_conv:
+                    st.rerun()
+            else:
+                st.markdown("""
+                <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;
+                            height:300px; opacity:0.5;'>
+                    <div style='font-size:28px; margin-bottom:16px; color:var(--osmos-primary);'>{icon_html("Run")}</div>
+                    <div style='font-size:15px; color:#64748b; text-align:center;'>Configure an event on the left<br>and click <strong>Run Simulation</strong></div>
+                </div>
+                """, unsafe_allow_html=True)
+
+
+
+    # ── Page 4: Create New Entity ──────────────────────────────────
+    elif page == "Create New Entity":
+        render_page_header(
+            "Create New Entity",
+            f"Register a Prospect or Client, initialize their Digital Twin, and get an instant {active_model} classification.",
+            icon="Create",
+            badge="Entity Intake",
+        )
+
+        entity_type = st.selectbox("Entity Type", ["Prospect", "Client"])
+
+        with st.form("new_entity_form"):
+            st.markdown(section_header_html("Profile & Demographics", "Entity"), unsafe_allow_html=True)
+
+            f_col1, f_col2, f_col3 = st.columns(3)
+            with f_col1:
+                region = st.selectbox("Region", [
+                    "Casablanca-Settat", "Rabat-Salé-Kénitra", "Fès-Meknès",
+                    "Marrakech-Safi", "Tangier-Tetouan-Al Hoceima", "Souss-Massa",
+                    "Oriental", "Béni Mellal-Khénifra", "Daraa-Tafilalet",
+                    "Guelmim-Oued Noun", "Laâyoune-Sakia El Hamra", "Dakhla-Oued Ed-Dahab"
+                ])
+                source_channel = st.selectbox("Acquisition Channel", [
+                    "Organic SEO", "Google Search", "Facebook Ads", "Instagram Ads",
+                    "Referral", "Marketplace App", "Direct Traffic", "Newsletter"
+                ])
+            with f_col2:
+                segment = st.selectbox("Segment", ["B2C", "B2B", "Student", "Family", "Enterprise"])
+                persona = st.selectbox("Customer Persona", [
+                    "Price Sensitive", "Quality Seeker", "Trend Follower",
+                    "B2B Decision Maker", "Loyalty Driven", "Tech Enthusiast"
+                ])
+                age_group = st.selectbox("Age Group", ["18-24", "25-34", "35-44", "45-54", "55+"])
+            with f_col3:
+                preferred_device   = st.selectbox("Preferred Device", ["Mobile", "Desktop", "Tablet"])
+                preferred_category = st.selectbox("Preferred Category", ["Electronics", "Fashion", "Home", "Beauty", "Sports"])
+                marketing_consent  = st.checkbox("Marketing Consent Given", value=True)
+
+            if entity_type == "Client":
+                st.markdown(section_header_html("Initial Client Activity", "Engagement"), unsafe_allow_html=True)
+                c_col1, c_col2, c_col3 = st.columns(3)
+                with c_col1:
+                    initial_purchase_count = st.number_input("Initial Purchase Count", min_value=0, value=1, step=1)
+                    initial_total_spent_mad = st.number_input("Initial Total Spent MAD", min_value=0.0, value=250.0, step=10.0)
+                with c_col2:
+                    initial_recency_days = st.number_input("Initial Recency Days", min_value=0, value=0, step=1)
+                    initial_visits_30d = st.number_input("Initial Visits 30d", min_value=0, value=1, step=1)
+                with c_col3:
+                    initial_product_views_30d = st.number_input("Initial Product Views 30d", min_value=0, value=1, step=1)
+                    initial_cart_additions_30d = st.number_input("Initial Cart Additions 30d", min_value=0, value=0, step=1)
+
+                st.markdown("<div style='margin-top:10px; font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0;'>Optional Email Activity Settings</div>", unsafe_allow_html=True)
+                e_col1, e_col2 = st.columns(2)
+                with e_col1:
+                    initial_email_open_rate = st.slider("Initial Email Open Rate", 0.0, 1.0, 0.0, 0.05)
+                with e_col2:
+                    initial_email_click_rate = st.slider("Initial Email Click Rate", 0.0, 1.0, 0.0, 0.05)
+            else:
+                initial_purchase_count = 0
+                initial_total_spent_mad = 0.0
+                initial_recency_days = 30.0
+                initial_visits_30d = 0.0
+                initial_product_views_30d = 0.0
+                initial_cart_additions_30d = 0.0
+                initial_email_open_rate = 0.0
+                initial_email_click_rate = 0.0
+
+            st.markdown("<div style='margin:20px 0 12px; font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0;'>Interest & Financial Scores</div>", unsafe_allow_html=True)
+            sl1, sl2, sl3 = st.columns(3)
+            with sl1: initial_interest_score = st.slider("Initial Interest Score", 0.0, 1.0, 0.3, 0.05)
+            with sl2: income_power_score     = st.slider("Income Power Score",    0.0, 1.0, 0.5, 0.05)
+            with sl3: price_sensitivity      = st.slider("Price Sensitivity",     0.0, 1.0, 0.6, 0.05)
+
+            create_btn = st.form_submit_button("Initialize Digital Twin & Predict")
+
+        if create_btn:
+            entity_data = {
+                "entity_type": entity_type, "region": region,
+                "source_channel": source_channel, "segment": segment,
+                "persona": persona, "age_group": age_group,
+                "preferred_device": preferred_device, "preferred_category": preferred_category,
+                "marketing_consent": marketing_consent,
+                "initial_interest_score": initial_interest_score,
+                "income_power_score": income_power_score, "price_sensitivity": price_sensitivity,
+                "initial_purchase_count": initial_purchase_count,
+                "initial_total_spent_mad": initial_total_spent_mad,
+                "initial_recency_days": initial_recency_days,
+                "initial_visits_30d": initial_visits_30d,
+                "initial_product_views_30d": initial_product_views_30d,
+                "initial_cart_additions_30d": initial_cart_additions_30d,
+                "initial_email_open_rate": initial_email_open_rate,
+                "initial_email_click_rate": initial_email_click_rate
+            }
+            df_data, new_entity_id, initial_class = create_new_entity(df_data, entity_data)
+
+            if entity_type == "Client":
+                st.session_state["pending_conversion_entity_id"] = new_entity_id
+                st.session_state["conversion_form_open"] = True
+                st.session_state["conversion_event_id"] = None
+                st.session_state["profile_completed"] = False
+
+            type_grad = "#2dd4bf" if entity_type == "Prospect" else "#34d399"
+            st.markdown(f"""
+            <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.08));
+                        border:2px solid {type_grad}; border-radius:8px; padding:28px;
+                        text-align:center; margin-top:20px;
+                        box-shadow:0 8px 30px rgba(45,212,191,0.2);'>
+                <div style='font-size:28px; margin-bottom:10px; color:var(--osmos-primary);'>{icon_html("Entity")}</div>
+                <h3 style='margin:0 0 14px; font-family:Space Grotesk,sans-serif; color:#f1f5f9;'>Digital Twin Initialized</h3>
+                <div style='display:inline-flex; gap:30px; flex-wrap:wrap; justify-content:center;'>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Entity ID</div>
+                    <div style='font-size:20px;font-weight:700;color:#e2e8f0;font-family:JetBrains Mono,monospace;'>{new_entity_id}</div></div>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Type</div>
+                    <div style='font-size:20px;font-weight:700;color:{type_grad};'>{entity_type}</div></div>
+                    <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Predicted Class</div>
+                    <div style='font-size:16px;font-weight:700;color:#2dd4bf;margin-top:4px;'>{initial_class}</div></div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
+            if entity_type == "Client":
+                st.rerun()
+
+    elif page == "Digital Twin & Persona":
+        from digital_twin.digital_twin_dashboard import render_digital_twin_dashboard
+        render_digital_twin_dashboard(df_data, df_history)
+
+    elif page == "Campaign Simulation":
+        from campaigns.campaign_dashboard import render_campaign_dashboard
+        render_campaign_dashboard(df_data)
+
+    elif page == "Journey Simulator":
+        from journey.journey_dashboard import render_journey_dashboard
+        render_journey_dashboard(df_data, df_history)
+
+    elif page == "Agent Supervision Center":
+        from agents.agent_dashboard import render_agent_dashboard
+        render_agent_dashboard(df_data, df_history)
+
+    elif page == "Knowledge Base":
+        from knowledge.knowledge_dashboard import render_knowledge_dashboard
+        render_knowledge_dashboard(df_data, df_history)
+
+    elif page == "Database Intelligence":
+        from admin.database_dashboard import render_database_dashboard
+        render_database_dashboard(df_data, df_history)
+
+    # ── Contextual Right-Side Floating Page Guide ──
+    render_floating_help_widget(page)
 
 
-# ── Page 4: Create New Entity ──────────────────────────────────
-elif page == "Create New Entity":
-    render_page_header(
-        "Create New Entity",
-        f"Register a Prospect or Client, initialize their Digital Twin, and get an instant {active_model} classification.",
-        icon="Create",
-        badge="Entity Intake",
-    )
 
-    entity_type = st.selectbox("Entity Type", ["Prospect", "Client"])
-
-    with st.form("new_entity_form"):
-        st.markdown(section_header_html("Profile & Demographics", "Entity"), unsafe_allow_html=True)
-
-        f_col1, f_col2, f_col3 = st.columns(3)
-        with f_col1:
-            region = st.selectbox("Region", [
-                "Casablanca-Settat", "Rabat-Salé-Kénitra", "Fès-Meknès",
-                "Marrakech-Safi", "Tangier-Tetouan-Al Hoceima", "Souss-Massa",
-                "Oriental", "Béni Mellal-Khénifra", "Daraa-Tafilalet",
-                "Guelmim-Oued Noun", "Laâyoune-Sakia El Hamra", "Dakhla-Oued Ed-Dahab"
-            ])
-            source_channel = st.selectbox("Acquisition Channel", [
-                "Organic SEO", "Google Search", "Facebook Ads", "Instagram Ads",
-                "Referral", "Marketplace App", "Direct Traffic", "Newsletter"
-            ])
-        with f_col2:
-            segment = st.selectbox("Segment", ["B2C", "B2B", "Student", "Family", "Enterprise"])
-            persona = st.selectbox("Customer Persona", [
-                "Price Sensitive", "Quality Seeker", "Trend Follower",
-                "B2B Decision Maker", "Loyalty Driven", "Tech Enthusiast"
-            ])
-            age_group = st.selectbox("Age Group", ["18-24", "25-34", "35-44", "45-54", "55+"])
-        with f_col3:
-            preferred_device   = st.selectbox("Preferred Device", ["Mobile", "Desktop", "Tablet"])
-            preferred_category = st.selectbox("Preferred Category", ["Electronics", "Fashion", "Home", "Beauty", "Sports"])
-            marketing_consent  = st.checkbox("Marketing Consent Given", value=True)
-
-        if entity_type == "Client":
-            st.markdown(section_header_html("Initial Client Activity", "Engagement"), unsafe_allow_html=True)
-            c_col1, c_col2, c_col3 = st.columns(3)
-            with c_col1:
-                initial_purchase_count = st.number_input("Initial Purchase Count", min_value=0, value=1, step=1)
-                initial_total_spent_mad = st.number_input("Initial Total Spent MAD", min_value=0.0, value=250.0, step=10.0)
-            with c_col2:
-                initial_recency_days = st.number_input("Initial Recency Days", min_value=0, value=0, step=1)
-                initial_visits_30d = st.number_input("Initial Visits 30d", min_value=0, value=1, step=1)
-            with c_col3:
-                initial_product_views_30d = st.number_input("Initial Product Views 30d", min_value=0, value=1, step=1)
-                initial_cart_additions_30d = st.number_input("Initial Cart Additions 30d", min_value=0, value=0, step=1)
-                
-            st.markdown("<div style='margin-top:10px; font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0;'>Optional Email Activity Settings</div>", unsafe_allow_html=True)
-            e_col1, e_col2 = st.columns(2)
-            with e_col1:
-                initial_email_open_rate = st.slider("Initial Email Open Rate", 0.0, 1.0, 0.0, 0.05)
-            with e_col2:
-                initial_email_click_rate = st.slider("Initial Email Click Rate", 0.0, 1.0, 0.0, 0.05)
-        else:
-            initial_purchase_count = 0
-            initial_total_spent_mad = 0.0
-            initial_recency_days = 30.0
-            initial_visits_30d = 0.0
-            initial_product_views_30d = 0.0
-            initial_cart_additions_30d = 0.0
-            initial_email_open_rate = 0.0
-            initial_email_click_rate = 0.0
-
-        st.markdown("<div style='margin:20px 0 12px; font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0;'>Interest & Financial Scores</div>", unsafe_allow_html=True)
-        sl1, sl2, sl3 = st.columns(3)
-        with sl1: initial_interest_score = st.slider("Initial Interest Score", 0.0, 1.0, 0.3, 0.05)
-        with sl2: income_power_score     = st.slider("Income Power Score",    0.0, 1.0, 0.5, 0.05)
-        with sl3: price_sensitivity      = st.slider("Price Sensitivity",     0.0, 1.0, 0.6, 0.05)
-
-        create_btn = st.form_submit_button("Initialize Digital Twin & Predict")
-
-    if create_btn:
-        entity_data = {
-            "entity_type": entity_type, "region": region,
-            "source_channel": source_channel, "segment": segment,
-            "persona": persona, "age_group": age_group,
-            "preferred_device": preferred_device, "preferred_category": preferred_category,
-            "marketing_consent": marketing_consent,
-            "initial_interest_score": initial_interest_score,
-            "income_power_score": income_power_score, "price_sensitivity": price_sensitivity,
-            "initial_purchase_count": initial_purchase_count,
-            "initial_total_spent_mad": initial_total_spent_mad,
-            "initial_recency_days": initial_recency_days,
-            "initial_visits_30d": initial_visits_30d,
-            "initial_product_views_30d": initial_product_views_30d,
-            "initial_cart_additions_30d": initial_cart_additions_30d,
-            "initial_email_open_rate": initial_email_open_rate,
-            "initial_email_click_rate": initial_email_click_rate
-        }
-        df_data, new_entity_id, initial_class = create_new_entity(df_data, entity_data)
-
-        if entity_type == "Client":
-            st.session_state["pending_conversion_entity_id"] = new_entity_id
-            st.session_state["conversion_form_open"] = True
-            st.session_state["conversion_event_id"] = None
-            st.session_state["profile_completed"] = False
-
-        type_grad = "#2dd4bf" if entity_type == "Prospect" else "#34d399"
-        st.markdown(f"""
-        <div style='background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(139,92,246,0.08));
-                    border:2px solid {type_grad}; border-radius:8px; padding:28px;
-                    text-align:center; margin-top:20px;
-                    box-shadow:0 8px 30px rgba(45,212,191,0.2);'>
-            <div style='font-size:28px; margin-bottom:10px; color:var(--osmos-primary);'>{icon_html("Entity")}</div>
-            <h3 style='margin:0 0 14px; font-family:Space Grotesk,sans-serif; color:#f1f5f9;'>Digital Twin Initialized</h3>
-            <div style='display:inline-flex; gap:30px; flex-wrap:wrap; justify-content:center;'>
-                <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Entity ID</div>
-                <div style='font-size:20px;font-weight:700;color:#e2e8f0;font-family:JetBrains Mono,monospace;'>{new_entity_id}</div></div>
-                <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Type</div>
-                <div style='font-size:20px;font-weight:700;color:{type_grad};'>{entity_type}</div></div>
-                <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:0;color:#64748b;'>Predicted Class</div>
-                <div style='font-size:16px;font-weight:700;color:#2dd4bf;margin-top:4px;'>{initial_class}</div></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if entity_type == "Client":
-            st.rerun()
-
-elif page == "Digital Twin & Persona":
-    from digital_twin.digital_twin_dashboard import render_digital_twin_dashboard
-    render_digital_twin_dashboard(df_data, df_history)
-
-elif page == "Campaign Simulation":
-    from campaigns.campaign_dashboard import render_campaign_dashboard
-    render_campaign_dashboard(df_data)
-
-elif page == "Journey Simulator":
-    from journey.journey_dashboard import render_journey_dashboard
-    render_journey_dashboard(df_data, df_history)
-
-elif page == "Agent Supervision Center":
-    from agents.agent_dashboard import render_agent_dashboard
-    render_agent_dashboard(df_data, df_history)
-
-elif page == "Knowledge Base":
-    from knowledge.knowledge_dashboard import render_knowledge_dashboard
-    render_knowledge_dashboard(df_data, df_history)
-
-elif page == "Database Intelligence":
-    from admin.database_dashboard import render_database_dashboard
-    render_database_dashboard(df_data, df_history)
-
-# ── Contextual Right-Side Floating Page Guide ──
-render_floating_help_widget(page)
-
+if __name__ == '__main__':
+    main()
 
 
 
