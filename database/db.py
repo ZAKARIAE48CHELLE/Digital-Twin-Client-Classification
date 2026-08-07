@@ -15,7 +15,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("OSMOS_DB")
 
-_auto_start_attempted = False
+_last_auto_start_time = 0.0
 
 
 def get_connection_string():
@@ -48,13 +48,14 @@ def get_connection_string():
 def ensure_postgres_server_running() -> bool:
     """
     Auto-healing engine: Automatically launches PostgreSQL server on Windows if stopped.
-    Guarantees permanent database connectivity without manual user intervention.
+    Uses process detachment (DETACHED_PROCESS) to prevent Streamlit reloads from terminating postgres.
     """
-    global _auto_start_attempted
-    if _auto_start_attempted:
+    global _last_auto_start_time
+    now = time.time()
+    if now - _last_auto_start_time < 15.0:
         return False
 
-    _auto_start_attempted = True
+    _last_auto_start_time = now
 
     pg_ctl_path = r"C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
     pg_data_path = r"C:\Program Files\PostgreSQL\18\data"
@@ -74,19 +75,26 @@ def ensure_postgres_server_running() -> bool:
         logger.warning("PostgreSQL auto-start engine: pg_ctl.exe or data directory not found.")
         return False
 
-    logger.info(f"PostgreSQL Auto-Healing Engine: Starting server instance via '{pg_ctl_path}'...")
+    logger.info(f"PostgreSQL Auto-Healing Engine: Starting independent detached server via '{pg_ctl_path}'...")
     try:
         log_file = os.path.join(pg_data_path, "server.log")
-        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        
+        # Windows process detachment flags: DETACHED_PROCESS + CREATE_NEW_PROCESS_GROUP + CREATE_NO_WINDOW
+        DETACHED_PROCESS = 0x00000008
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        CREATE_NO_WINDOW = 0x08000000
+        flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+
         subprocess.Popen(
             [pg_ctl_path, "start", "-D", pg_data_path, "-l", log_file],
             creationflags=flags,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            close_fds=True,
         )
 
         conn_str = get_connection_string()
-        for attempt in range(1, 12):
+        for attempt in range(1, 15):
             time.sleep(1)
             try:
                 conn = psycopg2.connect(conn_str)
