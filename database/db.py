@@ -24,7 +24,7 @@ def get_connection_string():
     if db_url:
         return db_url
         
-    host = os.environ.get("DB_HOST", "localhost")
+    host = os.environ.get("DB_HOST", "127.0.0.1")
     port = os.environ.get("DB_PORT", "5432")
     name = os.environ.get("DB_NAME", "postgres")
     user = os.environ.get("DB_USER", "postgres")
