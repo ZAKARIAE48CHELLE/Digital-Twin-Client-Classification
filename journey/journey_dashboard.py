@@ -38,6 +38,22 @@ def clean_html(html_str: str) -> str:
     return "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
 
 
+def get_event_badge_style(e_type: str) -> str:
+    """Returns vibrant, high-contrast CSS badge styling based on event type."""
+    t = str(e_type).lower()
+    if any(k in t for k in ["purchase"]):
+        return "background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;"
+    elif any(k in t for k in ["complaint", "negative", "inactivity"]):
+        return "background: #fff1f2; color: #be123c; border: 1px solid #fecdd3;"
+    elif any(k in t for k in ["click", "cart"]):
+        return "background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff;"
+    elif any(k in t for k in ["visit", "view", "open"]):
+        return "background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;"
+    elif any(k in t for k in ["review", "positive", "recovery", "retention", "mention"]):
+        return "background: #fefce8; color: #a16207; border: 1px solid #fef08a;"
+    return "background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;"
+
+
 def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
     """Renders visual cards, quality score, validation feedback, and JSON preview."""
     if not proposal:
@@ -63,12 +79,12 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
 
     banner_html = clean_html(f"""
     <div style="
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         border: 1px solid rgba(56, 189, 248, 0.4);
         border-radius: 16px;
         padding: 20px 24px;
         margin-bottom: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     ">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
             <div>
@@ -146,7 +162,13 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
             icon = event_icons.get(e_type, "⚡")
             val_str = f" ({e_val:,.0f} MAD)" if e_val is not None else ""
             offset_str = f" (T{e_offset}d)" if e_offset else ""
-            evt_pills.append(f"""<span style="background: rgba(30, 41, 59, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500;">{icon} <strong>{e_type}</strong>{val_str}<span style="color: #94a3b8; font-size: 11px;">{offset_str}</span></span>""")
+            badge_style = get_event_badge_style(e_type)
+
+            evt_pills.append(
+                f'<span style="{badge_style} border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">'
+                f'<span>{icon}</span><strong>{e_type}</strong>{val_str}'
+                f'<span style="opacity: 0.75; font-size: 11px; margin-left: 2px;">{offset_str}</span></span>'
+            )
 
         evt_html = "".join(evt_pills) if evt_pills else "<span style='color: #64748b; font-size: 12px;'>No events specified</span>"
 
@@ -157,43 +179,42 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
 
         stage_card_html = clean_html(f"""
         <div style="
-            background: rgba(15, 23, 42, 0.7);
-            border-left: 4px solid #38bdf8;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 14px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid #0284c7;
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
         ">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h4 style="margin: 0; color: #f8fafc; font-size: 16px; font-weight: 700;">{s_name}</h4>
-                <span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">🎯 {s_goal}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <h4 style="margin: 0; color: #0f172a; font-family: 'Outfit', 'Inter', sans-serif; font-size: 17px; font-weight: 800; letter-spacing: -0.01em;">{s_name}</h4>
+                <span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700;">🎯 {s_goal}</span>
             </div>
             
-            <div style="margin-bottom: 12px;">
-                <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Trigger Behavioral Telemetry:</span>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <div style="margin-bottom: 14px;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 8px;">Trigger Behavioral Telemetry:</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                     {evt_html}
                 </div>
             </div>
 
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: center;">
                 <div>
-                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Entity Type</span>
-                    <div style="color: #f1f5f9; font-size: 13px; font-weight: 600;">{entity_t}</div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Entity Type</span>
+                    <div style="color: #0f172a; font-size: 13.5px; font-weight: 700;">{entity_t}</div>
                 </div>
                 <div>
-                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Dynamic Class</span>
-                    <div style="color: #38bdf8; font-size: 13px; font-weight: 600;">{dyn_class}</div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Dynamic Class</span>
+                    <div style="color: #0284c7; font-size: 13.5px; font-weight: 700;">{dyn_class}</div>
                 </div>
                 <div>
-                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Segment</span>
-                    <div style="color: #c084fc; font-size: 13px; font-weight: 600;">{segment}</div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Segment</span>
+                    <div style="color: #9333ea; font-size: 13.5px; font-weight: 700;">{segment}</div>
                 </div>
                 <div>
-                    <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Stable Persona</span>
-                    <div style="color: #4ade80; font-size: 13px; font-weight: 600;">{persona}</div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Stable Persona</span>
+                    <div style="color: #16a34a; font-size: 13.5px; font-weight: 700;">{persona}</div>
                 </div>
             </div>
         </div>
