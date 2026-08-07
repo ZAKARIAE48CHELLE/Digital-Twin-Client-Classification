@@ -74,7 +74,7 @@ def check_and_apply_schema():
 def ensure_postgres_server_running() -> bool:
     """
     Auto-healing engine: Automatically launches PostgreSQL server on Windows if stopped.
-    Uses process detachment (DETACHED_PROCESS) to prevent Streamlit reloads from terminating postgres.
+    Checks pg_ctl status first to avoid duplicate server starts or file-sharing violations.
     """
     global _last_auto_start_time
     now = time.time()
@@ -101,9 +101,21 @@ def ensure_postgres_server_running() -> bool:
         logger.warning("PostgreSQL auto-start engine: pg_ctl.exe or data directory not found.")
         return False
 
+    # 1. Check if server is already running via pg_ctl status
+    try:
+        status_res = subprocess.run([pg_ctl_path, "status", "-D", pg_data_path], capture_output=True, text=True)
+        if "server is running" in status_res.stdout:
+            logger.info("PostgreSQL server is already running.")
+            check_and_apply_schema()
+            return True
+    except Exception:
+        pass
+
     logger.info(f"PostgreSQL Auto-Healing Engine: Starting independent detached server via '{pg_ctl_path}'...")
     try:
-        log_file = os.path.join(pg_data_path, "server.log")
+        log_dir = os.path.join(pg_data_path, "log")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, "pg_ctl_start.log")
         
         DETACHED_PROCESS = 0x00000008
         CREATE_NEW_PROCESS_GROUP = 0x00000200

@@ -1533,12 +1533,78 @@ def update_customer_segmentation(df, entity_id=None):
             res = assign_customer_segment(df.loc[idx[0]])
             for col, val in res.items():
                 df.at[idx[0], col] = val
-    else:
-        for i, row in df.iterrows():
-            res = assign_customer_segment(row)
-            for col, val in res.items():
-                df.at[i, col] = val
+        return df
+
+    purchases_90d = pd.to_numeric(df.get("purchases_90d"), errors="coerce").fillna(0)
+    rfm_score = pd.to_numeric(df.get("rfm_score"), errors="coerce").fillna(0)
+    total_spent_90d_mad = pd.to_numeric(df.get("total_spent_90d_mad"), errors="coerce").fillna(0)
+    predicted_clv_amount_mad = pd.to_numeric(df.get("predicted_clv_amount_mad"), errors="coerce").fillna(0)
+    predicted_clv_score = pd.to_numeric(df.get("predicted_clv_score"), errors="coerce").fillna(0)
+    churn_risk_score = pd.to_numeric(df.get("churn_risk_score"), errors="coerce").fillna(0)
+    behavioral_engagement_score = pd.to_numeric(df.get("behavioral_engagement_score"), errors="coerce").fillna(0)
+    price_sensitivity = pd.to_numeric(df.get("price_sensitivity"), errors="coerce").fillna(0)
+    complaint_count_90d = pd.to_numeric(df.get("complaint_count_90d"), errors="coerce").fillna(0)
+    social_sentiment_avg = pd.to_numeric(df.get("social_sentiment_avg"), errors="coerce").fillna(0.5)
+    recency_days = pd.to_numeric(df.get("recency_days"), errors="coerce").fillna(0)
+    email_click_rate = pd.to_numeric(df.get("email_click_rate"), errors="coerce").fillna(0)
+    predicted_clv_segment = df.get("predicted_clv_segment", pd.Series([""] * len(df))).astype(str)
+
+    cond_new = (purchases_90d <= 1) | (predicted_clv_segment == "Insufficient History")
+    cond_loyal = ((rfm_score >= 0.70) | (total_spent_90d_mad >= 15000.0) | (predicted_clv_amount_mad >= 8000.0) | ((rfm_score >= 0.65) & (predicted_clv_score >= 50))) & (churn_risk_score < 0.35)
+    cond_at_risk = (predicted_clv_score >= 70) & (churn_risk_score >= 0.50)
+    cond_growth = (predicted_clv_score >= 50) & (rfm_score >= 0.55) & (behavioral_engagement_score >= 0.50)
+    cond_price = (price_sensitivity >= 0.70) & (predicted_clv_score < 60)
+    cond_complaint = (complaint_count_90d >= 1) | (social_sentiment_avg < 0.35)
+    cond_dormant = (recency_days >= 60) & (behavioral_engagement_score < 0.30)
+    cond_advocate = (social_sentiment_avg >= 0.75) & (email_click_rate >= 0.30)
+
+    conditions = [
+        cond_new, cond_loyal, cond_at_risk, cond_growth,
+        cond_price, cond_complaint, cond_dormant, cond_advocate
+    ]
+
+    segment_choices = [
+        "New Customers", "High-Value Loyalists", "At-Risk Premium Clients",
+        "Growth Potential Clients", "Price-Sensitive Occasional Buyers",
+        "Complaint-Driven Risk Clients", "Dormant Low-Value Clients", "Social Advocates"
+    ]
+
+    persona_choices = [
+        "New Explorer", "Premium Loyalist", "Silent VIP at Risk",
+        "Emerging Loyalist", "Deal Seeker",
+        "Frustrated Client", "Sleeping Client", "Brand Advocate"
+    ]
+
+    desc_choices = [
+        "Recently acquired client with limited purchase history.",
+        "High-value customer with strong purchase history and low churn risk.",
+        "Valuable customer showing churn or inactivity signals.",
+        "Client with medium-to-high potential and strong engagement.",
+        "Client who is likely motivated by price, discounts, and promotions.",
+        "Client showing dissatisfaction through complaints or negative sentiment.",
+        "Client with low recent activity and limited engagement.",
+        "Client with positive sentiment and high engagement."
+    ]
+
+    action_choices = [
+        "Encourage second purchase using onboarding offers.",
+        "Reward loyalty with VIP offers, early access, and premium service.",
+        "Trigger retention campaign and personalized follow-up.",
+        "Use cross-selling, bundles, and loyalty incentives.",
+        "Send targeted discounts and limited-time offers.",
+        "Prioritize support resolution and service recovery.",
+        "Launch reactivation campaign or reduce marketing cost.",
+        "Encourage referrals, reviews, and ambassador campaigns."
+    ]
+
+    df["customer_segment"] = np.select(conditions, segment_choices, default="Standard Active Clients")
+    df["customer_persona"] = np.select(conditions, persona_choices, default="Regular Buyer")
+    df["persona_description"] = np.select(conditions, desc_choices, default="Client with normal activity and moderate value.")
+    df["persona_recommended_action"] = np.select(conditions, action_choices, default="Maintain engagement with personalized recommendations.")
+    df["segmentation_method"] = "Rule-Based RFM-ES + CLV Segmentation"
+    df["segmentation_last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return df
+
 
 def run_customer_clustering(df, n_clusters=5):
     from sklearn.preprocessing import StandardScaler
