@@ -116,7 +116,10 @@ class DatabaseAuditAgent(BaseAgent):
 
             if missing_tables:
                 status = "Warning"
-                risks.append(f"Missing entity history records in PostgreSQL tables: {', '.join(missing_tables)}.")
+                if missing_ref_count == 0:
+                    risks.append(f"Demo readiness / initialization warning: Missing entity history records in PostgreSQL tables: {', '.join(missing_tables)}.")
+                else:
+                    risks.append(f"Data integrity issue: Missing entity history records in PostgreSQL tables: {', '.join(missing_tables)}.")
                 recommendations.append(f"Run data pipeline and initial snapshot seed for Entity [{entity_id}].")
             else:
                 opportunities.append("Entity has complete multi-table audit trail across PostgreSQL history tables.")
@@ -124,7 +127,7 @@ class DatabaseAuditAgent(BaseAgent):
         # Orphaned event reference check
         if missing_ref_count > 0:
             status = "Warning"
-            risks.append(f"AUDIT WARNING: {missing_ref_count} journey/campaign records reference event IDs missing from customer_event_history.")
+            risks.append(f"Data integrity issue: {missing_ref_count} journey/campaign records reference event IDs missing from customer_event_history.")
             recommendations.append("Verify event persistence pipeline to prevent orphaned foreign event keys.")
 
         # Inconsistency: Prospect vs Purchase count

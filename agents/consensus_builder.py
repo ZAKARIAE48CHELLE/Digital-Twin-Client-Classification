@@ -137,12 +137,12 @@ def choose_priority_action(agent_outputs: List[Any], conflicts: List[AgentConfli
         if journey_d.get("status") == "Warning" or "0 steps" in j_sum or "not been started" in j_sum:
             journey_not_started = True
 
-    # Required Fix 4 Scenario: Churn Critical + Campaign Gap + Persona issue / Journey missing
+    # Required Scenario: Churn Critical + Campaign Gap + Persona issue / Journey missing
     if churn_critical and camp_gap:
         if persona_issue or journey_not_started:
             return (
-                "Prioritize service recovery and retention simulation because churn risk is critical and no campaign history exists. "
-                "Before presentation, fix persona mapping for the current segment and run the Journey Simulator if P_DEMO_001 is used as the demo entity."
+                "Demo entity is not ready because Journey Simulator has not been applied, persona mapping is unresolved, and no campaign action exists. "
+                "CLV is low but valid; churn risk remains critical, so prioritize low-cost service recovery simulation."
             )
         return "RETENTION INTERVENTION: Prepare retention and service recovery campaign simulation in Campaign Agent."
 
@@ -211,6 +211,9 @@ def generate_consensus_reasoning(
     """Generates a human-readable explanation of how consensus was formed."""
     total = len(agent_outputs)
     conflict_cnt = len(conflicts)
+
+    if "Demo entity is not ready" in priority_action:
+        return priority_action
 
     if consensus_status == "Strong Consensus":
         return f"All {total} active agents arrived at aligned findings with zero conflicts detected. Priority action: '{priority_action}'."

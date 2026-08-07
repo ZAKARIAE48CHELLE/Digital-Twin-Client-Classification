@@ -39,13 +39,20 @@ def detect_status_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
     """
     Detects status contradictions WITHIN THE SAME DOMAIN only.
     Cross-domain status differences (e.g. Journey OK vs Churn Critical) are NOT treated as conflicts.
+    Note: CLV Agent status 'OK' indicates CLV calculation validity, not customer health;
+    hence CLV OK vs Churn Critical is not treated as a domain status contradiction.
     """
     conflicts: List[AgentConflict] = []
     by_id = _get_agent_dict(agent_outputs)
 
     # 1. Customer Intelligence Domain Status Contradictions
     ci_critical = [aid for aid, data in by_id.items() if aid in CUSTOMER_INTELLIGENCE_DOMAINS and data.get("status") == "Critical"]
-    ci_ok = [aid for aid, data in by_id.items() if aid in CUSTOMER_INTELLIGENCE_DOMAINS and data.get("status") == "OK"]
+    ci_ok = [
+        aid for aid, data in by_id.items()
+        if aid in CUSTOMER_INTELLIGENCE_DOMAINS
+        and data.get("status") == "OK"
+        and not (aid == "clv" and "churn" in ci_critical)
+    ]
 
     if ci_critical and ci_ok:
         conflicts.append(
@@ -81,7 +88,7 @@ def detect_status_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
 
 
 def detect_priority_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
-    """Detects CLV opportunity vs Churn risk priority conflicts."""
+    """Detects CLV opportunity vs Churn risk priority conflicts and Low CLV + High Churn findings."""
     conflicts: List[AgentConflict] = []
     by_id = _get_agent_dict(agent_outputs)
 
@@ -93,9 +100,36 @@ def detect_priority_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
         churn_status = churn_data.get("status")
 
         has_opp = bool(clv_data.get("opportunities"))
+        is_churn_critical = churn_status == "Critical"
         is_churn_risk = churn_status in {"Warning", "Critical"}
 
-        if has_opp and is_churn_risk:
+        clv_val = 0.0
+        for item in clv_data.get("evidence", []):
+            if isinstance(item, dict) and item.get("metric_name") == "predicted_clv_mad":
+                val_str = str(item.get("value", "0")).replace("MAD", "").replace(",", "").strip()
+                try:
+                    clv_val = float(val_str)
+                except ValueError:
+                    pass
+
+        is_low_clv = (clv_val < 2500.0 or any("low value" in str(o).lower() or "minimal" in str(o).lower() for o in clv_data.get("observations", []))) or not has_opp
+
+        if is_churn_critical and is_low_clv and not has_opp:
+            conflicts.append(
+                AgentConflict(
+                    conflict_id="CONF_PRIO_002",
+                    conflict_type="Low CLV + High Churn Finding",
+                    agents_involved=["clv", "churn"],
+                    description="High churn risk with low CLV suggests low-cost automated retention/service recovery rather than expensive incentive.",
+                    severity="Medium",
+                    evidence=[
+                        f"CLV Status: {clv_status} (Valid Calculation)",
+                        f"Churn Status: Critical",
+                    ],
+                    resolution_suggestion="Retention action should be cost-efficient because churn risk is high but CLV is low.",
+                )
+            )
+        elif has_opp and is_churn_risk:
             conflicts.append(
                 AgentConflict(
                     conflict_id="CONF_PRIO_001",
@@ -114,7 +148,7 @@ def detect_priority_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
 
 
 def detect_data_quality_conflicts(agent_outputs: List[Any]) -> List[AgentConflict]:
-    """Detects DB audit alerts overriding high agent confidence when data reliability is affected."""
+    """Detects DB audit alerts overriding high agent confidence ONLY when real data integrity issues exist."""
     conflicts: List[AgentConflict] = []
     by_id = _get_agent_dict(agent_outputs)
 
@@ -123,7 +157,23 @@ def detect_data_quality_conflicts(agent_outputs: List[Any]) -> List[AgentConflic
         return conflicts
 
     db_status = db_data.get("status")
-    if db_status == "Critical" or (db_status == "Warning" and any("orphaned" in r.lower() or "missing" in r.lower() for r in db_data.get("risks", []))):
+
+    orphaned_count = 0
+    for ev in db_data.get("evidence", []):
+        if isinstance(ev, dict) and ev.get("metric_name") == "orphaned_event_references":
+            try:
+                orphaned_count = int(ev.get("value", 0))
+            except (ValueError, TypeError):
+                pass
+
+    risks = [r.lower() for r in db_data.get("risks", [])]
+    has_real_integrity_issue = (
+        db_status == "Critical" or
+        orphaned_count > 0 or
+        any("data integrity issue" in r or "missing fk" in r or "corrupted" in r or "broken event_history" in r for r in risks)
+    )
+
+    if has_real_integrity_issue:
         high_conf_agents = [
             aid for aid, d in by_id.items()
             if aid != "database_audit" and d.get("confidence_score", 0.0) >= 0.85 and d.get("status") == "OK"

@@ -80,14 +80,37 @@ class TestAgentDebatePhase84(unittest.TestCase):
         self.assertIn("churn", conflicts[0].agents_involved)
 
     def test_conflict_detector_status_disagreement(self):
-        """Verifies conflict detector catches Status Disagreement between OK and Critical agents within the same domain."""
-        conflicts = detect_status_conflicts([self.clv_output, self.churn_output])
+        """Verifies conflict detector catches Status Disagreement between Digital Twin OK and Churn Critical agents within the same domain."""
+        dt_ok = AgentOutput(
+            agent_id="digital_twin", agent_name="Digital Twin Agent", agent_role="State",
+            status="OK", summary="Entity state nominal.", confidence_score=0.90,
+        )
+        conflicts = detect_status_conflicts([dt_ok, self.churn_output])
         self.assertGreater(len(conflicts), 0)
         self.assertEqual(conflicts[0].conflict_type, "Customer Intelligence Status Disagreement")
 
+    def test_clv_ok_and_churn_critical_is_not_status_disagreement(self):
+        """Verifies CLV OK vs Churn Critical is not treated as a domain status contradiction, but creates a Low CLV + High Churn Finding."""
+        conflicts_stat = detect_status_conflicts([self.clv_output, self.churn_output])
+        self.assertEqual(len(conflicts_stat), 0)
+
+        conflicts_prio = detect_priority_conflicts([self.clv_output, self.churn_output])
+        self.assertGreater(len(conflicts_prio), 0)
+        self.assertEqual(conflicts_prio[0].conflict_type, "Low CLV + High Churn Finding")
+        self.assertIn("low-cost automated retention", conflicts_prio[0].description)
+
     def test_conflict_detector_data_quality_override(self):
-        """Verifies DB audit alerts create Data Quality Override conflict."""
-        conflicts = detect_data_quality_conflicts([self.clv_output, self.db_output])
+        """Verifies DB audit alerts create Data Quality Override conflict when real integrity issues exist."""
+        db_integrity_issue = AgentOutput(
+            agent_id="database_audit",
+            agent_name="Database Audit Agent",
+            agent_role="Data Integrity",
+            status="Critical",
+            summary="Data integrity issue: orphaned references in customer_event_history.",
+            risks=["Data integrity issue: 3 orphaned event references."],
+            confidence_score=0.95,
+        )
+        conflicts = detect_data_quality_conflicts([self.clv_output, db_integrity_issue])
         self.assertGreater(len(conflicts), 0)
         self.assertEqual(conflicts[0].conflict_type, "Database Audit Override")
 
@@ -145,7 +168,16 @@ class TestAgentDebatePhase84(unittest.TestCase):
 
     def test_database_audit_critical_overrides_domains(self):
         """Verifies Database Audit Critical overrides other domains and sets Data Quality Override conflict."""
-        conflicts = detect_data_quality_conflicts([self.clv_output, self.db_output])
+        db_critical = AgentOutput(
+            agent_id="database_audit",
+            agent_name="Database Audit Agent",
+            agent_role="Data Integrity",
+            status="Critical",
+            summary="Data integrity issue: corrupted foreign keys.",
+            risks=["Data integrity issue: corrupted foreign keys."],
+            confidence_score=0.95,
+        )
+        conflicts = detect_data_quality_conflicts([self.clv_output, db_critical])
         self.assertGreater(len(conflicts), 0)
         self.assertEqual(conflicts[0].conflict_type, "Database Audit Override")
         self.assertEqual(conflicts[0].severity, "Critical")
@@ -168,7 +200,8 @@ class TestAgentDebatePhase84(unittest.TestCase):
         )
         nba = choose_next_best_action([self.churn_output, camp_out, p_out, j_out], entity_id="P_DEMO_001")
 
-        self.assertIn("Prioritize service recovery", nba)
+        self.assertIn("Demo entity is not ready", nba)
+        self.assertIn("low-cost service recovery simulation", nba)
         self.assertIn("Journey Simulator", nba)
         self.assertIn("persona mapping", nba)
         self.assertNotIn("risk management department", nba)
