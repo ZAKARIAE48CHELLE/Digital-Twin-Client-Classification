@@ -7,6 +7,7 @@ from journey.journey_repository import (
     create_journey_scenario,
     get_journey_scenarios,
     get_journey_scenario_by_id,
+    get_latest_scenario_for_entity,
     insert_journey_step,
     get_journey_steps,
     delete_journey_scenario
