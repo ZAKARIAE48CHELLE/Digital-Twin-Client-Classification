@@ -33,6 +33,11 @@ from journey.journey_tree import (
 )
 
 
+def clean_html(html_str: str) -> str:
+    """Strips leading indentation from each line to prevent Streamlit from parsing HTML as indented markdown code blocks."""
+    return "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
+
+
 def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
     """Renders visual cards, quality score, validation feedback, and JSON preview."""
     if not proposal:
@@ -56,7 +61,7 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
     }
     txt_col, bg_col, border_col = label_colors.get(q_label, label_colors["Not Audited"])
 
-    banner_html = dedent(f"""
+    banner_html = clean_html(f"""
     <div style="
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
         border: 1px solid rgba(56, 189, 248, 0.4);
@@ -79,7 +84,10 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
         <p style="color: #94a3b8; font-size: 13.5px; margin: 0; line-height: 1.5;">{description}</p>
     </div>
     """)
-    st.markdown(banner_html, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(banner_html)
+    else:
+        st.markdown(banner_html, unsafe_allow_html=True)
 
     # Validation & Repair Feedback Box
     if val:
@@ -147,7 +155,7 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
         segment = state_chg.get("segment", "Prospect")
         persona = state_chg.get("persona", "New Explorer")
 
-        stage_card_html = dedent(f"""
+        stage_card_html = clean_html(f"""
         <div style="
             background: rgba(15, 23, 42, 0.7);
             border-left: 4px solid #38bdf8;
@@ -190,7 +198,10 @@ def render_llm_journey_plan_preview(proposal: dict, val: dict = None):
             </div>
         </div>
         """)
-        st.markdown(stage_card_html, unsafe_allow_html=True)
+        if hasattr(st, "html"):
+            st.html(stage_card_html)
+        else:
+            st.markdown(stage_card_html, unsafe_allow_html=True)
 
     with st.expander("🔍 View Raw Plan JSON Structure", expanded=False):
         st.json(proposal)
