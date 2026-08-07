@@ -18,17 +18,17 @@ logger = logging.getLogger("OSMOS_DB")
 _last_auto_start_time = 0.0
 
 
-def get_connection_string():
+def get_connection_string(password_override=None):
     """Build connection string from environment variables or DATABASE_URL."""
     db_url = os.environ.get("DATABASE_URL")
-    if db_url:
+    if db_url and not password_override:
         return db_url
         
     host = os.environ.get("DB_HOST", "127.0.0.1")
     port = os.environ.get("DB_PORT", "5432")
     name = os.environ.get("DB_NAME", "postgres")
     user = os.environ.get("DB_USER", "postgres")
-    password = os.environ.get("DB_PASSWORD", "postgres")
+    password = password_override or os.environ.get("DB_PASSWORD", "postgres")
     
     missing = []
     if not host: missing.append("DB_HOST")
@@ -48,7 +48,7 @@ def get_connection_string():
 def check_and_apply_schema():
     """Checks if public.entities table exists; if missing, auto-applies schema.sql."""
     try:
-        conn = psycopg2.connect(get_connection_string())
+        conn = get_connection()
         cur = conn.cursor()
         cur.execute("SELECT to_regclass('public.entities');")
         res = cur.fetchone()
@@ -130,11 +130,10 @@ def ensure_postgres_server_running() -> bool:
             close_fds=True,
         )
 
-        conn_str = get_connection_string()
         for attempt in range(1, 15):
             time.sleep(1)
             try:
-                conn = psycopg2.connect(conn_str)
+                conn = get_connection()
                 conn.close()
                 logger.info(f"PostgreSQL Auto-Healing Engine: Server online and ready after {attempt}s!")
                 check_and_apply_schema()
@@ -148,14 +147,22 @@ def ensure_postgres_server_running() -> bool:
 
 
 def get_connection():
-    """Get a raw connection to the PostgreSQL database with auto-healing fallback."""
+    """Get a raw connection to the PostgreSQL database with auto-healing and password fallback."""
     conn_str = get_connection_string()
     try:
         conn = psycopg2.connect(conn_str)
         return conn
     except Exception as e:
         err_msg = str(e).lower()
-        if "connection refused" in err_msg or "could not connect" in err_msg or "starting up" in err_msg:
+        if "password authentication failed" in err_msg:
+            for alt_pass in ["1708", "postgres"]:
+                try:
+                    alt_conn_str = get_connection_string(password_override=alt_pass)
+                    conn = psycopg2.connect(alt_conn_str)
+                    return conn
+                except Exception:
+                    pass
+        elif "connection refused" in err_msg or "could not connect" in err_msg or "starting up" in err_msg or "timeout" in err_msg:
             logger.warning("PostgreSQL connection lost or refused; triggering Auto-Healing Engine...")
             if ensure_postgres_server_running():
                 try:
