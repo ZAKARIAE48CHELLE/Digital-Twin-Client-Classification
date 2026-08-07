@@ -45,6 +45,32 @@ def get_connection_string():
     return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
 
+def check_and_apply_schema():
+    """Checks if public.entities table exists; if missing, auto-applies schema.sql."""
+    try:
+        conn = psycopg2.connect(get_connection_string())
+        cur = conn.cursor()
+        cur.execute("SELECT to_regclass('public.entities');")
+        res = cur.fetchone()
+        table_exists = res and res[0] is not None
+        cur.close()
+
+        if not table_exists:
+            logger.info("Database table 'public.entities' missing. Auto-applying schema DDL...")
+            schema_file = os.path.join(os.path.dirname(__file__), "schema.sql")
+            if os.path.exists(schema_file):
+                with open(schema_file, "r", encoding="utf-8") as f:
+                    ddl = f.read()
+                cur = conn.cursor()
+                cur.execute(ddl)
+                conn.commit()
+                cur.close()
+                logger.info("PostgreSQL schema DDL applied successfully.")
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Auto schema check warning: {e}")
+
+
 def ensure_postgres_server_running() -> bool:
     """
     Auto-healing engine: Automatically launches PostgreSQL server on Windows if stopped.
@@ -79,7 +105,6 @@ def ensure_postgres_server_running() -> bool:
     try:
         log_file = os.path.join(pg_data_path, "server.log")
         
-        # Windows process detachment flags: DETACHED_PROCESS + CREATE_NEW_PROCESS_GROUP + CREATE_NO_WINDOW
         DETACHED_PROCESS = 0x00000008
         CREATE_NEW_PROCESS_GROUP = 0x00000200
         CREATE_NO_WINDOW = 0x08000000
@@ -100,6 +125,7 @@ def ensure_postgres_server_running() -> bool:
                 conn = psycopg2.connect(conn_str)
                 conn.close()
                 logger.info(f"PostgreSQL Auto-Healing Engine: Server online and ready after {attempt}s!")
+                check_and_apply_schema()
                 return True
             except Exception:
                 pass
