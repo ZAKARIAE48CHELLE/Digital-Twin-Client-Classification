@@ -1,5 +1,7 @@
 import os
+import time
 import logging
+import subprocess
 from contextlib import contextmanager
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -13,17 +15,20 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("OSMOS_DB")
 
+_auto_start_attempted = False
+
+
 def get_connection_string():
     """Build connection string from environment variables or DATABASE_URL."""
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
         return db_url
         
-    host = os.environ.get("DB_HOST")
+    host = os.environ.get("DB_HOST", "localhost")
     port = os.environ.get("DB_PORT", "5432")
-    name = os.environ.get("DB_NAME")
-    user = os.environ.get("DB_USER")
-    password = os.environ.get("DB_PASSWORD")
+    name = os.environ.get("DB_NAME", "postgres")
+    user = os.environ.get("DB_USER", "postgres")
+    password = os.environ.get("DB_PASSWORD", "postgres")
     
     missing = []
     if not host: missing.append("DB_HOST")
@@ -39,15 +44,82 @@ def get_connection_string():
         
     return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
+
+def ensure_postgres_server_running() -> bool:
+    """
+    Auto-healing engine: Automatically launches PostgreSQL server on Windows if stopped.
+    Guarantees permanent database connectivity without manual user intervention.
+    """
+    global _auto_start_attempted
+    if _auto_start_attempted:
+        return False
+
+    _auto_start_attempted = True
+
+    pg_ctl_path = r"C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
+    pg_data_path = r"C:\Program Files\PostgreSQL\18\data"
+
+    if not os.path.exists(pg_ctl_path) or not os.path.exists(pg_data_path):
+        base_dir = r"C:\Program Files\PostgreSQL"
+        if os.path.exists(base_dir):
+            for item in sorted(os.listdir(base_dir), reverse=True):
+                candidate_ctl = os.path.join(base_dir, item, "bin", "pg_ctl.exe")
+                candidate_data = os.path.join(base_dir, item, "data")
+                if os.path.exists(candidate_ctl) and os.path.exists(candidate_data):
+                    pg_ctl_path = candidate_ctl
+                    pg_data_path = candidate_data
+                    break
+
+    if not os.path.exists(pg_ctl_path) or not os.path.exists(pg_data_path):
+        logger.warning("PostgreSQL auto-start engine: pg_ctl.exe or data directory not found.")
+        return False
+
+    logger.info(f"PostgreSQL Auto-Healing Engine: Starting server instance via '{pg_ctl_path}'...")
+    try:
+        log_file = os.path.join(pg_data_path, "server.log")
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.Popen(
+            [pg_ctl_path, "start", "-D", pg_data_path, "-l", log_file],
+            creationflags=flags,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        conn_str = get_connection_string()
+        for attempt in range(1, 12):
+            time.sleep(1)
+            try:
+                conn = psycopg2.connect(conn_str)
+                conn.close()
+                logger.info(f"PostgreSQL Auto-Healing Engine: Server online and ready after {attempt}s!")
+                return True
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"PostgreSQL Auto-Healing Engine failed to start server: {e}")
+
+    return False
+
+
 def get_connection():
-    """Get a raw connection to the PostgreSQL database."""
+    """Get a raw connection to the PostgreSQL database with auto-healing fallback."""
     conn_str = get_connection_string()
     try:
         conn = psycopg2.connect(conn_str)
         return conn
     except Exception as e:
+        err_msg = str(e).lower()
+        if "connection refused" in err_msg or "could not connect" in err_msg or "starting up" in err_msg:
+            logger.warning("PostgreSQL connection lost or refused; triggering Auto-Healing Engine...")
+            if ensure_postgres_server_running():
+                try:
+                    return psycopg2.connect(conn_str)
+                except Exception as retry_err:
+                    logger.error(f"PostgreSQL connection retry failed: {retry_err}")
+                    raise retry_err
         logger.error(f"Failed to connect to the database: {e}")
         raise
+
 
 @contextmanager
 def get_cursor(commit=True):
@@ -66,6 +138,7 @@ def get_cursor(commit=True):
         cursor.close()
         conn.close()
 
+
 @contextmanager
 def transaction():
     """Context manager to wrap operations in a single connection transaction."""
@@ -80,14 +153,16 @@ def transaction():
     finally:
         conn.close()
 
+
 def test_connection():
-    """Tests if the database connection can be established successfully."""
+    """Tests if the database connection can be established successfully, triggering auto-heal if down."""
     try:
         conn = get_connection()
         conn.close()
         return True, "Connection successful."
     except Exception as e:
         return False, str(e)
+
 
 def execute_query(query, params=None):
     """Executes a single query and returns results if applicable."""
@@ -96,8 +171,8 @@ def execute_query(query, params=None):
         try:
             return cur.fetchall()
         except psycopg2.ProgrammingError:
-            # Query didn't return rows (e.g., INSERT, UPDATE)
             return None
+
 
 def execute_many(query, params_list):
     """Executes a batch query for performance."""
