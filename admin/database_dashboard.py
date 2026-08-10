@@ -15,6 +15,7 @@ from ui.layout import render_page_header, section_header_html
 import os
 import storage.storage_manager as storage_manager
 import admin.database_metrics as db_metrics
+import admin.database_concurrency as db_conc
 import analytics.clv_trend_alerts as clv_alerts
 import analytics.segment_transitions as seg_trans
 import analytics.prediction_drift as pred_drift
@@ -87,8 +88,6 @@ def render_database_dashboard(df, history_df):
         st.info("LLM-Assisted Action Intelligence requires PostgreSQL historical tables.")
         return
 
-
-
     # 2. PostgreSQL Active Mode
     if not db_metrics.is_postgres_available():
         st.error("PostgreSQL was requested but connection checks are now returning offline. Check your database credentials or network interface.")
@@ -113,6 +112,85 @@ def render_database_dashboard(df, history_df):
         st.info(f"**Latest Logged Event**: {health.get('last_event_date', 'N/A')}")
     with col_date2:
         st.info(f"**Latest Prediction Logged**: {health.get('last_prediction_date', 'N/A')}")
+
+    # 2.5 Database Concurrency & Performance Statistics Section
+    st.markdown(section_header_html("⚡ Concurrency Load & Performance Statistics", "Performance"), unsafe_allow_html=True)
+    rt_stats = db_conc.get_realtime_connection_stats()
+    
+    sc1, sc2, sc3, sc4, sc5 = st.columns(5)
+    with sc1:
+        st.metric("Server Status", rt_stats.get("status", "Online"))
+    with sc2:
+        st.metric("Active Connections", f"{rt_stats.get('active_connections', 0)} / {rt_stats.get('max_connections', 500)}")
+    with sc3:
+        st.metric("Pool Utilization", f"{rt_stats.get('utilization_pct', 0.0):.1f}%")
+    with sc4:
+        st.metric("Active Queries", rt_stats.get("active_queries", 0))
+    with sc5:
+        st.metric("Database Footprint", rt_stats.get("db_size_pretty", "0 MB"))
+        
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    
+    with st.expander("🚀 Run Live Concurrency & Load Stress Test (Verify Multiple Requests Stability)", expanded=True):
+        st.markdown("""
+        **Multi-Threaded Concurrency Test Engine**: Simulates multiple simultaneous client requests (10 to 500 worker threads) 
+        executing concurrent read, write, and analytical join transactions against PostgreSQL to verify that multiple requests **do NOT stop or crash the database**.
+        """)
+        
+        c_col1, c_col2, c_col3 = st.columns([2.5, 3.5, 2])
+        with c_col1:
+            num_reqs = st.select_slider(
+                "Concurrent Requests Count:",
+                options=[10, 25, 50, 100, 200, 500],
+                value=50,
+                key="db_stress_num_reqs"
+            )
+        with c_col2:
+            workload = st.selectbox(
+                "Select Query Workload Type:",
+                [
+                    "Read Query (SELECT 1)",
+                    "Complex Analytics Join",
+                    "Audit Transaction Write",
+                ],
+                key="db_stress_workload"
+            )
+        with c_col3:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            run_stress_btn = st.button("🔥 Run Concurrency Test", width="stretch", type="primary", key="btn_run_db_stress")
+            
+        if run_stress_btn:
+            with st.spinner(f"Simulating {num_reqs} concurrent multi-threaded requests against PostgreSQL..."):
+                stress_results = db_conc.run_concurrency_stress_test(num_reqs, workload)
+                st.session_state["last_db_stress_results"] = stress_results
+                
+        if "last_db_stress_results" in st.session_state:
+            res = st.session_state["last_db_stress_results"]
+            
+            if res.get("failure_count", 0) == 0:
+                st.success(res["summary_verdict"])
+            else:
+                st.warning(res["summary_verdict"])
+                
+            m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+            with m_col1:
+                st.metric("Success Rate", f"{res['success_rate']:.1f}%")
+            with m_col2:
+                st.metric("Throughput", f"{res['throughput_qps']} req/sec")
+            with m_col3:
+                st.metric("Avg Latency", f"{res['avg_latency_ms']} ms")
+            with m_col4:
+                st.metric("P95 Latency", f"{res['p95_latency_ms']} ms")
+            with m_col5:
+                st.metric("Max Latency", f"{res['max_latency_ms']} ms")
+                
+            res_df = res.get("results_df", pd.DataFrame())
+            if not res_df.empty:
+                st.markdown("<p style='font-size:13px; font-weight:700; color:#38bdf8; margin-top:14px;'>Response Time / Latency Distribution per Concurrent Request (ms):</p>", unsafe_allow_html=True)
+                st.line_chart(res_df.set_index("Request_ID")["Latency_ms"], color="#38bdf8")
+                
+                with st.expander("🔍 View Detailed Request-by-Request Execution Logs", expanded=False):
+                    st.dataframe(res_df, width="stretch", hide_index=True)
         
     # 3. Table Overview
     st.markdown(section_header_html("Database Table Inventories", "Table"), unsafe_allow_html=True)
