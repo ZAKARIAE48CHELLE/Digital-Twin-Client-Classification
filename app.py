@@ -4641,13 +4641,17 @@ def main():
                 if is_conv:
                     st.rerun()
             else:
-                st.markdown("""
+                sim_placeholder_html = "\n".join(line.strip() for line in f"""
                 <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;
-                            height:300px; opacity:0.5;'>
-                    <div style='font-size:28px; margin-bottom:16px; color:var(--osmos-primary);'>{icon_html("Run")}</div>
-                    <div style='font-size:15px; color:#64748b; text-align:center;'>Configure an event on the left<br>and click <strong>Run Simulation</strong></div>
+                            height:300px; opacity:0.65;'>
+                    <div style='font-size:32px; margin-bottom:16px; color:#38bdf8;'>{icon_html("Run")}</div>
+                    <div style='font-size:15px; color:#64748b; text-align:center; font-weight:500;'>Configure an event on the left<br>and click <strong>Run Simulation</strong></div>
                 </div>
-                """, unsafe_allow_html=True)
+                """.splitlines() if line.strip())
+                if hasattr(st, "html"):
+                    st.html(sim_placeholder_html)
+                else:
+                    st.markdown(sim_placeholder_html, unsafe_allow_html=True)
 
 
 
