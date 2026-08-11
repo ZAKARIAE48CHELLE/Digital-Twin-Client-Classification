@@ -17,8 +17,11 @@ def get_llm_provider():
     return os.getenv("OSMOS_LLM_PROVIDER", "ollama").lower()
 
 def get_llm_model():
-    """Get the specific model name. Defaults to 'qwen3:8b'."""
-    return os.getenv("OSMOS_LLM_MODEL", "qwen3:8b")
+    """Get the specific model name. Defaults to 'auramarket-chat:latest'."""
+    val = os.getenv("OSMOS_LLM_MODEL")
+    if val:
+        return val
+    return "auramarket-chat:latest"
 
 def get_llm_base_url():
     """Get base URL of Ollama or LLM service."""
@@ -29,8 +32,9 @@ def get_llm_language():
     return os.getenv("OSMOS_LLM_LANGUAGE", "fr_en")
 
 def get_llm_timeout():
-    """Get timeout in seconds for LLM request. Defaults to 60."""
+    """Get timeout in seconds for LLM request. Defaults to 12 seconds."""
     try:
-        return int(os.getenv("OSMOS_LLM_TIMEOUT", "60"))
+        val = int(os.getenv("OSMOS_LLM_TIMEOUT", "12"))
+        return min(25, max(5, val))
     except ValueError:
-        return 60
+        return 12

@@ -123,13 +123,8 @@ def generate_text(prompt, temperature=0.2, max_tokens=768):
                 write_llm_audit_log("LLM_HTTP_ERROR", {"status_code": resp.status_code, "error": resp.text})
                 return ""
         except requests.exceptions.Timeout as e:
-            logger.error(f"Ollama request timed out: {e}")
-            write_llm_audit_log("LLM_TIMEOUT", {"error": str(e)})
-            try:
-                import streamlit as st
-                st.warning("The local LLM did not respond in time. The deterministic alert remains valid. Please retry or check Ollama.")
-            except Exception:
-                pass
+            logger.info(f"Ollama request timed out after {timeout}s. Seamlessly falling back to deterministic engine.")
+            write_llm_audit_log("LLM_TIMEOUT", {"error": str(e), "timeout_seconds": timeout})
             return "__TIMEOUT__"
         except requests.exceptions.RequestException as e:
             logger.error(f"Ollama connection error during generation: {e}")
