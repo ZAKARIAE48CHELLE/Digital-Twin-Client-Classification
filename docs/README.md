@@ -2,13 +2,11 @@
 
 Welcome to the official technical and architectural documentation package for **OSMOS** (Omnichannel Supervised Marketing Optimization System).
 
-OSMOS is an enterprise-grade, human-supervised Digital Twin CRM and marketing intelligence platform. It integrates customer lifecycle classification, RFM-ES scoring, Customer Lifetime Value (CLV) forecasting, persona modeling, closed-loop campaign simulation, controlled lifecycle journey generation, RAG-driven knowledge memory, multi-agent supervision orchestrated via LangGraph, and executive reporting.
+OSMOS is an enterprise-grade, human-supervised Digital Twin CRM and marketing intelligence platform. It integrates customer lifecycle classification, RFM-ES scoring, Customer Lifetime Value (CLV) forecasting, persona modeling, closed-loop campaign simulation, controlled lifecycle journey generation, RAG-driven knowledge memory, multi-agent supervision orchestrated via LangGraph, executive reporting, and database concurrency management.
 
 ---
 
-## Documentation Structure
-
-The documentation package is organized into specialized analytical and architectural guides:
+## Documentation Index (13 Technical Guides)
 
 | Document | Description |
 | :--- | :--- |
@@ -17,6 +15,9 @@ The documentation package is organized into specialized analytical and architect
 | [Scientific Explanation](OSMOS_Scientific_Explanation.md) | Theoretical foundations, mathematical formulations (RFM-ES, CLV, Churn), and deterministic governance rules. |
 | [Data Flow Architecture](OSMOS_Data_Flow.md) | End-to-end data pipeline, state transition sequence, event history tracking, and RAG knowledge retrieval flow. |
 | [AI Modules](OSMOS_AI_Modules.md) | Overview of machine learning models, segment-first persona mapping, local LLM integration, and LangGraph multi-agent supervision. |
+| [Multi-Agent Supervision & Debate](OSMOS_Multi_Agent_Supervision_and_Debate.md) | Detailed guide on 8 supervision agents, LangGraph graph topology, domain-aware debate rules, and approval queues. |
+| [Executive Reports & RAG Knowledge](OSMOS_Executive_Reports_and_RAG_Knowledge.md) | Architectural guide for RAG Knowledge Base memory, document indexing, and multi-format Executive Reports (MD, HTML, PDF). |
+| [API & Database Schema Data Dictionary](OSMOS_API_and_Database_Dictionary.md) | Complete schema specification and data dictionary for all 16 PostgreSQL relational tables. |
 | [Digital Twin & Persona Modeling](OSMOS_Digital_Twin_and_Persona_Modeling.md) | Specification of the Digital Twin profile architecture, stable business personas, and dynamic clustering. |
 | [LLM-Assisted Action Intelligence](OSMOS_LLM_Assisted_Action_Intelligence.md) | Governance framework for button-triggered local LLM guidance, journey planning, validation, and human approval queues. |
 | [PostgreSQL & Historical Intelligence](OSMOS_PostgreSQL_and_Historical_Intelligence.md) | Database schema design, audit logs, event persistence, and live connection/concurrency load statistics. |
