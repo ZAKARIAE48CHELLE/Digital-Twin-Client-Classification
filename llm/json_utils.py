@@ -10,7 +10,7 @@ def extract_and_parse_json(text, expected_keys=None):
     Cleans markdown code blocks if present.
     If parsing fails, returns a fallback dict with expected_keys initialized.
     """
-    if not text:
+    if not text or text == "__TIMEOUT__":
         return create_fallback_dict(expected_keys)
         
     # Remove whitespace

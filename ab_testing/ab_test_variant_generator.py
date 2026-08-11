@@ -216,6 +216,11 @@ REQUIRED STABLE JSON STRUCTURE:
 
     try:
         raw_output = generate_text(prompt)
+        if raw_output == "__TIMEOUT__":
+            logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", False)
+
         parsed = extract_and_parse_json(raw_output)
 
         if not parsed or "variants" not in parsed or not isinstance(parsed["variants"], list):
