@@ -90,8 +90,8 @@ def check_llm_available():
         
     return _cached_availability, _cached_availability_reason
 
-def generate_text(prompt, temperature=0.2):
-    """Generate raw text response from local LLM."""
+def generate_text(prompt, temperature=0.2, max_tokens=768):
+    """Generate raw text response from local LLM with bounded token generation."""
     available, reason = check_llm_available()
     if not available:
         logger.warning(f"LLM generate requested but service is unavailable: {reason}")
@@ -109,7 +109,8 @@ def generate_text(prompt, temperature=0.2):
             "prompt": prompt,
             "stream": False,
             "options": {
-                "temperature": temperature
+                "temperature": temperature,
+                "num_predict": max_tokens
             }
         }
         try:
