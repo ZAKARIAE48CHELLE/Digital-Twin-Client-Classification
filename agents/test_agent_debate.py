@@ -91,10 +91,19 @@ class TestAgentDebatePhase84(unittest.TestCase):
 
     def test_clv_ok_and_churn_critical_is_not_status_disagreement(self):
         """Verifies CLV OK vs Churn Critical is not treated as a domain status contradiction, but creates a Low CLV + High Churn Finding."""
-        conflicts_stat = detect_status_conflicts([self.clv_output, self.churn_output])
+        low_clv_output = AgentOutput(
+            agent_id="clv",
+            agent_name="CLV Agent",
+            agent_role="Lifetime Value",
+            status="OK",
+            summary="Low CLV calculation valid.",
+            observations=["Low value client with minimal historical spend."],
+            confidence_score=0.90,
+        )
+        conflicts_stat = detect_status_conflicts([low_clv_output, self.churn_output])
         self.assertEqual(len(conflicts_stat), 0)
 
-        conflicts_prio = detect_priority_conflicts([self.clv_output, self.churn_output])
+        conflicts_prio = detect_priority_conflicts([low_clv_output, self.churn_output])
         self.assertGreater(len(conflicts_prio), 0)
         self.assertEqual(conflicts_prio[0].conflict_type, "Low CLV + High Churn Finding")
         self.assertIn("low-cost automated retention", conflicts_prio[0].description)
