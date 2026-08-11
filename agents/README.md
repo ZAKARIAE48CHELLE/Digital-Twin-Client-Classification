@@ -1,121 +1,33 @@
-# OSMOS Multi-Agent Supervision Layer (Phase 8.1 - 8.7)
+# OSMOS Multi-Agent Supervision Layer (Phases 8.1 - 8.7)
 
 ## Overview
-The **Multi-Agent Supervision Layer** transforms OSMOS into a **supervised intelligent CRM system**.
+The **Multi-Agent Supervision Layer** (`agents/`) transforms OSMOS into a human-supervised intelligent CRM system.
 
-A central **Multi-Agent Orchestrator** coordinates 8 specialized analytical and operational agents:
-1. **Digital Twin Agent** (Profile & state completeness)
-2. **CLV Agent** (Monetary value tiering & VIP protection)
-3. **Churn Risk Agent** (Probability of churn & friction detection)
-4. **Persona Agent** (Segment-first persona consistency verification)
-5. **Campaign Agent** (Campaign dispatch & customer response alignment)
-6. **Journey Agent** (Lifecycle scenario & stage transition reference)
-7. **Database Audit Agent** (PostgreSQL schema & data integrity audit)
-8. **UI/UX Agent** (UI readiness & presentation suitability)
-
-Phase 8.4 introduced **Agent Collaboration & Debate Mode**, Phase 8.5 added **Agent Knowledge Base & Documentation Memory**, Phase 8.6 implemented the **Executive Report Generator**, and Phase 8.7 introduces **LangGraph Supervision Workflow Orchestration**:
-```
-                        ┌─────────────────────────┐
-                        │      START WORKFLOW     │
-                        └────────────┬────────────┘
-                                     │
-                                     ▼
-                         build_context_node (8.5)
-                                     │
-                                     ▼
-                          run_core_agents_node (4)
-                                     │
-                                     ▼
-                       run_operational_agents_node (4)
-                                     │
-                                     ▼
-                          aggregate_results_node
-                                     │
-                           ┌─────────┴─────────┐
-                           │ debate_mode=True? │
-                           └────┬──────────┬────┘
-                         YES    │          │    NO
-                         ┌──────┘          └──────┐
-                         ▼                        ▼
-                    debate_node              finalize_node
-                         │                        │
-                         └──────────┬─────────────┘
-                                    │
-                                    ▼
-                       prepare_approval_actions_node
-                                    │
-                                    ▼
-                           END (OrchestratorOutput)
-```
-
-> 🛡️ **Human-in-the-Loop & Read-Only Governance Guarantee**:
-> - LangGraph workflows, debate execution, and report generation are **100% read-only** and **deterministic by default**.
-> - Agents detect, explain, cite documentation, and recommend actions but **never** modify customer data or execute campaigns automatically.
-> - Legacy Orchestrator remains fully functional as fallback.
-> - All operational actions require explicit administrative validation in the **Human Approval Queue**.
+Multi-agent supervision is orchestrated using **LangGraph** (`agents/langgraph_supervision/`), which coordinates 8 specialized analytical and operational supervision agents across stateful graph nodes.
 
 ---
 
-## Agent Debate Engine Components
+## Agent Roster
 
-| Module | Description | Key Functions |
-| :--- | :--- | :--- |
-| `debate_schemas.py` | Dataclass schemas for statements, conflicts, and consensus. | `AgentDebateStatement`, `AgentConflict`, `AgentConsensus`, `DebateOutput` |
-| `conflict_detector.py` | Rule-based conflict detection engine evaluating risk/opportunity clashes and DB audit overrides. | `detect_all_conflicts()`, `detect_priority_conflicts()`, `detect_status_conflicts()`, `detect_data_quality_conflicts()` |
-| `consensus_builder.py` | Synthesis engine calculating consensus status, ranking actions, and computing debate confidence. | `build_consensus()`, `compute_consensus_status()`, `choose_priority_action()`, `compute_debate_confidence()` |
-| `debate_engine.py` | Main debate execution engine connecting statements, conflicts, and consensus synthesis. | `run_deterministic_debate()`, `build_agent_statements()`, `prepare_llm_debate_payload()` |
+### Customer Intelligence Domain
+1. **Digital Twin Agent (`digital_twin_agent.py`)**: Profile completeness and identity state audit.
+2. **CLV Agent (`clv_agent.py`)**: Monetary projections, VIP tiering, and value risk audit.
+3. **Churn Risk Agent (`churn_risk_agent.py`)**: Friction detection, complaint occurrences, and churn probability analysis.
+4. **Persona Agent (`persona_agent.py`)**: Segment-first persona mapping consistency verification.
 
----
-
-## Consensus Status Definitions
-
-- **`Strong Consensus`**: All active agents report aligned findings with zero conflicts detected.
-- **`Partial Consensus`**: Minor priority alignments or warnings present without high-severity conflicts.
-- **`Conflict Detected`**: Risk vs. opportunity or priority clash detected between active agents (e.g., high CLV vs. high churn).
-- **`Critical Conflict`**: Database audit critical alert or critical conflict requiring immediate administrative risk resolution before expansion.
-- **`Insufficient Data`**: Majority of active agents lack sufficient historical data.
+### Operational Supervision Domain
+5. **Campaign Agent (`campaign_agent.py`)**: Campaign dispatch gaps and response alignment audit.
+6. **Journey Agent (`journey_agent.py`)**: Digital Twin lifecycle stage transition and scenario reference.
+7. **Database Audit Agent (`database_audit_agent.py`)**: PostgreSQL schema, row count, and orphaned reference audit.
+8. **UI/UX Agent (`ui_ux_agent.py`)**: Presentation readiness, PII safety, and demo suitability audit.
 
 ---
 
-## File Structure
+## Key Architectural Principles
 
-```
-agents/
-├── __init__.py               # Package initialization & exports
-├── base_agent.py             # Abstract BaseAgent with crash-proof exception handling & read-only guard
-├── agent_schemas.py          # Dataclass schemas (AgentContext, AgentOutput, OrchestratorOutput, EvidenceItem)
-├── debate_schemas.py         # Debate schemas (AgentDebateStatement, AgentConflict, AgentConsensus, DebateOutput)
-├── conflict_detector.py      # Rule-based conflict detection engine (Phase 8.4)
-├── consensus_builder.py     # Consensus synthesis & priority action selection (Phase 8.4)
-├── debate_engine.py          # Deterministic agent debate engine (Phase 8.4)
-├── agent_registry.py         # Central agent registry (8 active agents)
-├── context_builder.py        # Read-only entity context assembler (Postgres & Excel fallback)
-├── agent_repository.py       # Persistence layer for agent_runs, agent_outputs, and approval queue
-├── orchestrator_agent.py     # Deterministic orchestrator, LLM summary engine & debate mode wrapper
-├── result_aggregator.py      # Status aggregation, risk/opportunity merging, and Next Best Action rules
-├── digital_twin_agent.py     # Digital Twin behavioral & profile completeness agent
-├── clv_agent.py              # CLV monetary tier & VIP protection agent
-├── churn_agent.py            # Churn probability & friction detection agent
-├── persona_agent.py          # Segment-first stable persona verification agent
-├── campaign_agent.py         # Campaign dispatch & response alignment agent
-├── journey_agent.py          # Customer journey scenario & step reference agent
-├── database_audit_agent.py   # PostgreSQL schema & orphaned event reference audit agent
-├── ui_ux_agent.py            # UI readiness & demo suitability agent
-├── agent_dashboard.py        # Streamlit Agent Supervision Center UI (Debate, Memory & Approval tabs)
-├── test_agents.py            # 8-agent execution unit test suite
-├── test_agent_memory.py      # Agent memory & human approval queue test suite
-└── test_agent_debate.py      # Agent collaboration & debate test suite (Phase 8.4)
-```
-
----
-
-## Testing
-
-Run Phase 8.4 Agent Debate unit tests:
-```bash
-python -m unittest agents/test_agent_debate.py
-```
-Or run full workspace tests:
-```bash
-python -m unittest discover -s . -p "test_*.py"
-```
+- **LangGraph Orchestration**: LangGraph wraps existing deterministic agents as read-only graph nodes without modifying their analytical algorithms.
+- **Domain-Aware Debate Mode**: Conflict detection evaluates agent findings within domain groupings (`Customer Intelligence` vs `Operational Supervision`). Cross-domain status differences (such as `Journey OK` vs `Churn Critical`) do not trigger status conflicts.
+- **CLV Validity vs Churn Risk**: `CLV Agent OK` indicates that the CLV model executed validly, not customer health. Low CLV + High Churn is resolved as: *"Retention action should be cost-efficient because churn risk is high but CLV is low."*
+- **Database Audit Classification**: A Database Audit warning with 0 orphaned references is classified as a *"demo readiness / initialization warning"*, not a data integrity issue.
+- **Knowledge Base RAG Integration**: Integrates RAG context from `knowledge_chunks` to support multi-agent evaluations with historical decision memory.
+- **Human Approval Queue**: Submits synthesized Next Best Actions (NBA) to `human_approval_queue` for administrator approval before execution.

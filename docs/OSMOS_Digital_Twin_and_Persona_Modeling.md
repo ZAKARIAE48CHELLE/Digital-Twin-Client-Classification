@@ -1,79 +1,64 @@
-# OSMOS — Digital Twin vs. Persona Modeling Layer
+# OSMOS Digital Twin & Persona Modeling Specification
 
-## 1. Conceptual Distinction Overview
-
-A fundamental design principle of OSMOS is the strict separation between individual customer representations (**Digital Twin**) and group-level behavioral abstractions (**Persona**).
-
-> [!IMPORTANT]
-> **Digital Twin $\neq$ Persona**
-> - **Digital Twin**: Belongs strictly to an **individual customer or prospect entity**. It represents real-time state, exact numerical features, transaction history, and calculated score vectors.
-> - **Persona**: Belongs strictly to a **segment cohort**. It represents an operational marketing blueprint, communication tone, and strategy guideline applicable to all entities matching that segment.
+This document specifies the data structure, behavioral parameterization, and persona resolution methodology governing the **Digital Twin Profile** and **Persona Library** in **OSMOS**.
 
 ---
 
-## 2. Component Specifications
+## 1. Digital Twin Profile Architecture
 
-### A. The Individual Digital Twin
-The Digital Twin is a dynamic computational mirror of a single entity (`entity_id` e.g., `C00001` for Client, `P00001` for Prospect, or `P01501` for Converted Prospect).
+The **Digital Twin Profile** (`digital_twin/`) represents a dynamic virtual copy of a customer entity.
 
-It encapsulates:
-1. **Core Identity**: Entity ID, Entity Type (Client vs. Prospect), Creation Date, Conversion Timestamp.
-2. **Behavioral State Vector**: Recency (days), 30-day Visits, 30-day Product Views, 30-day Cart Additions, 90-day Purchases, 90-day Total Spend (MAD), Average Order Value (MAD), Email Open/Click Rates, Complaint Counts, Review Scores, Social Sentiment.
-3. **Predictive & Value Score Vector**: RFM-ES Score, Predicted CLV Amount (MAD), Predicted CLV Segment, Churn Risk Class, Behavioral Engagement Score, Decision Priority Score.
-4. **Historical Track Record**: Sequence of event simulations, historical CLV evolution, RFM score progression, classification history, and segment transitions over time.
-
-### B. Segment
-A **Segment** is an analytical cohort that clusters entities exhibiting similar behavioral characteristics, value ranges, or risk profiles (e.g., `High-Value Loyalists`, `At-Risk Big Spenders`, `Prospect`).
-
-### C. Persona
-A **Persona** is a humanized marketing blueprint mapped directly to a segment. It translates technical score vectors into operational strategy guidelines (e.g., `Premium Loyalist`, `Churn Risk VIP`, `New Explorer`).
+### Profile Core Attributes:
+- **Core Identity**: Entity ID, Entity Type (`Prospect` / `Client`), registration timestamp, geographic location.
+- **Behavioral Telemetry**: Recency (days since last activity), Frequency (total transaction count), Monetary spend (MAD), review scores ($1.0 - 5.0$), complaint count, channel preferences.
+- **Predictive Metrics**: RFM-ES score ($0.0 - 1.0$), Churn Risk score ($0.0 - 1.0$), Predicted CLV Amount (MAD), Predicted CLV score ($0.0 - 1.0$).
+- **Lifecycle Cohort**: Dynamic lifecycle classification (`Cold Prospect`, `Warm Prospect`, `Active Client`, `VIP Client`, `Churn Risk Client`).
+- **Segment & Persona**: Quantitative customer segment assignment and resolved stable persona.
 
 ---
 
-## 3. The Resolution Chain Flow
+## 2. Stable Business Personas vs Dynamic Analytical Clusters
 
-To prevent arbitrary persona assignment, OSMOS enforces a strict, single-direction scientific resolution chain:
+OSMOS maintains a clear distinction between **Stable Business Personas** and **Dynamic Analytical Clusters**:
+
+| Dimension | Stable Business Persona | Dynamic Analytical Cluster |
+| :--- | :--- | :--- |
+| **Definition** | Official, standardized business profile catalog defined in `persona_library`. | Exploratory data science cluster generated dynamically via unsupervised K-Means. |
+| **Governance** | Governed by deterministic segment-first business rules. | Updated dynamically upon model retrain. |
+| **Use Case** | Executive decision-making, supervision agent audits, marketing campaign dispatches. | Exploratory audience discovery, feature drift analysis. |
+
+---
+
+## 3. Official Segment-to-Persona Mapping Rules
+
+To enforce business alignment, personas are resolved using segment-first mapping from `persona_library`:
 
 ```mermaid
 flowchart TD
-    A["Client / Prospect Entity<br/>(e.g., C00001, P00001)"] --> B["Individual Digital Twin State"]
-    B --> C["Deterministic Scoring & ML Models"]
-    C --> D["RFM-ES, CLV, Churn Risk, Engagement & Dynamic Class"]
-    D --> E["Customer Segment Assignment<br/>(e.g., High-Value Loyalists)"]
-    E --> F["Persona Library Lookup<br/>(persona_library.segment_name)"]
-    F --> G["Segment Persona Blueprint<br/>(e.g., Premium Loyalist)"]
-    G --> H["Recommended Marketing Action & Channel"]
+    Segment[Assigned Customer Segment] --> Library{persona_library Lookup}
+    Library -->|Prospect| P1[New Explorer]
+    Library -->|New Customers| P1
+    Library -->|High-Value Loyalists| P2[Premium Loyalist]
+    Library -->|At-Risk Premium Clients| P3[Silent VIP at Risk]
+    Library -->|Complaint-Driven Risk Clients| P4[Frustrated Client]
+    Library -->|Dormant Low-Value Clients| P5[Sleeping Client]
+    Library -->|Social Advocates| P6[Brand Advocate]
+    Library -->|Standard Active Clients| P7[Regular Buyer]
+    Library -->|Unmapped Segment| Unknown[Persona Unknown / Mapping Issue]
 ```
 
----
+### Mapping Matrix:
 
-## 4. Resolution Chain Execution Summary
+| Quantitative Customer Segment | Official Stable Persona | Strategic Persona Focus |
+| :--- | :--- | :--- |
+| **Prospect** | `New Explorer` | Brand orientation & onboarding |
+| **New Customers** | `New Explorer` | First-purchase conversion & activation |
+| **High-Value Loyalists** | `Premium Loyalist` | Exclusive VIP perks & retention |
+| **At-Risk Premium Clients** | `Silent VIP at Risk` | Executive concierge outreach & service recovery |
+| **Complaint-Driven Risk Clients** | `Frustrated Client` | Urgent service recovery & issue resolution |
+| **Dormant Low-Value Clients** | `Sleeping Client` | Low-cost re-engagement nurturing |
+| **Social Advocates** | `Brand Advocate` | Referral incentives & social amplifications |
+| **Standard Active Clients** | `Regular Buyer` | Routine cross-sell & loyalty rewards |
 
-| Entity ID | Entity Type | Resolved Segment | Persona Blueprint | Primary Marketing Channel | Priority |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `C00001` | Client | High-Value Loyalists | Premium Loyalist | Direct Phone / Email VIP | High |
-| `P00001` | Prospect | Prospect | New Explorer | Email / Web Popup | Medium |
-| `P01501` | Client (Converted Prospect) | High-Value Loyalists | Premium Loyalist | Direct Phone / Email VIP | High |
-
-
----
-
-## 5. Summary Rules
-1. Every entity has exactly **one active Digital Twin**.
-2. Every Digital Twin maps to exactly **one active Segment** based on deterministic feature thresholds.
-3. Every Segment maps to exactly **one active Persona Blueprint** defined in the system's `persona_library`.
-
----
-
-## 6. Stable vs. Dynamic Personas Distinction
-
-OSMOS distinguishes between **stable personas** and **dynamic personas**:
-
-> *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
->
-> *Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas.*
-
-- **Stable Personas**: Fixed at 9 strategic profiles (`persona_library`). Powers official marketing resolution and the Digital Twin resolution chain.
-- **Dynamic Personas**: Generated dynamically based on KMeans clustering outputs ($k = 2 \dots 9$). Provides exploratory cohort discovery without overwriting stable persona mappings.
-
-
+### Persona Mapping Issue Detection:
+If a customer entity is assigned a valid segment but `customer_persona` returns `None` or `Unknown`, the `PersonaAgent` flags a **Persona Mapping Issue** (`CONF_PERS_MAP_001`). Administrators can resolve this issue by executing `seed_default_personas()` or updating `persona_library`.

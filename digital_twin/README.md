@@ -1,33 +1,35 @@
-# OSMOS Digital Twin Modeling Layer (Phase 6)
+# OSMOS Digital Twin Modeling Layer (Phases 6.0 - 8.7)
 
 ## Overview
-The **Digital Twin** in OSMOS represents the individual-level virtual state of a customer or prospect entity. It captures entity identity, real-time behavioral metrics, multi-dimensional scores, model predictions, and full historical track records.
+The **Digital Twin Modeling Layer** (`digital_twin/`) manages the individual-level virtual state of customer and prospect entities.
+
+It captures core identity, real-time behavioral telemetry, multi-dimensional scores (RFM-ES, CLV, Churn Risk), model predictions, cohort segments, and stable personas into unified state representations backed by versioned PostgreSQL snapshot tables (`digital_twin_snapshots`).
+
+---
+
+## Resolution Hierarchy & Architecture
+
+```mermaid
+flowchart TD
+    Entity[Individual Entity: Client / Prospect] --> Twin[Digital Twin State Profile]
+    Twin --> Telemetry[Behavioral Telemetry & Transaction Logs]
+    Twin --> Scores[RFM-ES, CLV, Churn Probability]
+    Scores --> Segment[Customer Segment Bucket]
+    Segment --> Persona[Stable Persona from persona_library]
+    Persona --> Action[Recommended Marketing Action]
+```
 
 ---
 
 ## Scientific Distinction: Digital Twin vs. Persona
-In OSMOS, **Digital Twin** and **Persona** are strictly decoupled:
-* **Digital Twin**: Belongs to **one specific individual entity** (e.g. `C00001` or `P00005`). It is dynamic, real-time, and backed by event timelines and ML model outputs.
-* **Persona**: Belongs to a **customer segment** (e.g. `High-Value Loyalists`). It is a marketing abstraction representing collective behavior, value, risk profiles, and strategic communications.
 
-### Resolution Chain
-```
-Entity ID (Client / Prospect)
-      ↓
-Digital Twin (Individual state & score vectors)
-      ↓
-Scores & Predictions (RFM-ES, CLV, Churn Risk, Classification)
-      ↓
-Customer Segment (Cohort bucket)
-      ↓
-Persona (Segment-level marketing representation)
-      ↓
-Recommended Marketing Action
-```
+- **Digital Twin**: Belongs strictly to **one individual entity** (e.g. `C00001` or `P_DEMO_001`). It is dynamic, real-time, and continuously updated as new events are logged to `event_history`.
+- **Persona**: Belongs to a **customer segment** (e.g. `High-Value Loyalists`). It is a strategic marketing abstraction representing collective behavioral traits, risk profiles, and communication guidelines.
 
 ---
 
-## Module Components
-- `digital_twin_builder.py`: Combines identity, behavioral state, scores, predictions, persona context, and track records into a unified Digital Twin dictionary.
-- `digital_twin_explainer.py`: Provides rule-based deterministic state explainers (Risk, Value, Engagement, Actions) and on-demand LLM cognitive summaries.
-- `digital_twin_dashboard.py`: Streamlit explorer page rendering summary cards, multi-dimensional states, history tabs, and persona cards.
+## Module Files
+
+- `digital_twin_builder.py`: Aggregates identity, behavioral metrics, predictive scores, segment assignments, and persona blueprints into a unified Digital Twin payload.
+- `digital_twin_explainer.py`: Provides deterministic rule-based explainers and button-triggered local LLM summaries.
+- `digital_twin_dashboard.py`: Streamlit interface for exploring Digital Twin profiles, historical timelines, and state evolution metrics.

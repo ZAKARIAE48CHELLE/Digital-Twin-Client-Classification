@@ -1,39 +1,55 @@
-# OSMOS — Local LLM-Assisted Action Intelligence Layer
+# OSMOS LLM-Assisted Action Intelligence Specification
 
-## 1. Local LLM Architecture & Rationale
-
-OSMOS integrates an on-demand, local Large Language Model (LLM) advisory layer powered by **Ollama**.
-
-```mermaid
-flowchart TD
-    Alert["Critical Action Alert / Digital Twin Profile"] --> Payload["Structured JSON Context Assembly"]
-    Payload --> Client["LLM Client Interface (llm/llm_client.py)"]
-    Client -->|HTTP POST http://localhost:11434/api/generate| Ollama["Local Ollama Service"]
-
-    Ollama --> Model["Qwen3-8B / Llama 3.1 8B"]
-    Model --> JSON["Structured JSON Advisory Output"]
-    JSON --> Parser["Robust JSON Parser (llm_json_utils.py)"]
-    Parser --> UI["Streamlit Executive UI Card"]
-    Parser --> DB[(llm_action_recommendations Table)]
-```
-
-### Supported Models:
-1. **Primary Model**: `qwen3:8b` (Optimal balance of structured JSON generation, multi-lingual FR/EN fidelity, and fast inference).
-2. **Fallback Model**: `llama3.1:8b`
-3. **Lightweight Model**: `phi4-mini`
-
-### Strategic Rationale for Local LLM:
-- **Privacy & Compliance**: Zero customer data or behavioral features leave the local infrastructure.
-- **Cost Elimination**: No per-token API charges or external cloud dependencies.
-- **System Independence**: Operates seamlessly in isolated, air-gapped enterprise environments.
+This document specifies the integration, safety rules, validation workflow, and governance principles for **LLM-Assisted Action Intelligence** in **OSMOS**.
 
 ---
 
-## 2. Guardrails & Execution Rules
+## 1. Governance & Safety Rules
 
-To ensure operational reliability and performance stability, OSMOS enforces strict LLM guardrails:
+OSMOS enforces strict safety rules governing all Large Language Model (LLM) operations:
 
-1. **Button-Triggered Only**: LLM generation is NEVER auto-triggered on page load or background startup. It executes solely when the admin clicks `🤖 Generate Recommendation` or `🤖 Generate Digital Twin Summary`.
-2. **Deterministic Primacy**: System decisions, CLV predictions, RFM scores, and alert flags are 100% computed by python ML modules prior to invoking the LLM.
-3. **Structured JSON Enforcement**: LLM prompts require valid JSON outputs containing executive summaries, action steps, channel suggestions, and message drafts in both French (FR) and English (EN).
-4. **Graceful Fallbacks**: If Ollama is offline or times out (120s configurable timeout), the system renders structured deterministic recommendations without crashing the app.
+```mermaid
+flowchart TD
+    UserTrigger[User Clicks Action Button] --> Ollama[Local Ollama / Qwen Client]
+    Ollama --> AdvisoryOutput[Advisory Output Draft]
+    AdvisoryOutput --> Validation{Structured Plan?}
+    
+    Validation -->|Yes| RuleValidator[Deterministic Rule Validator]
+    RuleValidator -->|Valid| AdminApproval[Human Admin Approval Queue]
+    RuleValidator -->|Invalid| Block[Plan Blocked / Error Displayed]
+    
+    Validation -->|No| Display[Display Text Guidance]
+    
+    AdminApproval -->|Approved| Execution[Deterministic Execution Layer]
+    AdminApproval -->|Rejected| Discard[Draft Discarded]
+```
+
+### Mandatory Governance Rules:
+1. **Advisory Role Only**: The LLM operates purely in an advisory capacity. It cannot modify customer records, update database rows, or dispatch real marketing campaigns autonomously.
+2. **Button-Triggered Execution**: LLM invocations occur **only** when an administrator explicitly clicks an action button (e.g. "Generate LLM Recommendation", "Generate LLM Scenario Plan"). Zero automatic LLM calls occur on page load, background timers, or inside data fetch routines (`get_data()`).
+3. **No Direct Database Writes**: The LLM client never issues `INSERT`, `UPDATE`, or `DELETE` SQL queries directly against database tables.
+4. **Deterministic Validation Required**: Any structured payload proposed by an LLM (such as a multi-stage journey scenario plan) must be parsed, normalized, and validated by deterministic business rules before presentation to an administrator.
+5. **Human Approval Mandate**: Admin review and explicit approval are required before any generated action plan can be applied to customer records.
+6. **Local Deployment Privacy**: The LLM runs via a local **Ollama** instance (`qwen2.5` / `llama3`). Zero customer data or telemetry is transmitted to external cloud APIs.
+7. **Deterministic Fallback**: If the local LLM service is offline or unconfigured, system modules fall back gracefully to rule-based template logic without crashing the application.
+
+---
+
+## 2. LLM-Assisted Journey Scenario Planner
+
+The **LLM Journey Planner** (`journey/llm_journey_planner.py`) enables administrators to propose candidate lifecycle scenarios for demo entity `P_DEMO_001`.
+
+### Verification Sequence:
+1. **Proposal Generation**: LLM returns a structured candidate JSON proposal containing scenario metadata, target stages, behavioral events, and expected state changes.
+2. **JSON Repair & Normalization**: Utility functions (`journey/llm_json_utils.py`) clean trailing commas, repair missing brackets, and extract valid JSON payloads.
+3. **Deterministic Validation**: `validate_llm_journey_plan()` evaluates candidate plans against 10 strict business rules:
+   - Target entity must equal `P_DEMO_001`.
+   - Event types must belong to the allowed telemetry catalog.
+   - Event offset days must be chronologically non-decreasing.
+   - `purchase` events must occur only after conversion to `Client`.
+   - VIP stages must contain high-value purchase telemetry ($>1,000$ MAD).
+   - Churn stages must contain negative friction signals (`complaint`, `inactivity_period`).
+   - Expected segments must map to valid personas in `persona_library`.
+   - Payload must contain zero PII or unknown event fields.
+4. **Quality Scoring**: Evaluated plans receive a quality score ($0 - 100$) and quality label (`Excellent`, `Acceptable`, `Weak`, `Invalid`).
+5. **Admin Approval & Execution**: Valid plans are rendered as visual cards for administrator review. Upon approval, the deterministic `JourneyRunner` applies events and writes `event_history` records to PostgreSQL.

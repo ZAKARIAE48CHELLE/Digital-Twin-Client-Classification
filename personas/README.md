@@ -1,43 +1,53 @@
-# OSMOS Persona Library & Matching Layer (Phase 6 & Dynamic Expansion)
+# OSMOS Persona Library & Dynamic Clustering (`personas/`)
 
 ## Overview
-The **Persona Layer** provides both predefined strategic blueprints and exploratory data-driven profiles linked to OSMOS customer segments and clustering models. Personas provide human-readable behavior profiles, risk profiles, value profiles, and recommended marketing actions.
+The **Persona Module** (`personas/`) manages customer behavioral profiling, segment-first persona assignments, and exploratory dynamic clustering.
 
-OSMOS distinguishes between **stable personas** and **dynamic personas**:
-> *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
->
-> *Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas.*
-
+OSMOS enforces a strict architectural distinction between **Stable Business Personas** and **Dynamic Analytical Clusters**.
 
 ---
 
-## Architectural Principles
-1. **Segment-First Resolution for Digital Twin**: Entities are NEVER assigned a persona directly from raw attributes. The assignment flow strictly passes through the `customer_segment`.
-   ```
-   entity_id → Digital Twin → customer_segment → persona_library.segment_name → stable_persona
-   ```
-2. **Exploratory Dynamic Personas**: Generated on-demand from KMeans clustering outputs without overwriting `persona_library` or Digital Twin persona resolutions.
-3. **PostgreSQL Persistence**: Predefined stable personas are stored in the `persona_library` PostgreSQL table with fallback to in-memory dictionaries.
+## Stable Business Personas vs Dynamic Clusters
+
+```mermaid
+flowchart TD
+    CustomerState[Digital Twin State] --> Segment[Quantitative Customer Segment]
+    Segment --> Library{Persona Library Lookup}
+    
+    Library -->|Prospect| P1[New Explorer]
+    Library -->|New Customers| P1
+    Library -->|High-Value Loyalists| P2[Premium Loyalist]
+    Library -->|At-Risk Premium Clients| P3[Silent VIP at Risk]
+    Library -->|Complaint-Driven Risk Clients| P4[Frustrated Client]
+    Library -->|Dormant Low-Value Clients| P5[Sleeping Client]
+    Library -->|Social Advocates| P6[Brand Advocate]
+    Library -->|Standard Active Clients| P7[Regular Buyer]
+    Library -->|Unmapped| Unknown[Persona Unknown / Mapping Issue]
+```
+
+### Official Mapping Matrix:
+
+- **Prospect** $\rightarrow$ `New Explorer`
+- **New Customers** $\rightarrow$ `New Explorer`
+- **High-Value Loyalists** $\rightarrow$ `Premium Loyalist`
+- **At-Risk Premium Clients** $\rightarrow$ `Silent VIP at Risk`
+- **Complaint-Driven Risk Clients** $\rightarrow$ `Frustrated Client`
+- **Dormant Low-Value Clients** $\rightarrow$ `Sleeping Client`
+- **Social Advocates** $\rightarrow$ `Brand Advocate`
+- **Standard Active Clients** $\rightarrow$ `Regular Buyer`
 
 ---
 
-## Stable Persona Mapping (Predefined Official Blueprints)
-1. **Prospect / New Customers** ➔ *New Explorer*
-2. **High-Value Loyalists** ➔ *Premium Loyalist*
-3. **At-Risk Premium Clients** ➔ *Silent VIP at Risk*
-4. **Growth Potential Clients** ➔ *Emerging Loyalist*
-5. **Price-Sensitive Occasional Buyers** ➔ *Deal Seeker*
-6. **Complaint-Driven Risk Clients** ➔ *Frustrated Client*
-7. **Dormant Low-Value Clients** ➔ *Sleeping Client*
-8. **Social Advocates** ➔ *Brand Advocate*
-9. **Standard Active Clients** ➔ *Regular Buyer*
+## Key Governance Rules
+
+- **Segment-First Resolution**: Official business personas are resolved deterministically from assigned customer segments via `persona_library`.
+- **Persona Mapping Issue Detection**: If a customer entity is assigned a valid segment but `customer_persona` returns `None` or `Unknown`, the `PersonaAgent` flags a **Persona Mapping Issue** (`CONF_PERS_MAP_001`).
+- **Dynamic Clustering**: Unsupervised K-Means clustering (`dynamic_persona_generator.py`) is provided for exploratory data science discovery; it does **not** override official stable persona mappings in `persona_library`.
 
 ---
 
-## Module Components
-- `persona_library.py`: Database CRUD methods (`get_all_personas`, `get_persona_by_segment`, `upsert_persona`, `seed_default_personas`) with fallback defaults.
-- `seed_persona_library.py`: Executable seed script to populate PostgreSQL.
-- `persona_matcher.py`: Resolution functions ensuring segment-first persona matching and consistency audits.
-- `dynamic_persona_generator.py`: Generates data-driven profiles (`generate_dynamic_personas`, `summarize_cluster_profile`, `build_dynamic_persona_cards`) for 2-9 clusters.
-- `persona_dashboard.py`: Streamlit catalog viewer for Stable Personas, Dynamic Personas, and Comparison tabs.
-- `test_dynamic_personas.py`: Unit test suite verifying dynamic persona card generation, schema integrity, and isolation from `persona_library`.
+## Module Files
+
+- `persona_library.py`: Database seed and lookup routines for stable persona blueprints.
+- `dynamic_persona_generator.py`: Unsupervised K-Means clustering for dynamic cohort analysis.
+- `persona_dashboard.py`: Streamlit interface for viewing persona blueprints and dynamic cluster distribution charts.

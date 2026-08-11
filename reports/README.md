@@ -1,67 +1,49 @@
 # OSMOS Executive Report Generator (Phase 8.6)
 
 ## Overview
-The **Executive Report Generator** compiles Digital Twin profile states, ML/RFM/CLV metrics, 8-agent supervision reports, debate consensus decisions, knowledge evidence, approval queue history, campaign dispatches, and journey step traces into clean, professional, downloadable reports (Markdown `.md`, styled HTML `.html`, and PDF `.pdf`).
+The **Executive Report Generator** (`reports/`) compiles Digital Twin profile states, ML/RFM/CLV metrics, 8-agent supervision outputs, debate consensus decisions, RAG knowledge evidence, human approval history, campaign dispatches, and journey step traces into professional executive reports.
 
-```
- Digital Twin State  ML / RFM / CLV Metrics  8-Agent Supervision Reports  Debate Consensus (8.4)  Knowledge Evidence (8.5)
-         │                       │                         │                        │                        │
-         └───────────────────────┴────────────┬────────────┴────────────────────────┴────────────────────────┘
-                                              │
-                                              ▼
-                                 report_context_builder.py
-                                              │
-                                              ▼
-                                    report_templates.py
-                                              │
-                                              ▼
-                                     report_exporter.py
-                                              │
-                    ┌─────────────────────────┼─────────────────────────┐
-                    ▼                         ▼                         ▼
-            Markdown (.md)              HTML (.html)                PDF (.pdf)
-```
-
-> 🛡️ **Read-Only & Safety Governance Guarantee**:
-> - Report context assembly and file generation are **100% read-only**, deterministic, and offline.
-> - Reports **never** modify customer entity data (`entities`, `customer_event_history`, etc.) or alter DataFrames.
-> - LLM polished executive summaries are **strictly button-triggered only** ("LLM Executive Polish").
+Reports are exportable in multiple formats: **Markdown** (`.md`), styled **HTML** (`.html`), and standalone **PDF** (`.pdf`).
 
 ---
 
-## File Structure
+## Report Compilation Flow
 
-```
-reports/
-├── __init__.py               # Package exports
-├── report_schemas.py          # Dataclass schemas (ReportContext, ReportSection, ReportExportResult)
-├── report_context_builder.py # Context assembly for Entity, Agent Run, Journey, and System reports
-├── report_templates.py       # Markdown/HTML section renderers for title page, summary, twin state, scores, etc.
-├── report_generator.py       # Report compiler building complete structured markdown documents
-├── report_exporter.py        # File export engine saving .md, .html, and .pdf files to reports/generated/
-├── report_dashboard.py       # Streamlit UI dashboard (Type selection, parameters, preview, download buttons)
-├── README.md                 # Technical package architecture documentation
-└── test_reports.py          # Phase 8.6 unit test suite
+```mermaid
+flowchart TD
+    DT[Digital Twin State] & ML[RFM / CLV / Predictions] & Agents[8-Agent Supervision] & Debate[Debate & Consensus] & RAG[Knowledge Evidence] --> Builder[report_context_builder.py]
+    Builder --> Compiler[report_generator.py]
+    Compiler --> Exporter[report_exporter.py]
+    
+    Exporter --> MD[Markdown File]
+    Exporter --> HTML[Styled HTML Document]
+    Exporter --> PDF[Standalone PDF Report]
 ```
 
 ---
 
 ## Supported Report Types
 
-1. **Entity Executive Report**: Full 360° overview of a single customer or prospect (`entity_id`).
-2. **Agent Supervision Run Report**: Executive summary of a specific saved supervision run (`run_id`).
-3. **Customer Journey Report**: Customer lifecycle stage transitions and event traces (`scenario_id`).
-4. **System Overview Report**: High-level platform health & analytics summary.
+1. **Entity Executive Report**: Deep-dive profile report for a single client or prospect entity (`P_DEMO_001`, etc.).
+2. **Agent Run Report**: Audit document capturing the complete execution output of the 8 supervision agents.
+3. **Journey Report**: Lifecycle scenario progression summary detailing step-by-step stage transitions.
+4. **System Overview Report**: High-level platform health, active database metrics, and aggregate portfolio statistics.
 
 ---
 
-## Testing
+## Governance & Safety Rules
 
-Run Phase 8.6 unit tests:
-```bash
-python -m unittest reports/test_reports.py
-```
-Or run full workspace tests:
-```bash
-python -m unittest discover -s . -p "test_*.py"
-```
+- **Read-Only Operation**: Report compilation is 100% read-only with zero database state mutations.
+- **Button-Triggered LLM Summaries**: Executive LLM summaries are strictly button-triggered ("LLM Executive Polish"). Zero automated background LLM calls occur during report generation.
+- **Traceable Evidence**: All report findings link back to underlying database records, agent debate results, and knowledge memory passages.
+
+---
+
+## Module Components
+
+- `report_schemas.py`: Dataclass structures (`ReportContext`, `ReportSection`, `ReportExportResult`).
+- `report_context_builder.py`: Data assembly engine retrieving metrics from PostgreSQL tables.
+- `report_templates.py`: Section renderers for Markdown and HTML styling.
+- `report_generator.py`: Structured report compiler.
+- `report_exporter.py`: Exporter handling file writing (Markdown, HTML) and PDF conversion via ReportLab / WeasyPrint.
+- `report_dashboard.py`: Streamlit user interface for configuring, previewing, and downloading executive reports.

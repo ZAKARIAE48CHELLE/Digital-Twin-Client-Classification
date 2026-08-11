@@ -1,78 +1,102 @@
-# OSMOS — AI & Machine Learning Component Architecture
+# OSMOS AI & Supervision Modules Specification
 
-## 1. AI/ML Component Portfolio
+This document provides a detailed technical reference for all artificial intelligence, machine learning, multi-agent supervision, and knowledge memory modules in **OSMOS**.
 
-OSMOS incorporates a hybrid AI architecture combining deterministic mathematical scoring, supervised machine learning, time-series statistical modeling, and generative local LLM advice.
+---
+
+## 1. Predictive Machine Learning Suite
+
+OSMOS integrates three primary analytical models:
+
+1. **RFM-ES Score Engine (`analytics/rfm_es_calculator.py`)**: Computes 5-dimension normalized engagement and satisfaction scores combining Recency, Frequency, Monetary spend, Engagement intensity, and Satisfaction ratings.
+2. **Customer Lifecycle Classification Model (`models/`)**: Multi-class classification model assigning entities to standard lifecycle cohorts:
+   - Cold Prospect
+   - Warm Prospect
+   - Active Client
+   - VIP Client
+   - Churn Risk Client
+3. **CLV Forecasting Engine (`analytics/clv_calculator.py`)**: Predicts customer lifetime value monetary amount (MAD) and value score based on purchase velocity, average basket size, and dropout probability.
+
+---
+
+## 2. Segment-First Persona Resolution Module
+
+The **Persona Library** (`personas/`) enforces deterministic mapping from quantitative customer segments to official stable business personas.
 
 ```mermaid
-graph LR
-    subgraph Deterministic Engine
-        AHP["AHP Weighting Engine"] --> RFM["RFM-ES Scoring Vector"]
-        RFM --> Seg["Cohort Segmentation"]
-    end
-  
-    subgraph Machine Learning Engine
-        CLV_M["CLV Regression Model<br/>(Predicts MAD Value)"] --> CLV_P["CLV Score & Segment"]
-        DC_M["Dynamic Classifier<br/>(Predicts VIP/Warm/Cold)"] --> DC_P["Class Predictions"]
-    end
-  
-    subgraph Historical Intelligence
-        CLV_P --> Drift["Prediction Drift Detection"]
-        DC_P --> Trend["CLV Trend Alert Engine"]
-        Seg --> Trans["Segment Transition Matrix"]
-    end
-  
-    subgraph Generative Advisory Layer
-        Drift & Trend & Trans --> Prompt["Structured JSON Prompt"]
-        Prompt --> LocalLLM["Local LLM<br/>(Ollama Qwen3-8B / Llama 3.1)"]
-        LocalLLM --> Rec["Bilingual Marketing Advisory"]
-    end
+flowchart TD
+    QuantitativeSegment[Customer Segment] --> MappingCheck{Found in Persona Library?}
+    MappingCheck -->|Yes| StablePersona[Assigned Stable Persona]
+    MappingCheck -->|No| MappingIssue[Persona Mapping Issue Flagged]
 ```
 
----
-
-## 2. Core AI Component Specifications
-
-### A. RFM-ES Scoring Vector (AHP-Weighted)
-
-- **Inputs**: Recency (days), 30-day Visits, 30-day Product Views, 90-day Purchases, 90-day Total Spend, Email Open Rate, Complaint Count, Social Sentiment.
-- **Methodology**: Analytical Hierarchy Process (AHP) pairwise matrix weighting.
-- **Output**: Normalized scalar score $S_{\text{RFM-ES}} \in [0.0, 1.0]$.
-
-### B. Customer Lifetime Value (CLV) Regression Model
-
-- **Inputs**: Behavioral history, average order value, purchase frequency, engagement metrics.
-- **Output**: Predicted 12-month value in Moroccan Dirhams (MAD) and normalized CLV score (0–100).
-
-### C. Dynamic Classification Model
-
-- **Target Classes**: *VIP Client*, *Regular Client*, *At-Risk Client*, *Warm Prospect*, *Cold Prospect*.
-- **Output**: Multi-class classification probability distribution.
-
-### D. Advanced Historical Intelligence & Drift Detection
-
-- **CLV Trend Alerts**: Identifies entities experiencing sudden CLV drops ($> 15\%$) or growth over consecutive snapshot periods.
-- **Segment Transition Matrix**: Computes Markov transition probabilities across customer segments.
-- **Prediction Drift Monitoring**: Evaluates distribution shifts between baseline predictions and current window predictions using Population Stability Index (PSI) concepts.
-
-### E. Exploratory Dynamic Personas Generator (KMeans)
-
-- **Methodology**: Unsupervised KMeans Clustering combined with PCA projection ($k = 2 \dots 9$).
-- **Role**: Computes temporary, data-driven dynamic persona profiles (`personas/dynamic_persona_generator.py`).
-- **Separation Rule**:
-  > *OSMOS distinguishes between stable personas and dynamic personas. Stable personas are predefined strategic blueprints linked to official customer segments and used by the Digital Twin resolution chain. Dynamic personas are temporary, data-driven profiles generated from clustering results and used for exploratory analysis. Their number varies with the selected number of clusters (2 to 9).*
-  >
-  > *Dynamic personas are generated from clustering outputs using deterministic business interpretation rules. OSMOS assigns value level, engagement level, risk level, priority, recommended channel, and action based on cluster-level metrics. Micro-clusters and one-entity clusters are flagged as outliers to avoid presenting statistically weak groups as stable personas.*
-
+### Official Business Mappings:
+- **Prospect** $\rightarrow$ `New Explorer`
+- **New Customers** $\rightarrow$ `New Explorer`
+- **High-Value Loyalists** $\rightarrow$ `Premium Loyalist`
+- **At-Risk Premium Clients** $\rightarrow$ `Silent VIP at Risk`
+- **Complaint-Driven Risk Clients** $\rightarrow$ `Frustrated Client`
+- **Dormant Low-Value Clients** $\rightarrow$ `Sleeping Client`
+- **Social Advocates** $\rightarrow$ `Brand Advocate`
+- **Standard Active Clients** $\rightarrow$ `Regular Buyer`
 
 ---
 
-## 3. Strict Guardrails & LLM Role Boundary
+## 3. LangGraph Multi-Agent Supervision Layer
 
-> [!IMPORTANT]
-> **Deterministic vs. Generative Separation**
->
-> - The **Local LLM does NOT calculate** CLV amounts, RFM scores, churn risks, or alert thresholds.
-> - All numeric predictions and alert triggers are computed **100% deterministically** by python ML modules.
-> - The LLM is used **strictly for natural language synthesis**, explaining alerts, drafting customer messages, and suggesting tactical actions upon explicit admin button clicks.
+The multi-agent supervision framework (`agents/`) coordinates 8 specialized agents via **LangGraph**:
 
+```mermaid
+flowchart TD
+    subgraph Core Customer Intelligence
+        DT[Digital Twin Agent]
+        CLV[CLV Agent]
+        Churn[Churn Risk Agent]
+        Persona[Persona Agent]
+    end
+    
+    subgraph Operational Supervision
+        Campaign[Campaign Agent]
+        Journey[Journey Agent]
+        DBAudit[Database Audit Agent]
+        UIUX[UI/UX Agent]
+    end
+    
+    DT & CLV & Churn & Persona & Campaign & Journey & DBAudit & UIUX --> DebateEngine[Domain-Aware Debate Engine]
+    DebateEngine --> ConsensusBuilder[Consensus Builder]
+```
+
+### Debate Engine Domain Logic:
+- Disagreements are computed strictly within domain groups (`Customer Intelligence` vs `Operational Supervision`).
+- `CLV Agent OK` signifies calculation validity, not customer health; `CLV OK` vs `Churn Critical` is not treated as a domain status conflict.
+- Low CLV + High Churn is resolved as: *"Retention action should be cost-efficient because churn risk is high but CLV is low."*
+- Database Audit Warning with 0 orphaned references is treated as a *"demo readiness / initialization warning"*.
+
+---
+
+## 4. Local Ollama LLM & Action Intelligence
+
+OSMOS integrates a local **Ollama (Qwen)** LLM client (`llm/`) for advisory language generation:
+
+### Governance & Safety Controls:
+- **Button-Triggered Only**: Zero background or automated calls on page load or data fetch.
+- **Advisory Role**: LLM outputs do not write database records or execute real campaign dispatches.
+- **Deterministic Validation**: Structured outputs (such as LLM Journey Plans) undergo strict JSON repair and rule validation before administrator review.
+- **Local Privacy**: Runs entirely on local infrastructure with zero external API calls.
+
+---
+
+## 5. RAG Knowledge Base & Decision Memory
+
+The **Knowledge Base** (`knowledge/`) implements document chunking and vector/keyword search:
+- **Persistence**: Tables `knowledge_documents` and `knowledge_chunks`.
+- **Indexing**: Extracts passages from project documentation, governance rules, and approval logs.
+- **Retrieval**: Injects relevant prior decision context into multi-agent supervision reviews.
+
+---
+
+## 6. Executive Report Generator
+
+The **Executive Report Generator** (`reports/`) synthesizes entity states, agent outputs, debate consensus, and RAG evidence into comprehensive reports:
+- Supported formats: **Markdown**, **HTML**, standalone **PDF**.
+- Supported report types: Entity Executive Report, Agent Run Report, Journey Report, System Overview Report.

@@ -1,47 +1,93 @@
-# OSMOS — Development Roadmap & Evolution Phases
+# OSMOS System Development Roadmap
 
-## 1. Multi-Phase Progress Tracker
+This document outlines the evolutionary phases of the **OSMOS** (Omnichannel Supervised Marketing Optimization System) platform, detailing completed architectural milestones and future production deployment goals.
+
+---
+
+## Roadmap Overview
 
 ```mermaid
-gantt
-    title OSMOS Development Progression
-    dateFormat  YYYY-MM-DD
-    section Completed Phases
-    Phase 1 PostgreSQL Foundation           :done, p1, 2026-06-01, 2026-06-15
-    Phase 2 Storage Abstraction             :done, p2, 2026-06-16, 2026-06-25
-    Phase 3 Database Intelligence           :done, p3, 2026-06-26, 2026-07-05
-    Phase 4 Historical Intelligence         :done, p4, 2026-07-06, 2026-07-12
-    Phase 5 Local LLM Advisory              :done, p5, 2026-07-13, 2026-07-18
-    Phase 6 Digital Twin & Persona          :done, p6, 2026-07-19, 2026-07-20
-    Phase 6.5 Documentation & Science       :done, p65, 2026-07-21, 2026-07-21
-    Phase 7 Closed-Loop Campaign Sim        :done, p7, 2026-07-21, 2026-07-21
-    Phase 7.5 Journey Tree Simulator        :done, p75, 2026-07-23, 2026-07-23
-    Phase 8 Multi-Agent Supervision Layer   :done, p8, 2026-08-01, 2026-08-04
-    section Future Phases
-    Phase 9 Production Hardening & Security  :future, p9, 2026-08-15, 2026-09-01
-    Phase 10 Real CRM API Integrations      :future, p10, 2026-09-02, 2026-09-15
+timeline
+    title OSMOS Development Milestones
+    Phase 1 to 4 : Database & History : PostgreSQL Foundation : Storage Abstraction : Database Intelligence : Historical Intelligence
+    Phase 5 to 7.5 : Modeling & Simulation : Local LLM Action Intelligence : Digital Twin & Personas : Campaign Simulation : Journey Tree Simulator
+    Phase 8.1 to 8.7 : Multi-Agent & RAG : Multi-Agent Core : Operational Supervision : Human Approval Queue : Domain Debate Mode : Knowledge Memory : Executive Reports : LLM Journey Planner & LangGraph
+    Phase 9 : Future Horizon : Production Hardening : Cloud Multi-Tenancy : Real-Time Streaming
 ```
 
 ---
 
-## 2. Phase Summaries
+## Completed Development Phases
 
-### Completed Phases:
+### Phase 1 — PostgreSQL Foundation
+- Implemented PostgreSQL schema (`entities`, `customer_profiles`, `event_history`, `rfm_es_scores`, `classification_predictions`, `clv_predictions`, `customer_segments`, `persona_library`, `audit_logs`).
+- Automated DDL schema creation and index optimization.
 
-- **Phase 1: PostgreSQL Foundation**: Database schema DDL, psycopg2 connection pool, migration scripts from Excel.
-- **Phase 2: Storage Abstraction**: Dynamic `StorageManager` routing with seamless Excel fallback.
-- **Phase 3: Database Intelligence Dashboard**: Admin UI for database metrics, table row counts, storage sizes, index health.
-- **Phase 4: Advanced Historical Intelligence**: CLV trend alerts, segment transition matrix, dynamic classification drift detection.
-- **Phase 5: Local LLM-Assisted Action Intelligence**: Ollama integration (Qwen3-8B), guardrails, recommendation tracking.
-- **Phase 6: Explicit Digital Twin & Persona Modeling Layer**: Decoupled individual Digital Twin state builder and 10-blueprint `persona_library`.
-- **Phase 6.5: Documentation & Scientific Explanation Package**: Complete documentation suite, architectural diagrams, scientific frameworks, and demo guides.
-- **Phase 7: Closed-Loop Campaign Simulation**: Campaign draft dispatcher, probabilistic response simulator, single-entity event generator, and closed-loop CLV impact tracking.
-- **Phase 7.5: Digital Twin Journey Tree Simulator**: 5-stage customer lifecycle scenario engine, Mermaid tree visualization, timeline tracking, and Presentation Mode.
-- **Phase 8: Multi-Agent Supervision Layer (Phase 8.1 - 8.6)**: Read-only deterministic 8-agent supervision framework, Agent Collaboration & Debate Mode (`debate_engine.py`), Agent Knowledge Base & Documentation Memory (`knowledge/` package), Executive Report Generator (`reports/` package), LangGraph Supervision Workflow Orchestration (`agents/langgraph_supervision/` package with legacy fallback), persistent Agent Memory (`agent_runs`, `agent_outputs`), Human Approval Queue (`agent_approval_queue`), System Readiness Summary, Evidence Traceability Matrix, Next Best Action engine, and button-triggered LLM executive, debate & report summaries.
-- **Phase 8.7: LLM-Assisted Journey Scenario Planner + Deterministic Execution**: Controlled lifecycle generator for OSMOS. LLM proposes structured journey scenario, 14-rule deterministic validator checks plan, admin approves, and Journey Runner applies valid events to PostgreSQL `event_history` with realistic timestamps.
+### Phase 2 — Storage Abstraction & Failover Engine
+- Created unified `StorageManager` supporting seamless runtime switching between `postgres` and `excel` engines.
+- Implemented auto-healing server detection for PostgreSQL 18 with detached background process startup.
 
-### Planned Future Phases:
+### Phase 3 — Database Intelligence
+- Developed the Database Intelligence Dashboard to monitor cluster health, table row counts, and database storage sizes.
+- Implemented audit logging for operational actions.
 
-- **Phase 9: Production Hardening & Security**: API rate limiting, OAuth2 authentication, distributed Celery task queues, Docker containerization.
-- **Phase 10: Real CRM & Marketing API Integration**: Webhook integrations for Salesforce, Hubspot, Twilio SMS, and SendGrid email automation.
+### Phase 4 — Historical Intelligence
+- Built time-series tracking for RFM-ES score evolution, CLV trend alerts, dynamic classification drift, and segment transitions.
+- Added table-level historical intelligence inspection.
 
+### Phase 5 — Local LLM-Assisted Action Intelligence
+- Integrated local Ollama (Qwen) LLM client for button-triggered marketing action generation.
+- Implemented `ActionRecommendationsRepository` and bilingual output formatting (English / French).
+
+### Phase 6 — Digital Twin & Persona Modeling
+- Formulated the Digital Twin core profile structure, unifying core identity, behavioral state, predictive parameters, and segment assignments.
+- Standardized stable business personas mapped deterministically from customer segments.
+
+### Phase 6.5 — Documentation & Scientific Explanation
+- Authored theoretical documentation, mathematical formulations for RFM-ES, CLV, Churn, and architectural specifications.
+
+### Phase 7 — Closed-Loop Campaign Simulation
+- Developed closed-loop marketing campaign simulator (`campaign_dispatches`, `campaign_responses`).
+- Integrated automated customer behavioral response generator (conversion, complaint, opt-out).
+
+### Phase 7.5 — Journey Tree Simulator
+- Created the controlled lifecycle scenario generator for demo entity `P_DEMO_001`.
+- Built 6-stage lifecycle progression executing real PostgreSQL history inserts.
+
+### Phase 8.1 — Multi-Agent Foundation
+- Developed core customer intelligence agents: `DigitalTwinAgent`, `CLVAgent`, `ChurnRiskAgent`, and `PersonaAgent`.
+
+### Phase 8.2 — Operational Supervision Agents
+- Developed operational supervision agents: `CampaignAgent`, `JourneyAgent`, `DatabaseAuditAgent`, and `UIUXAgent`.
+- Implemented global status aggregation and Next Best Action (NBA) selection rules.
+
+### Phase 8.3 — Agent Memory & Human Approval Workflow
+- Created persistent `human_approval_queue` repository for agent-generated operational recommendations.
+- Implemented approval workflow (Pending, Approved, Rejected, Executed).
+
+### Phase 8.4 — Agent Collaboration & Domain-Aware Debate Mode
+- Built deterministic cross-agent debate engine (`DebateEngine`, `ConflictDetector`, `ConsensusBuilder`).
+- Established domain-aware conflict detection (Customer Intelligence Domain vs Operational Supervision Domain) to resolve status differences logically.
+
+### Phase 8.5 — Agent Knowledge Base & Decision Memory
+- Implemented document indexing pipeline (`knowledge_documents`, `knowledge_chunks`) for internal documentation and approval history.
+- Integrated RAG-driven context memory into the Agent Supervision Center.
+
+### Phase 8.6 — Executive Report Generator
+- Built multi-format report generator supporting Entity Executive Reports, Agent Run Reports, Journey Reports, and System Overview Reports.
+- Added export capabilities for Markdown, HTML, and standalone PDF files.
+
+### Phase 8.7 — LLM-Assisted Journey Scenario Planner & LangGraph Orchestration
+- Integrated LangGraph as the primary stateful workflow engine for multi-agent supervision.
+- Developed LLM-assisted Journey Planner proposing candidate scenarios validated deterministically before execution.
+- Added real-time database concurrency stress testing and connection pool monitoring.
+
+---
+
+## Future Horizon
+
+### Phase 9 — Production Hardening & Deployment Readiness
+- **Production Containerization**: Multi-stage Docker packaging for Streamlit frontend, LangGraph supervisor, and PostgreSQL 18 cluster.
+- **Role-Based Access Control (RBAC)**: Fine-grained permissions for marketing managers, data scientists, and system administrators.
+- **Kafka / Event Streaming Integration**: Real-time event ingestion pipeline replacing batch polling.
+- **Automated CI/CD**: End-to-end integration testing and database migration verification pipeline.
