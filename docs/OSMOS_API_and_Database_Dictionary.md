@@ -128,3 +128,11 @@ RAG Knowledge Base header documents and chunked text passages.
 System operational audit trails and trained machine learning model metadata registry.
 - `action_type`, `details` (JSONB): Audit trail log.
 - `model_type`, `model_name`, `artifact_path`, `metrics` (JSONB): Trained model lineage tracking.
+
+### 15. `ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`
+A/B testing experiment definitions, campaign variant parameters, Digital Twin simulated response metrics, and decision recommendations.
+- `experiment_id`, `admin_question`, `objective`, `status`, `llm_generated`: Experiment headers.
+- `variant_id`, `variant_label` ('A', 'B', 'C'), `message_text`, `offer_type`, `incentive_value`, `channel`, `tone`: Variant definitions.
+- `predicted_open_probability`, `predicted_click_probability`, `predicted_conversion_probability`, `predicted_complaint_probability`, `predicted_churn_delta`, `predicted_clv_delta`, `response_score`: Digital Twin simulated response metrics.
+- `winning_variant_id`, `confidence_score`, `recommendation_summary`, `decision_reason`, `risk_notes`: Academic decision recommendations.
+

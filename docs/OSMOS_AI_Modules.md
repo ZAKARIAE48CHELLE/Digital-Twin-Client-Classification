@@ -100,3 +100,14 @@ The **Knowledge Base** (`knowledge/`) implements document chunking and vector/ke
 The **Executive Report Generator** (`reports/`) synthesizes entity states, agent outputs, debate consensus, and RAG evidence into comprehensive reports:
 - Supported formats: **Markdown**, **HTML**, standalone **PDF**.
 - Supported report types: Entity Executive Report, Agent Run Report, Journey Report, System Overview Report.
+
+---
+
+## 7. A/B Test & Digital Twin Response Simulator
+
+The **A/B Test Simulator** (`ab_testing/`) enables formulation of marketing hypotheses, variant generation, and Digital Twin behavioral response modeling:
+- **Variant Generation**: Button-triggered local LLMs generate candidate variants (A/B/C) based on entity profile and persona.
+- **Rule Validator**: Enforces 14 deterministic validation rules (discount cap 30%, low CLV protection, frustrated client service recovery mandate).
+- **Behavioral Response Simulator**: Evaluates variant against Digital Twin state to calculate predicted open, click, conversion, complaint probabilities, churn reduction, CLV lift, and response score ($0-100$).
+- **Governance**: Persists records to PostgreSQL (`ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`). Converts winning variants into simulated campaign drafts or applies response events upon human approval.
+

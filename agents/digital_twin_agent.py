@@ -128,6 +128,19 @@ class DigitalTwinAgent(BaseAgent):
             risks.append(f"Detected {negative_events} negative sentiment events in recent interaction history.")
             recommendations.append("Inspect timeline event log for specific customer friction points.")
 
+        # A/B Simulated Response Events Check
+        ab_events = [e for e in events if isinstance(e.get("event_type"), str) and "ab_test_simulated_response" in e.get("event_type", "")]
+        if ab_events:
+            observations.append(f"Detected {len(ab_events)} A/B test simulated response event(s) in entity behavioral timeline.")
+            evidence.append(
+                EvidenceItem(
+                    metric_name="ab_simulated_response_events",
+                    value=len(ab_events),
+                    threshold=">=1 A/B Event",
+                    interpretation=f"Entity history incorporates {len(ab_events)} simulated A/B test behavioral event(s).",
+                ).to_dict()
+            )
+
         # Engagement opportunities
         if recency > 0 and recency <= 30 and freq >= 3:
             opportunities.append("High recent engagement and recurring frequency signal upselling potential.")

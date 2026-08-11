@@ -490,5 +490,87 @@ CREATE INDEX IF NOT EXISTS idx_report_exp_type ON report_exports(report_type);
 CREATE INDEX IF NOT EXISTS idx_report_exp_entity_id ON report_exports(entity_id);
 CREATE INDEX IF NOT EXISTS idx_report_exp_created_at ON report_exports(created_at);
 
+-- W. A/B Test Experiments (Phase 8.8)
+CREATE TABLE IF NOT EXISTS ab_test_experiments (
+    experiment_id SERIAL PRIMARY KEY,
+    entity_id VARCHAR(50) REFERENCES entities(entity_id) ON DELETE CASCADE,
+    experiment_name TEXT NOT NULL,
+    admin_question TEXT NOT NULL,
+    objective TEXT NOT NULL,
+    target_segment TEXT,
+    target_persona TEXT,
+    status TEXT DEFAULT 'Draft' CHECK (status IN ('Draft', 'Simulated', 'Converted to Campaign', 'Archived')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT DEFAULT 'admin',
+    storage_mode TEXT DEFAULT 'postgres',
+    llm_generated BOOLEAN DEFAULT FALSE,
+    notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_ab_exp_entity_id ON ab_test_experiments(entity_id);
+CREATE INDEX IF NOT EXISTS idx_ab_exp_status ON ab_test_experiments(status);
+CREATE INDEX IF NOT EXISTS idx_ab_exp_created_at ON ab_test_experiments(created_at);
+
+-- X. A/B Test Variants (Phase 8.8)
+CREATE TABLE IF NOT EXISTS ab_test_variants (
+    variant_id SERIAL PRIMARY KEY,
+    experiment_id INTEGER REFERENCES ab_test_experiments(experiment_id) ON DELETE CASCADE,
+    variant_label TEXT NOT NULL,
+    variant_title TEXT NOT NULL,
+    message_text TEXT NOT NULL,
+    offer_type TEXT DEFAULT 'none',
+    incentive_value NUMERIC(10, 2) DEFAULT 0.0,
+    channel TEXT DEFAULT 'email',
+    tone TEXT DEFAULT 'commercial',
+    call_to_action TEXT,
+    expected_behavior TEXT,
+    validation_status TEXT DEFAULT 'Valid',
+    validation_warnings JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ab_var_exp_id ON ab_test_variants(experiment_id);
+CREATE INDEX IF NOT EXISTS idx_ab_var_label ON ab_test_variants(variant_label);
+
+-- Y. A/B Test Simulated Responses (Phase 8.8)
+CREATE TABLE IF NOT EXISTS ab_test_simulated_responses (
+    response_id SERIAL PRIMARY KEY,
+    experiment_id INTEGER REFERENCES ab_test_experiments(experiment_id) ON DELETE CASCADE,
+    variant_id INTEGER REFERENCES ab_test_variants(variant_id) ON DELETE CASCADE,
+    entity_id VARCHAR(50) REFERENCES entities(entity_id) ON DELETE CASCADE,
+    predicted_open_probability NUMERIC(5, 4),
+    predicted_click_probability NUMERIC(5, 4),
+    predicted_conversion_probability NUMERIC(5, 4),
+    predicted_complaint_probability NUMERIC(5, 4),
+    predicted_churn_delta NUMERIC(5, 4),
+    predicted_clv_delta NUMERIC(12, 2),
+    predicted_rfm_es_delta NUMERIC(5, 4),
+    predicted_satisfaction_delta NUMERIC(5, 4),
+    simulated_response_type TEXT,
+    simulation_reason TEXT,
+    response_score NUMERIC(6, 2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ab_resp_exp_id ON ab_test_simulated_responses(experiment_id);
+CREATE INDEX IF NOT EXISTS idx_ab_resp_var_id ON ab_test_simulated_responses(variant_id);
+CREATE INDEX IF NOT EXISTS idx_ab_resp_entity_id ON ab_test_simulated_responses(entity_id);
+
+-- Z. A/B Test Recommendations (Phase 8.8)
+CREATE TABLE IF NOT EXISTS ab_test_recommendations (
+    recommendation_id SERIAL PRIMARY KEY,
+    experiment_id INTEGER REFERENCES ab_test_experiments(experiment_id) ON DELETE CASCADE,
+    winning_variant_id INTEGER REFERENCES ab_test_variants(variant_id) ON DELETE CASCADE,
+    confidence_score NUMERIC(5, 4),
+    recommendation_summary TEXT,
+    decision_reason TEXT,
+    risk_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ab_rec_exp_id ON ab_test_recommendations(experiment_id);
+CREATE INDEX IF NOT EXISTS idx_ab_rec_win_var_id ON ab_test_recommendations(winning_variant_id);
+
+
 
 

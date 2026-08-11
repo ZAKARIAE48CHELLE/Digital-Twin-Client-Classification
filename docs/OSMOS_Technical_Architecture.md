@@ -161,3 +161,15 @@ The **Executive Report Generator** (`reports/`) aggregates system metrics, agent
 
 - **Report Types**: Entity Executive Report, Agent Run Report, Journey Report, System Overview Report.
 - **Governance**: LLM executive summary generation remains button-triggered only.
+
+---
+
+## 7. A/B Test & Digital Twin Response Simulator
+
+OSMOS allows administrators to formulate A/B test questions, generate or define campaign variants, and simulate how a selected Digital Twin would respond (`ab_testing/`).
+
+- **Variant Generation**: Button-triggered local LLMs propose candidate variants (A/B/C) based on entity profile, objective, and persona constraints.
+- **Deterministic Validation**: Variants undergo 14 strict validation rules (discount ceiling $\le 30\%$, low CLV cost inefficiency blocks, frustrated client service recovery mandate).
+- **Digital Twin Behavioral Simulator**: Predicts open, click, conversion, complaint probabilities, churn delta, CLV lift, and composite response score ($0-100$).
+- **Human Approval Governance**: Results are stored in PostgreSQL (`ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`). Winning variants can be converted into simulated campaign drafts or applied as events only upon explicit admin action.
+

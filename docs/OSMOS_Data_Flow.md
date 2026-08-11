@@ -86,3 +86,30 @@ When running multi-agent supervision with Knowledge Memory enabled:
 2. **Chunk Search**: `KnowledgeRetriever` searches indexed documentation passages in `knowledge_chunks`.
 3. **Context Injection**: Relevant guidelines are injected into the agent evaluation payload.
 4. **Traceable Evidence**: Injected guidelines are attached to agent outputs as evidence items for human review.
+
+---
+
+## 5. A/B Test & Digital Twin Response Simulator Data Flow
+
+The A/B Test Simulator module processes business questions and evaluates candidate campaign variants against a Digital Twin profile:
+
+```mermaid
+flowchart TD
+    Question[Admin Business Question & Entity Select] --> LLMGen[LLM Variant Generator (Optional)]
+    LLMGen --> CandidateVars[Candidate Campaign Variants A & B]
+    CandidateVars --> Validator[Deterministic Rule Validator]
+    
+    Validator -->|Failed| FixInputs[Display Errors & Fix Inputs]
+    Validator -->|Passed| Simulator[Digital Twin Response Simulator]
+    
+    DTProfile[Digital Twin Profile & State] --> Simulator
+    Simulator --> Evaluator[A/B Test Evaluator]
+    
+    Evaluator --> WinnerCard[Winning Variant & Recommendation Summary]
+    WinnerCard --> HumanAction[Human Governance Actions]
+    
+    HumanAction --> SaveExp[Save to ab_test_experiments & ab_test_variants]
+    HumanAction --> DraftCampaign[Convert Winner to campaign_dispatches Draft]
+    HumanAction --> ApplyEvent[Apply Response to event_history (Approved)]
+```
+

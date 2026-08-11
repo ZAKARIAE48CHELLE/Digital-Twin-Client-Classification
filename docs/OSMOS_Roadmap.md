@@ -82,6 +82,11 @@ timeline
 - Developed LLM-assisted Journey Planner proposing candidate scenarios validated deterministically before execution.
 - Added real-time database concurrency stress testing and connection pool monitoring.
 
+### Phase 8.8 — A/B Test & Digital Twin Response Simulator
+- Developed the `ab_testing/` module allowing administrators to formulate A/B testing questions and generate campaign variants manually or via button-triggered local LLMs.
+- Implemented deterministic 14-rule variant validator, Digital Twin behavioral response simulator, multi-variant score ranking ($0-100$), and academic decision recommendation synthesis.
+- Added human governance controls: saving experiment records in PostgreSQL (`ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`), converting winning variants to simulated campaign drafts, and applying simulated response events.
+
 ---
 
 ## Future Horizon

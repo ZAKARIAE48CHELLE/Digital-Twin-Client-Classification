@@ -53,3 +53,17 @@ The **LLM Journey Planner** (`journey/llm_journey_planner.py`) enables administr
    - Payload must contain zero PII or unknown event fields.
 4. **Quality Scoring**: Evaluated plans receive a quality score ($0 - 100$) and quality label (`Excellent`, `Acceptable`, `Weak`, `Invalid`).
 5. **Admin Approval & Execution**: Valid plans are rendered as visual cards for administrator review. Upon approval, the deterministic `JourneyRunner` applies events and writes `event_history` records to PostgreSQL.
+
+---
+
+## 3. LLM-Assisted A/B Test Variant Generator
+
+The **A/B Test Variant Generator** (`ab_testing/ab_test_variant_generator.py`) enables administrators to generate marketing campaign variants to answer specific business questions.
+
+### Governance Rules:
+- **Button-Triggered Execution**: Triggered solely when an administrator clicks "🤖 Generate A/B Variants with LLM".
+- **Zero Direct Database Write**: The LLM returns structured candidate variant JSON only; zero DB writes occur during generation.
+- **Deterministic 14-Rule Validator**: Candidate variants are validated by `validate_ab_variants()` (max discount 30%, low CLV protection, frustrated client service recovery option mandate, no PII, no real dispatch claims).
+- **Digital Twin Simulation**: Validated variants are simulated deterministically by the Digital Twin Response Simulator (`digital_twin_response_simulator.py`) to compute predicted open, click, conversion, complaint probabilities, churn reduction, CLV lift, and composite response score ($0-100$).
+- **Human Approval & Campaign Conversion**: Converting winning variants into simulated campaign drafts or applying response events requires explicit administrator button confirmation.
+

@@ -2871,6 +2871,7 @@ def main():
         "Digital Twin & Persona": ":material/account_tree:",
         "Campaign Simulation": ":material/campaign:",
         "Journey Simulator": ":material/route:",
+        "A/B Test Simulator": ":material/science:",
         "Agent Supervision Center": ":material/smart_toy:",
         "Knowledge Base": ":material/book:",
         "Simulate Event": ":material/bolt:",
@@ -4789,6 +4790,10 @@ def main():
     elif page == "Journey Simulator":
         from journey.journey_dashboard import render_journey_dashboard
         render_journey_dashboard(df_data, df_history)
+
+    elif page == "A/B Test Simulator":
+        from ab_testing.ab_test_dashboard import render_ab_test_dashboard
+        render_ab_test_dashboard(df_data, df_history)
 
     elif page == "Agent Supervision Center":
         from agents.agent_dashboard import render_agent_dashboard

@@ -86,7 +86,30 @@ class CampaignAgent(BaseAgent):
             ).to_dict()
         )
 
-        observations.append(f"Recorded {dispatch_count} dispatches and {response_count} customer responses.")
+        # A/B Experiment Intelligence Check
+        try:
+            from ab_testing.ab_test_repository import get_latest_ab_experiment_for_entity
+            latest_ab_exp = get_latest_ab_experiment_for_entity(context.entity_id)
+        except Exception:
+            latest_ab_exp = None
+
+        if latest_ab_exp:
+            win_label = latest_ab_exp.get("winning_label", "A")
+            win_title = latest_ab_exp.get("winning_title", "Simulated Variant")
+            observations.append(
+                f"A/B Experiment #{latest_ab_exp['experiment_id']} ('{latest_ab_exp['experiment_name']}') exists. Winning variant: Variant {win_label} ('{win_title}')."
+            )
+            evidence.append(
+                EvidenceItem(
+                    metric_name="latest_ab_experiment",
+                    value=latest_ab_exp["experiment_id"],
+                    threshold="Evaluated A/B Winner",
+                    interpretation=f"A/B Winner Variant {win_label} is available for campaign draft conversion.",
+                ).to_dict()
+            )
+            if churn_risk >= 0.65 and dispatch_count == 0:
+                opportunities.append(f"A/B Experiment #{latest_ab_exp['experiment_id']} winning variant ({win_label}) can be converted into an immediate retention campaign draft.")
+                recommendations.append(f"Convert A/B Experiment #{latest_ab_exp['experiment_id']} winning variant ({win_label}: {win_title}) to a campaign draft for critical churn recovery.")
 
         status = "OK"
 

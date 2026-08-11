@@ -51,4 +51,6 @@ flowchart TD
 13. **Review Conflicts & Consensus**: Examine the cross-agent statement comparison, domain-aware conflict detector findings, and synthesized consensus status (`Partial Consensus` or `Strong Consensus`).
 14. **Create Approval Items**: Scroll to the **Human Approval Queue** action generator and click **"Submit Action to Approval Queue"**.
 15. **Open Campaign Simulation**: Navigate to **Campaign Simulation**, select the generated service recovery draft, and execute a simulated dispatch.
-16. **Generate Executive Report**: Navigate to **Executive Report Generator**, select `P_DEMO_001`, and click **"Generate Report"**. Export as HTML or PDF.
+16. **A/B Test & Response Simulation**: Navigate to **A/B Test Simulator**, formulate a question (*"Should we use a discount or a service recovery apology?"*), click **"🤖 Generate A/B Variants with LLM"**, run **"🔬 Run Digital Twin Response Simulation"**, and convert the winning variant to a campaign draft.
+17. **Generate Executive Report**: Navigate to **Executive Report Generator**, select `P_DEMO_001`, and click **"Generate Report"**. Export as HTML or PDF.
+
