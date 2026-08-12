@@ -3,8 +3,8 @@ OSMOS A/B Test Variant Generator & LLM Scientist Integration (Phase 8.8)
 ===========================================================================
 Generates candidate A/B testing campaign variants using local LLM inference or
 deterministic domain rule fallbacks. Strictly enforces prompt boundaries,
-schema validation, character max limits, human-in-the-loop governance,
-and records candidate LLM outputs to 'candidate_llm_output.log' in ab_testing/.
+schema validation, character max limits, semantic governance rules, and
+records candidate LLM outputs to 'candidate_llm_output.log' in ab_testing/.
 """
 
 import os
@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Tuple
 from ab_testing.ab_test_schemas import ABVariant
 import ab_testing.ab_test_validator as ab_val
 from llm.llm_client import generate_text, check_llm_available
-from llm.json_utils import repair_and_parse_json, extract_and_parse_json_array
+from llm.json_utils import repair_and_parse_json, extract_and_parse_json_array, is_json_truncated
 
 logger = logging.getLogger("OSMOS_AB_VARIANT_GEN")
 
@@ -27,7 +27,8 @@ def _log_candidate_llm_output(
     entity_id: str,
     status_code: str,
     raw_output: str,
-    extracted_variants: List[ABVariant] = None
+    extracted_variants: List[ABVariant] = None,
+    failure_reason: str = None
 ) -> None:
     """
     Appends candidate LLM outputs to 'candidate_llm_output.log' inside the ab_testing directory.
@@ -42,10 +43,14 @@ def _log_candidate_llm_output(
             f"OBJECTIVE       : {objective}",
             f"QUESTION        : {admin_question}",
             f"STATUS CODE     : {status_code}",
+        ]
+        if failure_reason:
+            entry.append(f"REASON          : {failure_reason}")
+        entry.extend([
             f"-" * 80,
             f"RAW LLM OUTPUT  :\n{raw_output}",
             f"-" * 80
-        ]
+        ])
         if extracted_variants:
             entry.append("EXTRACTED CANDIDATE VARIANTS:")
             for v in extracted_variants:
@@ -215,6 +220,66 @@ def _build_fallback_variants(
     return [var_a, var_b, var_c]
 
 
+def _validate_semantic_rules(
+    variants: List[ABVariant],
+    objective: str,
+    entity_profile: Dict[str, Any]
+) -> Tuple[bool, str]:
+    """
+    Validates candidate variants against semantic domain governance rules:
+    - Rule 1 (CLV Guardrail): If CLV <= 0, block 'high CLV', 'top CLV', 'valuable CLV', 'high value client'.
+    - Rule 2 (Frustrated/Complaint): For Complaint-Driven Risk Clients or Frustrated Client, prefer service_recovery (at least one).
+    - Rule 3 (Safety/Scary Wording): Block scary wording ('account suspended', 'account blocked', 'terminated', 'legal action', 'permanently deleted').
+    - Rule 4 (VIP Guardrail): Block VIP wording ('vip loyali', 'exclusive vip perk', 'vip concierge') if persona is not Premium Loyalist or segment is not Silent VIP at Risk / Premium.
+    - Rule 5 (Retention Objective): For retention objective, require at least one service_recovery variant.
+    """
+    clv_amount = float(entity_profile.get("predicted_clv_amount_mad", 0.0))
+    segment = str(entity_profile.get("customer_segment", "")).lower()
+    persona = str(entity_profile.get("customer_persona", "")).lower()
+    obj_lower = objective.lower()
+
+    # Rule 3: Scary Wording check
+    scary_words = ["account suspended", "account blocked", "terminated", "legal action", "permanently deleted", "account closed"]
+    for v in variants:
+        combined_text = f"{v.variant_title} {v.message_text} {v.call_to_action}".lower()
+        for w in scary_words:
+            if w in combined_text:
+                return (False, f"Scary wording detected: '{w}'")
+
+    # Rule 1: CLV Guardrail
+    if clv_amount <= 0:
+        clv_words = ["high clv", "top clv", "valuable clv", "high value client", "high value customer"]
+        for v in variants:
+            combined_text = f"{v.variant_title} {v.message_text}".lower()
+            for w in clv_words:
+                if w in combined_text:
+                    return (False, f"Blocked high-CLV wording for zero/negative CLV: '{w}'")
+
+    # Rule 2: Frustrated / Complaint-Driven Risk Client
+    if "frustrated" in persona or "complaint" in segment:
+        has_service_rec = any(v.offer_type == "service_recovery" for v in variants)
+        if not has_service_rec:
+            return (False, "Frustrated/Complaint profile requires at least one service_recovery variant")
+
+    # Rule 4: VIP Wording Guardrail
+    is_vip_profile = "vip" in persona or "loyalist" in persona or "vip" in segment or "premium" in segment
+    if not is_vip_profile:
+        vip_words = ["vip loyali", "exclusive vip perk", "vip concierge", "vip tier", "vip member"]
+        for v in variants:
+            combined_text = f"{v.variant_title} {v.message_text}".lower()
+            for w in vip_words:
+                if w in combined_text:
+                    return (False, f"VIP wording used for non-VIP customer: '{w}'")
+
+    # Rule 5: Retention Objective
+    if obj_lower == "retention":
+        has_service_rec = any(v.offer_type == "service_recovery" for v in variants)
+        if not has_service_rec:
+            return (False, "Retention objective requires at least one service_recovery variant")
+
+    return (True, "OK")
+
+
 def generate_llm_ab_variants(
     admin_question: str,
     objective: str,
@@ -224,7 +289,8 @@ def generate_llm_ab_variants(
 ) -> Tuple[List[ABVariant], str, str]:
     """
     Button-triggered LLM generator producing structured A/B campaign variants as a JSON object containing a "variants" list.
-    Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success', 'timeout', or 'invalid_json'.
+    Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success_valid', 'partial_json',
+    'invalid_json', 'empty_variants', 'incomplete_variant_count', 'semantic_validation_failed', or 'timeout'.
     Logs candidate LLM output to 'ab_testing/candidate_llm_output.log'.
     """
     entity_id = entity_profile.get("entity_id", "P_DEMO_001")
@@ -240,7 +306,7 @@ def generate_llm_ab_variants(
     if not avail:
         logger.info("Local LLM offline or unconfigured. Using deterministic fallback variant generator.")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-        _log_candidate_llm_output(admin_question, objective, entity_id, "offline_fallback", "LLM Offline / Unconfigured")
+        _log_candidate_llm_output(admin_question, objective, entity_id, "fallback_used", "LLM Offline / Unconfigured")
         return (variants[:num_variants], default_exp_name, "timeout")
 
     # Prompt requesting a JSON object with a "variants" array
@@ -277,7 +343,14 @@ Required Output Schema:
             _log_candidate_llm_output(admin_question, objective, entity_id, "timeout", "__TIMEOUT__")
             return (variants[:num_variants], default_exp_name, "timeout")
 
-        # Flexible Parser: Accepts JSON object containing "variants" or raw list
+        # 1. Check for Truncated JSON
+        if is_json_truncated(raw_output):
+            logger.warning("LLM output is truncated or incomplete. Using fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "partial_json", raw_output, failure_reason="Output truncated or unclosed brackets/quotes")
+            return (variants[:num_variants], default_exp_name, "partial_json")
+
+        # 2. Parse JSON Payload
         parsed_payload = repair_and_parse_json(raw_output)
 
         raw_array = []
@@ -297,16 +370,40 @@ Required Output Schema:
                 logger.info(f"[DEBUG_LLM] Payload Keys Found: {list(parsed_payload.keys())}")
             logger.info(f"[DEBUG_LLM] Variants Extracted Count: {len(raw_array)}")
 
+        # 3. Check for Empty Variants List
         if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
-            logger.warning("LLM output is incomplete or invalid variants payload. Using fallback generator.")
+            logger.warning("LLM output contains empty variants list. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output)
-            return (variants[:num_variants], default_exp_name, "invalid_json")
+            _log_candidate_llm_output(admin_question, objective, entity_id, "empty_variants", raw_output, failure_reason="Variants array was empty")
+            return (variants[:num_variants], default_exp_name, "empty_variants")
 
-        variants = []
+        # 4. Check for Incomplete Variant Count
+        if len(raw_array) < num_variants:
+            logger.warning(f"LLM output returned {len(raw_array)} variants, but {num_variants} requested. Using fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "incomplete_variant_count", raw_output, failure_reason=f"Returned {len(raw_array)} < requested {num_variants}")
+            return (variants[:num_variants], default_exp_name, "incomplete_variant_count")
+
+        # 5. Extract and Strict Required Field Check
+        candidate_variants = []
         labels = ["A", "B", "C"]
+        required_fields = ["variant_label", "variant_title", "message_text", "offer_type", "channel", "tone", "call_to_action"]
+
         for idx, rvar in enumerate(raw_array[:num_variants]):
-            lbl = rvar.get("variant_label", labels[idx if idx < len(labels) else 0])
+            if not isinstance(rvar, dict):
+                logger.warning("LLM variant item is not a dict. Using fallback generator.")
+                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+                _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output, failure_reason="Variant item not dict")
+                return (variants[:num_variants], default_exp_name, "invalid_json")
+
+            missing = [f for f in required_fields if not str(rvar.get(f, "")).strip()]
+            if missing:
+                logger.warning(f"LLM variant item missing required fields: {missing}. Using fallback generator.")
+                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+                _log_candidate_llm_output(admin_question, objective, entity_id, "partial_json", raw_output, failure_reason=f"Missing required fields: {missing}")
+                return (variants[:num_variants], default_exp_name, "partial_json")
+
+            lbl = str(rvar.get("variant_label", labels[idx if idx < len(labels) else 0])).strip()
             v_title = str(rvar.get("variant_title", "")).strip()[:60]
             v_msg = str(rvar.get("message_text", "")).strip()[:180]
             v_cta = str(rvar.get("call_to_action", "Click Here")).strip()[:40]
@@ -318,39 +415,40 @@ Required Output Schema:
             if v_tone not in ["commercial", "empathetic", "informational", "exclusive"]:
                 v_tone = "commercial"
 
-            if not v_title or not v_msg:
-                logger.warning("LLM variant item missing required title or message. Using fallback generator.")
-                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-                _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output)
-                return (variants[:num_variants], default_exp_name, "invalid_json")
+            try:
+                v_inc = float(rvar.get("incentive_value", 0.0))
+            except (ValueError, TypeError):
+                v_inc = 0.0
 
             var_obj = ABVariant(
                 variant_label=lbl,
                 variant_title=v_title,
                 message_text=v_msg,
                 offer_type=v_offer,
-                incentive_value=float(rvar.get("incentive_value", 0.0)),
+                incentive_value=v_inc,
                 channel=rvar.get("channel", channel),
                 tone=v_tone,
                 call_to_action=v_cta,
                 expected_behavior=str(rvar.get("expected_behavior", "Customer behavioral engagement")).strip()[:100]
             )
-            variants.append(var_obj)
+            candidate_variants.append(var_obj)
 
-        if len(variants) < num_variants:
-            fb_vars = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            for idx in range(len(variants), num_variants):
-                if idx < len(fb_vars):
-                    variants.append(fb_vars[idx])
+        # 6. Semantic Validation Check
+        is_valid_semantic, semantic_reason = _validate_semantic_rules(candidate_variants, objective, entity_profile)
+        if not is_valid_semantic:
+            logger.warning(f"LLM variants failed semantic validation: {semantic_reason}. Using fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "semantic_validation_failed", raw_output, extracted_variants=candidate_variants, failure_reason=semantic_reason)
+            return (variants[:num_variants], default_exp_name, "semantic_validation_failed")
 
-        exp_name = f"A/B ({objective.title()}): {variants[0].variant_title[:30]} vs {variants[1].variant_title[:30]}" if len(variants) >= 2 else default_exp_name
+        exp_name = f"A/B ({objective.title()}): {candidate_variants[0].variant_title[:30]} vs {candidate_variants[1].variant_title[:30]}" if len(candidate_variants) >= 2 else default_exp_name
         
         # Log successful candidate LLM output
-        _log_candidate_llm_output(admin_question, objective, entity_id, "llm_success", raw_output, variants[:num_variants])
+        _log_candidate_llm_output(admin_question, objective, entity_id, "llm_success_valid", raw_output, extracted_variants=candidate_variants)
 
-        return (variants[:num_variants], exp_name, "llm_success")
+        return (candidate_variants[:num_variants], exp_name, "llm_success_valid")
     except Exception as e:
         logger.error(f"Error during LLM variant generation: {e}")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-        _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json_exception", str(e))
+        _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", str(e), failure_reason=str(e))
         return (variants[:num_variants], default_exp_name, "invalid_json")

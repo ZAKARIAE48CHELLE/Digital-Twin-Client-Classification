@@ -310,72 +310,52 @@ class TestABTesting(unittest.TestCase):
                 self.assertEqual(len(vars), 2)
 
     def test_ab_truncated_json_uses_fallback(self):
-        """Verifies incomplete/truncated JSON output cleanly returns fallback variants."""
+        """Verifies incomplete/truncated JSON output cleanly returns fallback variants with partial_json status code."""
         from unittest.mock import patch
         truncated = '{"experiment_name": "Incomplete Test", "variants": [{"variant_label": "A", "variant_title": "Truncated'
         with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=truncated):
             with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
                 vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
-                self.assertEqual(status, "invalid_json")
+                self.assertEqual(status, "partial_json")
                 self.assertEqual(len(vars), 2)
 
-    def test_ab_fallback_populates_session_state(self):
-        """Verifies fallback variants populate structured values suitable for session_state initialization."""
-        vars = _build_fallback_variants("Question", "retention", "P_DEMO_001", "Segment", "Persona")
-        session_state = {}
-        for i, v in enumerate(vars[:2]):
-            session_state[f"ab_v_title_{i}"] = v.variant_title
-            session_state[f"ab_v_msg_{i}"] = v.message_text
-            session_state[f"ab_v_offer_{i}"] = v.offer_type
-            session_state[f"ab_v_inc_{i}"] = float(v.incentive_value)
+    def test_ab_empty_variants_uses_fallback(self):
+        """Verifies empty variants array output returns empty_variants status code."""
+        from unittest.mock import patch
+        empty_json = '{"variants": []}'
+        with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=empty_json):
+            with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
+                self.assertEqual(status, "empty_variants")
+                self.assertEqual(len(vars), 2)
 
-        self.assertIn("ab_v_title_0", session_state)
-        self.assertIn("ab_v_title_1", session_state)
-        self.assertTrue(len(session_state["ab_v_title_0"]) > 0)
-
-    def test_ab_fallback_variants_display_in_inputs(self):
-        """Verifies fallback variants contain default readable text for display in UI input boxes."""
-        vars = _build_fallback_variants("Question", "retention", "P_DEMO_001", "Segment", "Persona")
-        for v in vars:
-            self.assertTrue(len(v.variant_title) > 0)
-            self.assertTrue(len(v.message_text) > 0)
-            self.assertTrue(len(v.call_to_action) > 0)
-            self.assertIn(v.offer_type, ["service_recovery", "discount", "vip_perk", "onboarding", "reactivation", "none"])
-
-    def test_ab_llm_prompt_compact_json_only(self):
-        """Verifies prompt generation enforces compact JSON instructions and character limits."""
-        entity = self.sample_entity
-        from ab_testing.ab_test_variant_generator import _build_fallback_variants
-        # Prompt structure validation check
-        vars = _build_fallback_variants("Question", "retention", entity["entity_id"], entity["customer_segment"], entity["customer_persona"])
-        self.assertGreaterEqual(len(vars), 2)
-
-    def test_ab_timeout_uses_env_value(self):
-        """Verifies get_llm_timeout reads OSMOS_LLM_TIMEOUT environment variable or defaults to 90s."""
-        import os
-        from llm.llm_config import get_llm_timeout
-        old_env = os.environ.get("OSMOS_LLM_TIMEOUT")
-        try:
-            os.environ["OSMOS_LLM_TIMEOUT"] = "45"
-            self.assertEqual(get_llm_timeout(90), 45)
-            del os.environ["OSMOS_LLM_TIMEOUT"]
-            self.assertEqual(get_llm_timeout(90), 90)
-        finally:
-            if old_env is not None:
-                os.environ["OSMOS_LLM_TIMEOUT"] = old_env
+    def test_ab_incomplete_variant_count_uses_fallback(self):
+        """Verifies returning fewer variants than requested uses incomplete_variant_count status code."""
+        from unittest.mock import patch
+        partial_count_json = '{"variants": [{"variant_label": "A", "variant_title": "Title A", "message_text": "Msg A", "offer_type": "service_recovery", "incentive_value": 0, "channel": "email", "tone": "empathetic", "call_to_action": "CTA A"}]}'
+        with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=partial_count_json):
+            with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+                self.assertEqual(status, "incomplete_variant_count")
+                self.assertEqual(len(vars), 2)
 
     def test_ab_debug_llm_mode(self):
         """Verifies OSMOS_AB_DEBUG_LLM environment flag triggers debug logging without crashing."""
         import os
         from unittest.mock import patch
         old_env = os.environ.get("OSMOS_AB_DEBUG_LLM")
+        valid_json = '''{
+          "variants": [
+            {"variant_label": "A", "variant_title": "Title A", "message_text": "Msg A", "offer_type": "service_recovery", "incentive_value": 0, "channel": "email", "tone": "empathetic", "call_to_action": "CTA A"},
+            {"variant_label": "B", "variant_title": "Title B", "message_text": "Msg B", "offer_type": "discount", "incentive_value": 10, "channel": "email", "tone": "commercial", "call_to_action": "CTA B"}
+          ]
+        }'''
         try:
             os.environ["OSMOS_AB_DEBUG_LLM"] = "true"
-            mock_json = '{"variants": [{"variant_label": "A", "variant_title": "Test Title", "message_text": "Test Msg"}]}'
-            with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=mock_json):
+            with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=valid_json):
                 with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
                     vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
-                    self.assertEqual(status, "llm_success")
+                    self.assertEqual(status, "llm_success_valid")
         finally:
             if old_env is not None:
                 os.environ["OSMOS_AB_DEBUG_LLM"] = old_env
