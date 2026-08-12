@@ -92,14 +92,12 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             objective = st.selectbox(
                 "Strategic Objective:",
                 ["retention", "conversion", "upsell", "reactivation", "complaint_recovery", "engagement"],
-                index=0,
                 key="ab_objective"
             )
         with col_opt2:
             channel = st.selectbox(
                 "Target Channel:",
                 ["email", "sms", "phone", "web_notification", "simulated_only"],
-                index=0,
                 key="ab_channel"
             )
         with col_opt3:
@@ -203,15 +201,16 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
 
             c1, c2 = st.columns(2)
             with c1:
-                curr_offer = st.session_state.get(f"ab_v_offer_{idx}", stored_v.offer_type if stored_v else "none")
-                offer_idx = ab_val.ALLOWED_OFFER_TYPES.index(curr_offer) if curr_offer in ab_val.ALLOWED_OFFER_TYPES else 0
+                if f"ab_v_offer_{idx}" not in st.session_state or st.session_state[f"ab_v_offer_{idx}"] not in ab_val.ALLOWED_OFFER_TYPES:
+                    st.session_state[f"ab_v_offer_{idx}"] = stored_v.offer_type if stored_v else "none"
                 v_offer = st.selectbox(
                     f"Offer Type ({lbl}):",
                     ab_val.ALLOWED_OFFER_TYPES,
-                    index=offer_idx,
                     key=f"ab_v_offer_{idx}"
                 )
             with c2:
+                if f"ab_v_inc_{idx}" not in st.session_state:
+                    st.session_state[f"ab_v_inc_{idx}"] = float(stored_v.incentive_value) if stored_v else 0.0
                 v_inc = st.number_input(
                     f"Incentive Value ({lbl}):",
                     min_value=0.0,
@@ -222,12 +221,11 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             c3, c4 = st.columns(2)
             tone_options = ["commercial", "empathetic", "informational", "exclusive"]
             with c3:
-                curr_tone = st.session_state.get(f"ab_v_tone_{idx}", stored_v.tone if stored_v else "commercial")
-                tone_idx = tone_options.index(curr_tone) if curr_tone in tone_options else 0
+                if f"ab_v_tone_{idx}" not in st.session_state or st.session_state[f"ab_v_tone_{idx}"] not in tone_options:
+                    st.session_state[f"ab_v_tone_{idx}"] = stored_v.tone if stored_v else "commercial"
                 v_tone = st.selectbox(
                     f"Tone ({lbl}):",
                     tone_options,
-                    index=tone_idx,
                     key=f"ab_v_tone_{idx}"
                 )
             with c4:
