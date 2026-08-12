@@ -73,7 +73,11 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             "Which upsell proposal is safest for this VIP client?"
         ]
 
-        preset_choice = st.selectbox("Select Preset Question Example (or write custom):", ["Custom Question..."] + preset_questions, key="ab_preset_choice")
+        preset_choice = st.selectbox(
+            "Select Preset Question Example (or write custom):",
+            ["Custom Question..."] + preset_questions,
+            key="ab_preset_choice"
+        )
         default_q_text = preset_choice if preset_choice != "Custom Question..." else "Should we use a discount or a service recovery apology?"
 
         admin_question = st.text_area(
@@ -99,7 +103,12 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
                 key="ab_channel"
             )
         with col_opt3:
-            num_vars = st.radio("Number of Variants:", ["A/B (2 Variants)", "A/B/C (3 Variants)"], horizontal=True, key="ab_num_vars")
+            num_vars = st.radio(
+                "Number of Variants:",
+                ["A/B (2 Variants)", "A/B/C (3 Variants)"],
+                horizontal=True,
+                key="ab_num_vars"
+            )
             variant_count = 3 if "3" in num_vars else 2
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
@@ -109,77 +118,144 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
     # --------------------------------------------------------
     st.markdown(section_header_html("2. Campaign Variant Definition", "Campaign"), unsafe_allow_html=True)
 
-    col_gen, col_spacer = st.columns([3, 7])
+    col_gen, col_info = st.columns([3.5, 6.5])
     with col_gen:
         gen_llm_btn = st.button("🤖 Generate A/B Variants with LLM", width="stretch", type="secondary", key="btn_gen_ab_llm")
 
+    # Initialize experiment name if missing
+    if "ab_test_experiment_name" not in st.session_state:
+        st.session_state["ab_test_experiment_name"] = f"A/B Test ({objective.title()}): {selected_entity_id}"
+    if "ab_test_is_llm_generated" not in st.session_state:
+        st.session_state["ab_test_is_llm_generated"] = False
+
+    # Handle LLM Variant Generation Button Click
     if gen_llm_btn:
         with st.spinner("Generating candidate campaign variants via Local LLM..."):
             gen_vars, exp_name, is_llm = variant_gen.generate_llm_ab_variants(
                 admin_question, objective, ent_row, channel=channel, num_variants=variant_count
             )
-            st.session_state["ab_current_variants"] = gen_vars
-            st.session_state["ab_exp_name"] = exp_name
-            st.session_state["ab_is_llm_generated"] = is_llm
-            st.success(f"Generated {len(gen_vars)} candidate variants successfully!")
+            st.session_state["ab_test_variants"] = gen_vars
+            st.session_state["ab_test_experiment_name"] = exp_name
+            st.session_state["ab_test_is_llm_generated"] = is_llm
 
-    # Default Variants state initialization
-    if "ab_current_variants" not in st.session_state:
-        st.session_state["ab_current_variants"] = variant_gen._build_fallback_variants(
+            # Update widget session_state keys for instant UI input reflection
+            for i, v in enumerate(gen_vars):
+                st.session_state[f"ab_v_title_{i}"] = v.variant_title
+                st.session_state[f"ab_v_msg_{i}"] = v.message_text
+                st.session_state[f"ab_v_offer_{i}"] = v.offer_type
+                st.session_state[f"ab_v_inc_{i}"] = float(v.incentive_value)
+                st.session_state[f"ab_v_tone_{i}"] = v.tone
+                st.session_state[f"ab_v_cta_{i}"] = v.call_to_action
+
+            if is_llm:
+                st.success("LLM variants generated and loaded into editable fields.")
+            else:
+                st.info("LLM generation failed or unavailable. Default variants loaded. You can still define variants manually.")
+
+    # Initialize or Adjust Session State Variants matching requested variant_count
+    current_stored = st.session_state.get("ab_test_variants", [])
+    if not current_stored or len(current_stored) != variant_count:
+        fallback_list = variant_gen._build_fallback_variants(
             admin_question, objective, selected_entity_id,
             ent_row.get("customer_segment", "Standard Active Clients"),
             ent_row.get("customer_persona", "Regular Buyer"),
             channel=channel
         )[:variant_count]
-        st.session_state["ab_exp_name"] = f"A/B Test ({objective.title()}): {selected_entity_id}"
-        st.session_state["ab_is_llm_generated"] = False
+        st.session_state["ab_test_variants"] = fallback_list
 
-    curr_vars = st.session_state["ab_current_variants"]
+        for i, v in enumerate(fallback_list):
+            if f"ab_v_title_{i}" not in st.session_state:
+                st.session_state[f"ab_v_title_{i}"] = v.variant_title
+            if f"ab_v_msg_{i}" not in st.session_state:
+                st.session_state[f"ab_v_msg_{i}"] = v.message_text
+            if f"ab_v_offer_{i}" not in st.session_state:
+                st.session_state[f"ab_v_offer_{i}"] = v.offer_type
+            if f"ab_v_inc_{i}" not in st.session_state:
+                st.session_state[f"ab_v_inc_{i}"] = float(v.incentive_value)
+            if f"ab_v_tone_{i}" not in st.session_state:
+                st.session_state[f"ab_v_tone_{i}"] = v.tone
+            if f"ab_v_cta_{i}" not in st.session_state:
+                st.session_state[f"ab_v_cta_{i}"] = v.call_to_action
 
-    # Manual Variant Form Editors
-    var_cols = st.columns(len(curr_vars))
+    # Render Editable Variant Input Fields (Dynamic Count: 2 or 3)
+    variant_labels = ["A", "B", "C"][:variant_count]
+    var_cols = st.columns(variant_count)
     edited_variants: List[ABVariant] = []
 
-    for idx, var in enumerate(curr_vars):
+    for idx, lbl in enumerate(variant_labels):
+        stored_v = st.session_state["ab_test_variants"][idx] if idx < len(st.session_state["ab_test_variants"]) else None
+
         with var_cols[idx]:
-            st.markdown(f"**Variant {var.variant_label} Configuration**")
-            v_title = st.text_input(f"Variant {var.variant_label} Title:", value=var.variant_title, key=f"ab_v_title_{idx}")
-            v_msg = st.text_area(f"Variant {var.variant_label} Message Text:", value=var.message_text, height=100, key=f"ab_v_msg_{idx}")
-            
+            st.markdown(f"**Variant {lbl} Configuration**")
+
+            # Input Title
+            v_title = st.text_input(
+                f"Variant {lbl} Title:",
+                key=f"ab_v_title_{idx}"
+            )
+
+            # Input Message Text
+            v_msg = st.text_area(
+                f"Variant {lbl} Message Text:",
+                height=100,
+                key=f"ab_v_msg_{idx}"
+            )
+
             c1, c2 = st.columns(2)
             with c1:
+                curr_offer = st.session_state.get(f"ab_v_offer_{idx}", stored_v.offer_type if stored_v else "none")
+                offer_idx = ab_val.ALLOWED_OFFER_TYPES.index(curr_offer) if curr_offer in ab_val.ALLOWED_OFFER_TYPES else 0
                 v_offer = st.selectbox(
-                    f"Offer Type:",
+                    f"Offer Type ({lbl}):",
                     ab_val.ALLOWED_OFFER_TYPES,
-                    index=ab_val.ALLOWED_OFFER_TYPES.index(var.offer_type) if var.offer_type in ab_val.ALLOWED_OFFER_TYPES else 0,
+                    index=offer_idx,
                     key=f"ab_v_offer_{idx}"
                 )
             with c2:
-                v_inc = st.number_input(f"Incentive Value:", value=float(var.incentive_value), min_value=0.0, max_value=100.0, key=f"ab_v_inc_{idx}")
+                v_inc = st.number_input(
+                    f"Incentive Value ({lbl}):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    key=f"ab_v_inc_{idx}"
+                )
 
             c3, c4 = st.columns(2)
+            tone_options = ["commercial", "empathetic", "informational", "exclusive"]
             with c3:
-                v_tone = st.selectbox(f"Tone:", ["commercial", "empathetic", "informational", "exclusive"], key=f"ab_v_tone_{idx}")
+                curr_tone = st.session_state.get(f"ab_v_tone_{idx}", stored_v.tone if stored_v else "commercial")
+                tone_idx = tone_options.index(curr_tone) if curr_tone in tone_options else 0
+                v_tone = st.selectbox(
+                    f"Tone ({lbl}):",
+                    tone_options,
+                    index=tone_idx,
+                    key=f"ab_v_tone_{idx}"
+                )
             with c4:
-                v_cta = st.text_input(f"Call to Action:", value=var.call_to_action or "Click Here", key=f"ab_v_cta_{idx}")
+                v_cta = st.text_input(
+                    f"Call to Action ({lbl}):",
+                    key=f"ab_v_cta_{idx}"
+                )
 
             edited_var = ABVariant(
-                variant_label=var.variant_label,
-                variant_title=v_title,
-                message_text=v_msg,
+                variant_label=lbl,
+                variant_title=v_title or f"Strategy {lbl}",
+                message_text=v_msg or f"Variant {lbl} communication message.",
                 offer_type=v_offer,
-                incentive_value=v_inc,
+                incentive_value=float(v_inc),
                 channel=channel,
                 tone=v_tone,
-                call_to_action=v_cta,
-                expected_behavior=var.expected_behavior
+                call_to_action=v_cta or "Click Here",
+                expected_behavior=stored_v.expected_behavior if stored_v else "Customer engagement"
             )
             edited_variants.append(edited_var)
 
-    st.session_state["ab_current_variants"] = edited_variants
+    # Persist current edited variants into session state
+    st.session_state["ab_test_variants"] = edited_variants
 
     # Live Deterministic Validation Check
     val_check = ab_val.validate_ab_variants(edited_variants, ent_row, objective=objective)
+    st.session_state["ab_test_validation_status"] = val_check
+
     if val_check["errors"]:
         for err in val_check["errors"]:
             st.error(f"Validation Error: {err}")
@@ -202,16 +278,19 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
         if not val_check["is_valid"]:
             st.error("Cannot run simulation while validation errors exist. Please fix errors above.")
         else:
-            with st.spinner("Simulating Digital Twin behavioral responses..."):
+            with st.spinner("Simulating Digital Twin behavioral responses across all variants..."):
+                experiment_name = st.session_state.get(
+                    "ab_test_experiment_name", f"A/B Test ({objective.title()}): {selected_entity_id}"
+                )
                 experiment_obj = ABExperiment(
                     entity_id=selected_entity_id,
-                    experiment_name=st.session_state.get("ab_exp_name", f"A/B Test ({objective.title()}): {selected_entity_id}"),
+                    experiment_name=experiment_name,
                     admin_question=admin_question,
                     objective=objective,
                     target_segment=ent_row.get("customer_segment"),
                     target_persona=ent_row.get("customer_persona"),
                     status="Simulated",
-                    llm_generated=st.session_state.get("ab_is_llm_generated", False)
+                    llm_generated=st.session_state.get("ab_test_is_llm_generated", False)
                 )
 
                 eval_result = ab_eval.evaluate_ab_experiment(experiment_obj, edited_variants, ent_row)
@@ -250,7 +329,7 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             v_match = next((v for v in res.variants if v.variant_label == r.variant_label), None)
             comp_data.append({
                 "Variant": f"Variant {r.variant_label}",
-                "Title": v_match.variant_title if v_match else r.variant_label,
+                "Title": v_match.variant_title if v_match else f"Variant {r.variant_label}",
                 "Response Score": r.response_score,
                 "Simulated Outcome": r.simulated_response_type,
                 "Open %": f"{r.predicted_open_probability*100:.1f}%",
@@ -282,11 +361,10 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             if st.button("💾 Save A/B Experiment Records", width="stretch", key="btn_save_ab_exp"):
                 saved_id = ab_repo.save_ab_experiment(res)
                 if saved_id:
-                    st.success(f"Saved Experiment #{saved_id} in PostgreSQL successfully!")
+                    st.success(f"Saved Experiment #{saved_id} ('{res.experiment.experiment_name}') in PostgreSQL successfully!")
 
         with act_col2:
             if st.button("📣 Convert Winner to Campaign Draft", width="stretch", key="btn_convert_ab_draft"):
-                # Save experiment first if needed
                 saved_id = ab_repo.save_ab_experiment(res)
                 if saved_id:
                     winning_var_id = next((v.variant_id for v in res.variants if v.variant_label == rec.winning_variant_label), None)

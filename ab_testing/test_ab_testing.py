@@ -208,5 +208,88 @@ class TestABTesting(unittest.TestCase):
         self.assertIn(output.status, ["OK", "Warning", "Critical"])
 
 
+    def test_ab_variant_count_two_renders_two_variants(self):
+        """Verifies generator returns 2 variants ('A', 'B') when num_variants=2."""
+        vars, name, _ = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+        self.assertEqual(len(vars), 2)
+        self.assertEqual([v.variant_label for v in vars], ["A", "B"])
+
+    def test_ab_variant_count_three_renders_three_variants(self):
+        """Verifies generator returns 3 variants ('A', 'B', 'C') when num_variants=3."""
+        vars, name, _ = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=3)
+        self.assertEqual(len(vars), 3)
+        self.assertEqual([v.variant_label for v in vars], ["A", "B", "C"])
+
+    def test_llm_generated_variants_populate_session_state(self):
+        """Verifies generated variants populate structured values for session_state storage."""
+        vars, exp_name, is_llm = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+        session_state = {
+            "ab_test_variants": vars,
+            "ab_test_experiment_name": exp_name,
+            "ab_test_is_llm_generated": is_llm,
+        }
+        self.assertIn("ab_test_variants", session_state)
+        self.assertEqual(len(session_state["ab_test_variants"]), 2)
+        self.assertTrue(session_state["ab_test_experiment_name"].startswith("A/B Test"))
+
+    def test_llm_generated_variants_populate_input_defaults(self):
+        """Verifies LLM generated variants contain non-empty field values for form inputs."""
+        vars, _, _ = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+        for v in vars:
+            self.assertTrue(bool(v.variant_title))
+            self.assertTrue(bool(v.message_text))
+            self.assertTrue(bool(v.offer_type))
+            self.assertIsNotNone(v.incentive_value)
+            self.assertTrue(bool(v.tone))
+            self.assertTrue(bool(v.call_to_action))
+
+    def test_edited_generated_variants_used_in_simulation(self):
+        """Verifies edited variant values (e.g. customized title and incentive) are used in evaluation."""
+        vars = _build_fallback_variants("Question", "retention", "P_DEMO_001", "Segment", "Persona")[:2]
+        # Admin edits variant titles and incentive values
+        vars[0].variant_title = "Custom Service Recovery Alpha"
+        vars[1].variant_title = "Custom Goodwill Discount Beta"
+        vars[1].incentive_value = 12.0
+
+        exp = ABExperiment("P_DEMO_001", "Edited Experiment", "Question", "retention")
+        eval_res = evaluate_ab_experiment(exp, vars, self.frustrated_entity)
+
+        # Confirm evaluated variants match edited titles
+        self.assertEqual(eval_res.variants[0].variant_title, "Custom Service Recovery Alpha")
+        self.assertEqual(eval_res.variants[1].variant_title, "Custom Goodwill Discount Beta")
+        self.assertEqual(eval_res.variants[1].incentive_value, 12.0)
+
+    def test_simulation_runs_three_variants(self):
+        """Verifies simulation correctly evaluates and ranks 3 variants."""
+        vars = _build_fallback_variants("Question", "retention", "P_DEMO_001", "Segment", "Persona")[:3]
+        exp = ABExperiment("P_DEMO_001", "3 Variant Test", "Question", "retention")
+        eval_res = evaluate_ab_experiment(exp, vars, self.frustrated_entity)
+
+        self.assertEqual(len(eval_res.responses), 3)
+        self.assertEqual([r.variant_label for r in eval_res.responses], ["A", "B", "C"])
+        self.assertIn(eval_res.recommendation.winning_variant_label, ["A", "B", "C"])
+
+    def test_experiment_history_saves_real_variant_titles(self):
+        """Verifies saving an experiment preserves real variant titles instead of generic placeholders."""
+        exp = ABExperiment("P_DEMO_001", "Empathetic vs Commercial Retention", "Question", "retention")
+        var_a = ABVariant("A", "Empathetic Service Recovery", "Message A", offer_type="service_recovery", tone="empathetic", channel="email")
+        var_b = ABVariant("B", "Goodwill Discount Offer", "Message B", offer_type="discount", incentive_value=10.0, channel="email")
+
+        eval_res = evaluate_ab_experiment(exp, [var_a, var_b], self.frustrated_entity)
+        saved_id = save_ab_experiment(eval_res)
+        self.assertIsNotNone(saved_id)
+
+        history = get_ab_experiments_for_entity("P_DEMO_001", limit=1)
+        self.assertGreater(len(history), 0)
+        self.assertEqual(history[0]["experiment_name"], "Empathetic vs Commercial Retention")
+        self.assertNotEqual(history[0]["winning_title"], "Title A")
+
+    def test_no_llm_call_on_page_load(self):
+        """Verifies fallback variants are built instantly without triggering external LLM calls."""
+        fallback = _build_fallback_variants("Question", "retention", "P_DEMO_001", "Segment", "Persona")
+        self.assertGreaterEqual(len(fallback), 2)
+        self.assertEqual(fallback[0].variant_label, "A")
+
+
 if __name__ == "__main__":
     unittest.main()

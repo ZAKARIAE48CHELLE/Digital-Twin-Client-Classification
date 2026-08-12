@@ -57,6 +57,17 @@ def _build_fallback_variants(
             call_to_action="Claim Goodwill Credit",
             expected_behavior="Encourages immediate purchase re-engagement."
         )
+        var_c = ABVariant(
+            variant_label="C",
+            variant_title="Dedicated Specialist Review Check-In",
+            message_text=f"Dear Valued Customer, an account specialist has been assigned to review your recent service history and ensure full resolution.",
+            offer_type="reactivation",
+            incentive_value=0.0,
+            channel=channel,
+            tone="informational",
+            call_to_action="Schedule Specialist Call",
+            expected_behavior="Provides direct human assurance and long-term trust restoration."
+        )
     elif "loyal" in pers_lower or "vip" in pers_lower or "premium" in seg_lower or obj_lower == "upsell":
         var_a = ABVariant(
             variant_label="A",
@@ -79,6 +90,17 @@ def _build_fallback_variants(
             tone="commercial",
             call_to_action="Use Member Reward",
             expected_behavior="Drives incremental basket size increase."
+        )
+        var_c = ABVariant(
+            variant_label="C",
+            variant_title="Private Masterclass & Early Access Pass",
+            message_text=f"Exclusive for VIP Members: Reserve your private early-access pass for upcoming product drops.",
+            offer_type="vip_perk",
+            incentive_value=0.0,
+            channel=channel,
+            tone="exclusive",
+            call_to_action="Reserve Pass",
+            expected_behavior="Elevates brand prestige and loyalty retention."
         )
     elif "prospect" in seg_lower or "explorer" in pers_lower or obj_lower == "conversion":
         var_a = ABVariant(
@@ -103,6 +125,17 @@ def _build_fallback_variants(
             call_to_action="Claim 15% Discount",
             expected_behavior="Accelerates prospect-to-client initial purchase conversion."
         )
+        var_c = ABVariant(
+            variant_label="C",
+            variant_title="Interactive Product Demo & Consultation",
+            message_text=f"Welcome! Request a 1-on-1 walkthrough with a product specialist tailored for your team.",
+            offer_type="onboarding",
+            incentive_value=0.0,
+            channel=channel,
+            tone="informational",
+            call_to_action="Book Demo",
+            expected_behavior="Drives deep engagement for high-intent prospects."
+        )
     else:  # Reactivation or General Engagement
         var_a = ABVariant(
             variant_label="A",
@@ -126,8 +159,19 @@ def _build_fallback_variants(
             call_to_action="Shop Now",
             expected_behavior="Stimulates dormant account activity."
         )
+        var_c = ABVariant(
+            variant_label="C",
+            variant_title="Account Summary & Feature Highlights",
+            message_text=f"See what you missed! Check your personalized account summary and recommendations.",
+            offer_type="reactivation",
+            incentive_value=0.0,
+            channel=channel,
+            tone="informational",
+            call_to_action="See Summary",
+            expected_behavior="Re-establishes brand presence with zero cost."
+        )
 
-    return [var_a, var_b]
+    return [var_a, var_b, var_c]
 
 
 def generate_llm_ab_variants(
@@ -248,10 +292,13 @@ REQUIRED STABLE JSON STRUCTURE:
             )
             variants.append(var_obj)
 
-        if len(variants) < 2:
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+        if len(variants) < num_variants:
+            fb_vars = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            for idx in range(len(variants), num_variants):
+                if idx < len(fb_vars):
+                    variants.append(fb_vars[idx])
 
-        return (variants, exp_name, True)
+        return (variants[:num_variants], exp_name, True)
     except Exception as e:
         logger.error(f"Error during LLM variant generation: {e}")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
