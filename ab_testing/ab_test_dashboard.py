@@ -148,9 +148,9 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             if status_code == "llm_success":
                 st.success("LLM variants generated successfully.")
             elif status_code == "timeout":
-                st.warning("LLM timed out. Deterministic fallback variants were generated.")
+                st.warning("LLM timed out. Deterministic fallback variants loaded.")
             else:
-                st.warning("LLM returned invalid JSON. Deterministic fallback variants were generated.")
+                st.warning("LLM output incomplete. Deterministic fallback variants loaded.")
 
     # Initialize or Adjust Session State Variants matching requested variant_count
     current_stored = st.session_state.get("ab_test_variants", [])

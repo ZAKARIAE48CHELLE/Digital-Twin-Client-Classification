@@ -21,6 +21,106 @@ def is_json_truncated(raw_text: str) -> bool:
     return False
 
 
+def extract_and_parse_json_array(text: str) -> list:
+    """
+    Extracts and parses a JSON array from a raw LLM output block.
+    Strips markdown code fences, replaces unquoted NULL/None, removes trailing commas,
+    extracts the JSON array substring from [ to ], and parses it safely.
+    Returns a list of dictionaries (or empty list if incomplete or invalid).
+    """
+    if not text or text == "__TIMEOUT__":
+        return []
+
+    s = text.strip()
+    
+    # Strip markdown code blocks
+    s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s*```$", "", s)
+    s = s.strip()
+
+    # Find start of JSON array [
+    idx_bracket = s.find("[")
+    if idx_bracket != -1:
+        s = s[idx_bracket:]
+    else:
+        idx_brace = s.find("{")
+        if idx_brace != -1:
+            s = "[" + s[idx_brace:] + "]"
+        else:
+            return []
+
+    # Replace unquoted NULL, Null, None with null
+    s = re.sub(r'(?<=[:,\s\[{])\b(NULL|Null|None)\b', 'null', s)
+
+    # Remove trailing commas before } or ]
+    s = re.sub(r',\s*([}\]])', r'\1', s)
+
+    # Attempt 1: Direct parse
+    try:
+        res = json.loads(s)
+        if isinstance(res, list):
+            return res
+        elif isinstance(res, dict) and "variants" in res and isinstance(res["variants"], list):
+            return res["variants"]
+    except Exception:
+        pass
+
+    # Attempt 2: Balance quotes, brackets, and braces if truncated
+    try:
+        cand = s
+        quotes = len(re.findall(r'(?<!\\)"', cand))
+        if quotes % 2 != 0:
+            cand += '"'
+
+        cand = re.sub(r',\s*$', '', cand.strip())
+        cand = re.sub(r',\s*([}\]])', r'\1', cand)
+
+        in_q = False
+        esc = False
+        open_braces = 0
+        open_brackets = 0
+
+        for ch in cand:
+            if ch == '"' and not esc:
+                in_q = not in_q
+            elif not in_q:
+                if ch == '{':
+                    open_braces += 1
+                elif ch == '}':
+                    open_braces = max(0, open_braces - 1)
+                elif ch == '[':
+                    open_brackets += 1
+                elif ch == ']':
+                    open_brackets = max(0, open_brackets - 1)
+            esc = (ch == '\\' and not esc)
+
+        repaired = cand + ('}' * open_braces) + (']' * open_brackets)
+        res = json.loads(repaired)
+        if isinstance(res, list):
+            return res
+    except Exception:
+        pass
+
+    # Attempt 3: Regex extraction of individual JSON objects inside array
+    try:
+        match_objs = re.findall(r'(\{\s*"variant_label"\s*:\s*"[^"]+".*?\})', s, re.DOTALL)
+        if match_objs:
+            parsed = []
+            for item_str in match_objs:
+                try:
+                    if not item_str.endswith("}"):
+                        item_str += "}"
+                    parsed.append(json.loads(item_str))
+                except Exception:
+                    pass
+            if parsed:
+                return parsed
+    except Exception:
+        pass
+
+    return []
+
+
 def repair_and_parse_json(text: str) -> dict:
     """
     Cleans markdown code fences, replaces NULL/None literals, removes trailing commas,
