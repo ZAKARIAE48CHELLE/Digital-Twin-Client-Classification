@@ -370,6 +370,60 @@ class TestABTesting(unittest.TestCase):
         _log_candidate_llm_output("Test Question", "retention", "P_TEST_001", "llm_success", '{"variants": []}')
         self.assertTrue(os.path.exists(CANDIDATE_LLM_LOG_PATH))
 
+    def test_ollama_generate_response_extraction(self):
+        """Verifies _extract_ollama_text parses /api/generate 'response' field."""
+        from llm.llm_client import _extract_ollama_text
+        payload = {"response": "  Generated text content  ", "done": True}
+        self.assertEqual(_extract_ollama_text(payload), "Generated text content")
+
+    def test_ollama_chat_response_extraction(self):
+        """Verifies _extract_ollama_text parses /api/chat 'message' -> 'content' field and fallback fields."""
+        from llm.llm_client import _extract_ollama_text
+        chat_payload = {"message": {"role": "assistant", "content": "Chat response text"}}
+        self.assertEqual(_extract_ollama_text(chat_payload), "Chat response text")
+
+        fallback_payload = {"content": "Fallback content text"}
+        self.assertEqual(_extract_ollama_text(fallback_payload), "Fallback content text")
+
+    def test_empty_llm_output_uses_fallback(self):
+        """Verifies returning an empty string uses fallback variants."""
+        from unittest.mock import patch
+        with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=""):
+            with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
+                self.assertEqual(len(vars), 2)
+                self.assertTrue(bool(vars[0].variant_title))
+
+    def test_empty_llm_output_status_code(self):
+        """Verifies empty LLM output specifically returns empty_llm_output status code."""
+        from unittest.mock import patch
+        with patch("ab_testing.ab_test_variant_generator.generate_text", return_value="   "):
+            with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
+                self.assertEqual(status, "empty_llm_output")
+
+    def test_debug_logs_full_ollama_response_keys(self):
+        """Verifies debug logging captures Ollama response keys when OSMOS_AB_DEBUG_LLM is enabled."""
+        import os
+        from unittest.mock import patch, MagicMock
+        old_env = os.environ.get("OSMOS_AB_DEBUG_LLM")
+        try:
+            os.environ["OSMOS_AB_DEBUG_LLM"] = "true"
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"response": '{"variants": []}', "done": True, "context": [1, 2, 3]}
+
+            with patch("requests.post", return_value=mock_resp):
+                with patch("llm.llm_client.check_llm_available", return_value=(True, "Connected")):
+                    from llm.llm_client import generate_text
+                    out = generate_text("Prompt", json_format=True)
+                    self.assertIn('"variants"', out)
+        finally:
+            if old_env is not None:
+                os.environ["OSMOS_AB_DEBUG_LLM"] = old_env
+            elif "OSMOS_AB_DEBUG_LLM" in os.environ:
+                del os.environ["OSMOS_AB_DEBUG_LLM"]
+
 
 if __name__ == "__main__":
     unittest.main()

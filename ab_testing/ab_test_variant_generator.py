@@ -341,7 +341,12 @@ Required Output Schema:
             logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             _log_candidate_llm_output(admin_question, objective, entity_id, "timeout", "__TIMEOUT__")
-            return (variants[:num_variants], default_exp_name, "timeout")
+        # 0. Check for Empty Output
+        if not raw_output or not raw_output.strip():
+            logger.warning("LLM returned empty output. Using deterministic fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "empty_llm_output", "<empty>", failure_reason="LLM returned empty output")
+            return (variants[:num_variants], default_exp_name, "empty_llm_output")
 
         # 1. Check for Truncated JSON
         if is_json_truncated(raw_output):

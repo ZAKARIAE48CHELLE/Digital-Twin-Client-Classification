@@ -147,6 +147,8 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
 
             if status_code == "llm_success_valid":
                 st.success("LLM variants generated successfully.")
+            elif status_code == "empty_llm_output":
+                st.warning("LLM returned empty output. Deterministic fallback variants were loaded.")
             else:
                 st.warning("LLM output was incomplete. Safe deterministic variants were loaded.")
 

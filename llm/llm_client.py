@@ -90,7 +90,22 @@ def check_llm_available():
         
     return _cached_availability, _cached_availability_reason
 
-def generate_text(prompt, temperature=0.2, max_tokens=700, timeout=None):
+def _extract_ollama_text(res_json: dict) -> str:
+    """Extract raw generated text from Ollama /api/generate, /api/chat, or standard JSON response."""
+    if not isinstance(res_json, dict):
+        return ""
+    # /api/generate endpoint
+    raw_text = res_json.get("response", "")
+    # /api/chat endpoint
+    if not raw_text and isinstance(res_json.get("message"), dict):
+        raw_text = res_json.get("message", {}).get("content", "")
+    # Fallback fields
+    if not raw_text:
+        raw_text = res_json.get("content", "") or res_json.get("text", "")
+    return str(raw_text).strip()
+
+
+def generate_text(prompt, temperature=0.0, max_tokens=900, timeout=None, json_format=True):
     """Generate raw text response from local LLM with bounded token generation and configurable timeout."""
     available, reason = check_llm_available()
     if not available:
@@ -111,14 +126,27 @@ def generate_text(prompt, temperature=0.2, max_tokens=700, timeout=None):
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
+                "num_ctx": 4096,
                 "top_p": 0.8,
                 "repeat_penalty": 1.05
             }
         }
+        if json_format:
+            payload["format"] = "json"
+
         try:
             resp = requests.post(url, json=payload, timeout=req_timeout)
             if resp.status_code == 200:
-                return resp.json().get("response", "").strip()
+                res_json = resp.json()
+                raw_text = _extract_ollama_text(res_json)
+
+                debug_mode = os.getenv("OSMOS_AB_DEBUG_LLM", "").lower() in ["true", "1"]
+                if debug_mode and isinstance(res_json, dict):
+                    logger.info(f"[DEBUG_LLM] Full Ollama Response JSON: {res_json}")
+                    logger.info(f"[DEBUG_LLM] Ollama Response Keys: {list(res_json.keys())}")
+                    logger.info(f"[DEBUG_LLM] Extracted Raw Text Length: {len(raw_text)}")
+
+                return raw_text
             else:
                 err_msg = f"Ollama HTTP error {resp.status_code}: {resp.text}"
                 logger.error(err_msg)
