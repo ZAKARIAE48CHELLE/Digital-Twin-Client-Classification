@@ -21,7 +21,7 @@ from reports.report_generator import (
 from reports.report_exporter import export_report_to_file, convert_markdown_to_html
 from agents.agent_repository import get_agent_runs, is_agent_db_available
 from llm.llm_client import generate_text, check_llm_available
-from llm.llm_json_utils import extract_and_parse_json
+from llm.json_utils import extract_and_parse_json
 from ui.icons import icon_html
 
 logger = logging.getLogger("OSMOS_REPORT_DASHBOARD")
