@@ -364,6 +364,24 @@ class TestABTesting(unittest.TestCase):
             if old_env is not None:
                 os.environ["OSMOS_LLM_TIMEOUT"] = old_env
 
+    def test_ab_debug_llm_mode(self):
+        """Verifies OSMOS_AB_DEBUG_LLM environment flag triggers debug logging without crashing."""
+        import os
+        from unittest.mock import patch
+        old_env = os.environ.get("OSMOS_AB_DEBUG_LLM")
+        try:
+            os.environ["OSMOS_AB_DEBUG_LLM"] = "true"
+            mock_json = '{"variants": [{"variant_label": "A", "variant_title": "Test Title", "message_text": "Test Msg"}]}'
+            with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=mock_json):
+                with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                    vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
+                    self.assertEqual(status, "llm_success")
+        finally:
+            if old_env is not None:
+                os.environ["OSMOS_AB_DEBUG_LLM"] = old_env
+            elif "OSMOS_AB_DEBUG_LLM" in os.environ:
+                del os.environ["OSMOS_AB_DEBUG_LLM"]
+
 
 if __name__ == "__main__":
     unittest.main()

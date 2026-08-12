@@ -6,12 +6,13 @@ deterministic domain rule fallbacks. Strictly enforces prompt boundaries,
 schema validation, character max limits, and human-in-the-loop governance.
 """
 
+import os
 import logging
 from typing import Dict, Any, List, Tuple
 from ab_testing.ab_test_schemas import ABVariant
 import ab_testing.ab_test_validator as ab_val
 from llm.llm_client import generate_text, check_llm_available
-from llm.json_utils import extract_and_parse_json_array, is_json_truncated
+from llm.json_utils import repair_and_parse_json, extract_and_parse_json_array
 
 logger = logging.getLogger("OSMOS_AB_VARIANT_GEN")
 
@@ -177,7 +178,7 @@ def generate_llm_ab_variants(
     num_variants: int = 2
 ) -> Tuple[List[ABVariant], str, str]:
     """
-    Button-triggered LLM generator producing structured A/B campaign variants as a raw JSON array.
+    Button-triggered LLM generator producing structured A/B campaign variants as a JSON object containing a "variants" list.
     Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success', 'timeout', or 'invalid_json'.
     """
     entity_id = entity_profile.get("entity_id", "P_DEMO_001")
@@ -195,26 +196,28 @@ def generate_llm_ab_variants(
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
         return (variants[:num_variants], default_exp_name, "timeout")
 
-    # Simplified Prompt asking strictly for a JSON array of variants
-    prompt = f"""Return ONLY a raw JSON array of exactly {num_variants} variant objects. No markdown, no explanation.
+    # Prompt requesting a JSON object with a "variants" array
+    prompt = f"""Return ONLY a raw JSON object containing a "variants" array of exactly {num_variants} variant objects. No markdown ```json, no extra text.
 
 Question: "{admin_question}"
 Objective: "{objective}", Channel: "{channel}"
 Customer: ID {entity_id}, Segment: {segment}, Persona: {persona}, ChurnRisk: {churn_risk:.2f}, CLV: {clv_amount:.0f} MAD
 
 Required Output Schema:
-[
-  {{
-    "variant_label": "A",
-    "variant_title": "Short Title (max 60 chars)",
-    "message_text": "Customer message (max 180 chars)",
-    "offer_type": "service_recovery | discount | vip_perk | onboarding | reactivation | none",
-    "incentive_value": 0,
-    "channel": "{channel}",
-    "tone": "empathetic | commercial | informational | exclusive",
-    "call_to_action": "CTA text (max 40 chars)"
-  }}
-]
+{{
+  "variants": [
+    {{
+      "variant_label": "A",
+      "variant_title": "Short Title (max 60 chars)",
+      "message_text": "Customer message (max 180 chars)",
+      "offer_type": "service_recovery | discount | vip_perk | onboarding | reactivation | none",
+      "incentive_value": 0,
+      "channel": "{channel}",
+      "tone": "empathetic | commercial | informational | exclusive",
+      "call_to_action": "CTA text (max 40 chars)"
+    }}
+  ]
+}}
 """
 
     num_predict = 750 if num_variants >= 3 else 500
@@ -226,11 +229,28 @@ Required Output Schema:
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             return (variants[:num_variants], default_exp_name, "timeout")
 
-        # Parse JSON array
-        raw_array = extract_and_parse_json_array(raw_output)
+        # Flexible Parser: Accepts JSON object containing "variants" or raw list
+        parsed_payload = repair_and_parse_json(raw_output)
+
+        raw_array = []
+        if isinstance(parsed_payload, dict) and "variants" in parsed_payload and isinstance(parsed_payload["variants"], list):
+            raw_array = parsed_payload["variants"]
+        elif isinstance(parsed_payload, list):
+            raw_array = parsed_payload
+        else:
+            raw_array = extract_and_parse_json_array(raw_output)
+
+        # Debug Mode Logging
+        debug_mode = os.getenv("OSMOS_AB_DEBUG_LLM", "").lower() in ["true", "1"]
+        if debug_mode:
+            logger.info(f"[DEBUG_LLM] Raw Output: {raw_output[:300]}")
+            logger.info(f"[DEBUG_LLM] Parsed Payload Type: {type(parsed_payload).__name__}")
+            if isinstance(parsed_payload, dict):
+                logger.info(f"[DEBUG_LLM] Payload Keys Found: {list(parsed_payload.keys())}")
+            logger.info(f"[DEBUG_LLM] Variants Extracted Count: {len(raw_array)}")
 
         if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
-            logger.warning("LLM output is incomplete or invalid JSON array. Using fallback generator.")
+            logger.warning("LLM output is incomplete or invalid variants payload. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             return (variants[:num_variants], default_exp_name, "invalid_json")
 
