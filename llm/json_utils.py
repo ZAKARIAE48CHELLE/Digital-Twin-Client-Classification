@@ -4,53 +4,72 @@ import logging
 
 logger = logging.getLogger("OSMOS_LLM_JSON_UTILS")
 
+def is_json_truncated(raw_text: str) -> bool:
+    """Detects if raw text appears to be truncated JSON."""
+    if not raw_text:
+        return True
+    s = raw_text.strip()
+    s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE).rstrip("`").strip()
+    if not s.startswith("{") and not s.startswith("["):
+        return True
+    if not (s.endswith("}") or s.endswith("]")):
+        return True
+    # Count quotes
+    quotes = len(re.findall(r'(?<!\\)"', s))
+    if quotes % 2 != 0:
+        return True
+    return False
+
+
 def repair_and_parse_json(text: str) -> dict:
     """
-    Attempts to repair incomplete, truncated, or unclosed JSON output from local LLMs.
-    Handles unclosed strings, trailing commas, missing closing brackets/braces,
-    and partial JSON code block formatting.
+    Cleans markdown code fences, replaces NULL/None literals, removes trailing commas,
+    extracts the first valid JSON object, and parses incomplete or truncated JSON.
     """
     if not text or text == "__TIMEOUT__":
         return {}
 
     s = text.strip()
     
-    # Strip markdown code blocks (even if unclosed)
+    # Strip markdown code blocks
     s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
     s = re.sub(r"\s*```$", "", s)
     
-    # Find start of JSON object or array
+    # Extract first { to end
     idx_brace = s.find("{")
-    idx_bracket = s.find("[")
-    
-    if idx_brace != -1 and (idx_bracket == -1 or idx_brace < idx_bracket):
+    if idx_brace != -1:
         s = s[idx_brace:]
-    elif idx_bracket != -1:
-        s = s[idx_bracket:]
-        
-    # Attempt 1: Direct standard parse
+    else:
+        return {}
+
+    # Replace unquoted NULL, Null, None with null
+    s = re.sub(r'(?<=[:,\s\[{])\b(NULL|Null|None)\b', 'null', s)
+
+    # Remove trailing commas before } or ]
+    s = re.sub(r',\s*([}\]])', r'\1', s)
+
+    # Attempt 1: Standard parse
     try:
         return json.loads(s)
     except Exception:
         pass
 
-    # Attempt 2: Quote & Brace balance repair
+    # Attempt 2: Auto-close quotes and balance braces/brackets
     try:
-        # Step A: Close open string literal if odd number of unescaped quotes
-        quotes = len(re.findall(r'(?<!\\)"', s))
+        cand = s
+        quotes = len(re.findall(r'(?<!\\)"', cand))
         if quotes % 2 != 0:
-            s = s + '"'
+            cand += '"'
 
-        # Step B: Strip trailing comma
-        s = re.sub(r",\s*$", "", s.strip())
+        cand = re.sub(r',\s*$', '', cand.strip())
+        cand = re.sub(r',\s*([}\]])', r'\1', cand)
 
-        # Step C: Count unclosed { and [ outside string quotes
         in_q = False
         esc = False
         open_braces = 0
         open_brackets = 0
-        
-        for ch in s:
+
+        for ch in cand:
             if ch == '"' and not esc:
                 in_q = not in_q
             elif not in_q:
@@ -64,12 +83,12 @@ def repair_and_parse_json(text: str) -> dict:
                     open_brackets = max(0, open_brackets - 1)
             esc = (ch == '\\' and not esc)
 
-        repaired = s + (']' * open_brackets) + ('}' * open_braces)
+        repaired = cand + (']' * open_brackets) + ('}' * open_braces)
         return json.loads(repaired)
     except Exception:
         pass
 
-    # Attempt 3: Regex extraction of completed objects inside array
+    # Attempt 3: Regex extraction of completed variant objects
     try:
         match_variants = re.findall(r'(\{\s*"variant_label"\s*:\s*"[^"]+".*?\})', s, re.DOTALL)
         if match_variants:

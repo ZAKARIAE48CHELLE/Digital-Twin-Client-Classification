@@ -1,22 +1,17 @@
 """
-OSMOS A/B Test Variant Generator (Phase 8.8)
-============================================
-Generates A/B testing campaign variants using local LLMs or rule-based fallbacks.
-
-Governance & Safety Rules:
-- Button-triggered only. Zero calls on page load or inside data fetch.
-- No direct database writes by LLM.
-- Proposes variant ideas only; does NOT dispatch campaigns.
-- No PII, no unrealistic promises, no aggressive manipulation.
-- Adheres to persona & CLV value constraints.
+OSMOS A/B Test Variant Generator & LLM Scientist Integration (Phase 8.8)
+===========================================================================
+Generates candidate A/B testing campaign variants using local LLM inference or
+deterministic domain rule fallbacks. Strictly enforces prompt boundaries,
+schema validation, and human-in-the-loop governance.
 """
 
-import json
 import logging
 from typing import Dict, Any, List, Tuple
-from llm.llm_client import generate_text, check_llm_available
-from llm.json_utils import extract_and_parse_json
 from ab_testing.ab_test_schemas import ABVariant
+import ab_testing.ab_test_validator as ab_val
+from llm.llm_client import generate_text, check_llm_available
+from llm.json_utils import repair_and_parse_json, is_json_truncated
 
 logger = logging.getLogger("OSMOS_AB_VARIANT_GEN")
 
@@ -180,18 +175,16 @@ def generate_llm_ab_variants(
     entity_profile: Dict[str, Any],
     channel: str = "email",
     num_variants: int = 2
-) -> Tuple[List[ABVariant], str, bool]:
+) -> Tuple[List[ABVariant], str, str]:
     """
     Button-triggered LLM generator producing structured A/B campaign variants.
-    Returns (variants_list, experiment_name, is_llm_generated).
+    Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success', 'timeout', or 'invalid_json'.
     """
     entity_id = entity_profile.get("entity_id", "P_DEMO_001")
     segment = entity_profile.get("customer_segment", "Standard Active Clients")
     persona = entity_profile.get("customer_persona", "Regular Buyer")
     churn_risk = float(entity_profile.get("churn_risk_score", 0.30))
     clv_amount = float(entity_profile.get("predicted_clv_amount_mad", 500.0))
-    rfm_score = float(entity_profile.get("rfm_score", 0.50))
-    dynamic_class = entity_profile.get("dynamic_class", "Active Client")
 
     # Check LLM availability
     avail, _ = check_llm_available()
@@ -199,78 +192,52 @@ def generate_llm_ab_variants(
         logger.info("Local LLM offline or unconfigured. Using deterministic fallback variant generator.")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
         exp_name = f"A/B Test ({objective.title()}): {entity_id}"
-        return (variants[:num_variants], exp_name, False)
+        return (variants[:num_variants], exp_name, "timeout")
 
-    prompt = f"""
-SYSTEM GOVERNANCE INSTRUCTIONS:
-You are an expert CRM Marketing Scientist for the OSMOS platform.
-Your task is to generate {num_variants} distinct marketing campaign/action variants ('A', 'B') to answer the administrator's business question.
+    prompt = f"""Generate exactly {num_variants} marketing campaign variants as raw JSON only. No markdown, no explanation.
 
-ADMINISTRATOR CONTEXT:
-- Business Question: "{admin_question}"
-- Objective: "{objective}"
-- Target Channel: "{channel}"
+Question: "{admin_question}"
+Objective: "{objective}", Channel: "{channel}"
+Customer: ID {entity_id}, Segment: {segment}, Persona: {persona}, ChurnRisk: {churn_risk:.2f}, CLV: {clv_amount:.0f} MAD
 
-CUSTOMER DIGITAL TWIN PROFILE:
-- Entity ID: {entity_id}
-- Dynamic Cohort Class: {dynamic_class}
-- Customer Segment: {segment}
-- Resolved Stable Persona: {persona}
-- Churn Risk Score: {churn_risk:.2f}
-- Predicted CLV Amount (MAD): {clv_amount:.2f}
-- RFM-ES Score: {rfm_score:.2f}
-
-STRATEGIC RULES:
-1. If Persona is 'Frustrated Client' or Segment is 'Complaint-Driven Risk Clients', generate at least ONE empathetic 'service_recovery' variant (0 incentive).
-2. If Persona is 'Premium Loyalist' or 'Silent VIP at Risk', allow 'vip_perk' or exclusive concierge offers.
-3. If Churn Risk is High (>= 0.60), do NOT generate aggressive upsell-only variants.
-4. Discounts must NOT exceed 25%. Low CLV customers must not receive expensive incentives (>15).
-5. Output ONLY a raw valid JSON object. No Markdown code block delimiters, no conversational text.
-
-REQUIRED STABLE JSON STRUCTURE:
+JSON Output Format:
 {{
-  "experiment_name": "A/B Experiment Title",
+  "experiment_name": "Short Title (max 80 chars)",
   "objective": "{objective}",
   "variants": [
     {{
       "variant_label": "A",
-      "variant_title": "Descriptive Title A",
-      "message_text": "Engaging customer communication message A...",
+      "variant_title": "Title (max 80 chars)",
+      "message_text": "Short message text (max 280 chars)",
       "offer_type": "discount | service_recovery | vip_perk | onboarding | reactivation | none",
-      "incentive_value": 15,
-      "channel": "{channel}",
-      "tone": "commercial | empathetic | informational | exclusive",
-      "call_to_action": "Clear action button text A",
-      "expected_behavior": "Predicted customer psychological reaction A"
-    }},
-    {{
-      "variant_label": "B",
-      "variant_title": "Descriptive Title B",
-      "message_text": "Engaging customer communication message B...",
-      "offer_type": "service_recovery | discount | vip_perk | onboarding | reactivation | none",
       "incentive_value": 0,
       "channel": "{channel}",
-      "tone": "empathetic | commercial | informational | exclusive",
-      "call_to_action": "Clear action button text B",
-      "expected_behavior": "Predicted customer psychological reaction B"
+      "tone": "commercial | empathetic | informational | exclusive",
+      "call_to_action": "CTA text (max 60 chars)",
+      "expected_behavior": "Reaction description (max 100 chars)"
     }}
   ]
 }}
 """
 
     try:
-        raw_output = generate_text(prompt, max_tokens=1500)
+        raw_output = generate_text(prompt, max_tokens=700)
         if raw_output == "__TIMEOUT__":
             logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", False)
+            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", "timeout")
 
-        parsed = extract_and_parse_json(raw_output)
+        if is_json_truncated(raw_output):
+            logger.warning("LLM output is truncated or incomplete. Using fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", "invalid_json")
 
-        if not parsed or "variants" not in parsed or not isinstance(parsed["variants"], list):
+        parsed = repair_and_parse_json(raw_output)
+
+        if not parsed or "variants" not in parsed or not isinstance(parsed["variants"], list) or len(parsed["variants"]) == 0:
             logger.warning("Failed to parse valid JSON from LLM output. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", False)
+            return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", "invalid_json")
 
         exp_name = parsed.get("experiment_name", f"A/B Test ({objective.title()}): {entity_id}")
         raw_vars = parsed["variants"]
@@ -279,16 +246,31 @@ REQUIRED STABLE JSON STRUCTURE:
         labels = ["A", "B", "C"]
         for idx, rvar in enumerate(raw_vars[:num_variants]):
             lbl = rvar.get("variant_label", labels[idx if idx < len(labels) else 0])
+            v_title = str(rvar.get("variant_title", "")).strip()[:80]
+            v_msg = str(rvar.get("message_text", "")).strip()[:280]
+            v_cta = str(rvar.get("call_to_action", "Click Here")).strip()[:60]
+            v_offer = str(rvar.get("offer_type", "none")).strip().lower()
+            if v_offer not in ab_val.ALLOWED_OFFER_TYPES:
+                v_offer = "none"
+            v_tone = str(rvar.get("tone", "commercial")).strip().lower()
+            if v_tone not in ["commercial", "empathetic", "informational", "exclusive"]:
+                v_tone = "commercial"
+
+            if not v_title or not v_msg:
+                logger.warning("LLM variant item missing required fields. Using fallback generator.")
+                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+                return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", "invalid_json")
+
             var_obj = ABVariant(
                 variant_label=lbl,
-                variant_title=rvar.get("variant_title", f"Variant {lbl}"),
-                message_text=rvar.get("message_text", "No message provided."),
-                offer_type=rvar.get("offer_type", "none"),
+                variant_title=v_title,
+                message_text=v_msg,
+                offer_type=v_offer,
                 incentive_value=float(rvar.get("incentive_value", 0.0)),
                 channel=rvar.get("channel", channel),
-                tone=rvar.get("tone", "commercial"),
-                call_to_action=rvar.get("call_to_action", "Click Here"),
-                expected_behavior=rvar.get("expected_behavior", "Customer engagement")
+                tone=v_tone,
+                call_to_action=v_cta,
+                expected_behavior=str(rvar.get("expected_behavior", "Customer engagement")).strip()[:100]
             )
             variants.append(var_obj)
 
@@ -298,8 +280,8 @@ REQUIRED STABLE JSON STRUCTURE:
                 if idx < len(fb_vars):
                     variants.append(fb_vars[idx])
 
-        return (variants[:num_variants], exp_name, True)
+        return (variants[:num_variants], exp_name, "llm_success")
     except Exception as e:
         logger.error(f"Error during LLM variant generation: {e}")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-        return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", False)
+        return (variants[:num_variants], f"A/B Test ({objective.title()}): {entity_id}", "invalid_json")

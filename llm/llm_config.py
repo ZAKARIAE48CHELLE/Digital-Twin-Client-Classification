@@ -31,10 +31,12 @@ def get_llm_language():
     """Get LLM output language preference. Defaults to 'fr_en'."""
     return os.getenv("OSMOS_LLM_LANGUAGE", "fr_en")
 
-def get_llm_timeout():
-    """Get timeout in seconds for LLM request. Defaults to 12 seconds."""
-    try:
-        val = int(os.getenv("OSMOS_LLM_TIMEOUT", "12"))
-        return min(25, max(5, val))
-    except ValueError:
-        return 12
+def get_llm_timeout(default_val: int = 90) -> int:
+    """Get timeout in seconds for LLM request. Reads OSMOS_LLM_TIMEOUT from env, defaulting to default_val (90s)."""
+    env_str = os.getenv("OSMOS_LLM_TIMEOUT")
+    if env_str:
+        try:
+            return min(120, max(5, int(env_str)))
+        except ValueError:
+            pass
+    return default_val

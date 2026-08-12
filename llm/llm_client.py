@@ -90,8 +90,8 @@ def check_llm_available():
         
     return _cached_availability, _cached_availability_reason
 
-def generate_text(prompt, temperature=0.2, max_tokens=768):
-    """Generate raw text response from local LLM with bounded token generation."""
+def generate_text(prompt, temperature=0.2, max_tokens=700, timeout=None):
+    """Generate raw text response from local LLM with bounded token generation and configurable timeout."""
     available, reason = check_llm_available()
     if not available:
         logger.warning(f"LLM generate requested but service is unavailable: {reason}")
@@ -100,7 +100,7 @@ def generate_text(prompt, temperature=0.2, max_tokens=768):
     provider = get_llm_provider()
     base_url = get_llm_base_url()
     model = get_llm_model()
-    timeout = get_llm_timeout()
+    req_timeout = timeout if timeout is not None else get_llm_timeout(90)
     
     if provider == "ollama":
         url = f"{base_url}/api/generate"
@@ -110,11 +110,13 @@ def generate_text(prompt, temperature=0.2, max_tokens=768):
             "stream": False,
             "options": {
                 "temperature": temperature,
-                "num_predict": max_tokens
+                "num_predict": max_tokens,
+                "top_p": 0.8,
+                "repeat_penalty": 1.05
             }
         }
         try:
-            resp = requests.post(url, json=payload, timeout=timeout)
+            resp = requests.post(url, json=payload, timeout=req_timeout)
             if resp.status_code == 200:
                 return resp.json().get("response", "").strip()
             else:
@@ -123,8 +125,8 @@ def generate_text(prompt, temperature=0.2, max_tokens=768):
                 write_llm_audit_log("LLM_HTTP_ERROR", {"status_code": resp.status_code, "error": resp.text})
                 return ""
         except requests.exceptions.Timeout as e:
-            logger.info(f"Ollama request timed out after {timeout}s. Seamlessly falling back to deterministic engine.")
-            write_llm_audit_log("LLM_TIMEOUT", {"error": str(e), "timeout_seconds": timeout})
+            logger.info(f"Ollama request timed out after {req_timeout}s. Seamlessly falling back to deterministic engine.")
+            write_llm_audit_log("LLM_TIMEOUT", {"error": str(e), "timeout_seconds": req_timeout})
             return "__TIMEOUT__"
         except requests.exceptions.RequestException as e:
             logger.error(f"Ollama connection error during generation: {e}")

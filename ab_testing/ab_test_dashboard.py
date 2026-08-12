@@ -129,12 +129,12 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
     # Handle LLM Variant Generation Button Click
     if gen_llm_btn:
         with st.spinner("Generating candidate campaign variants via Local LLM..."):
-            gen_vars, exp_name, is_llm = variant_gen.generate_llm_ab_variants(
+            gen_vars, exp_name, status_code = variant_gen.generate_llm_ab_variants(
                 admin_question, objective, ent_row, channel=channel, num_variants=variant_count
             )
             st.session_state["ab_test_variants"] = gen_vars
             st.session_state["ab_test_experiment_name"] = exp_name
-            st.session_state["ab_test_is_llm_generated"] = is_llm
+            st.session_state["ab_test_is_llm_generated"] = (status_code == "llm_success")
 
             # Update widget session_state keys for instant UI input reflection
             for i, v in enumerate(gen_vars):
@@ -145,10 +145,12 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
                 st.session_state[f"ab_v_tone_{i}"] = v.tone
                 st.session_state[f"ab_v_cta_{i}"] = v.call_to_action
 
-            if is_llm:
-                st.success("LLM variants generated and loaded into editable fields.")
+            if status_code == "llm_success":
+                st.success("LLM variants generated successfully.")
+            elif status_code == "timeout":
+                st.warning("LLM timed out. Deterministic fallback variants were generated.")
             else:
-                st.info("LLM generation failed or unavailable. Default variants loaded. You can still define variants manually.")
+                st.warning("LLM returned invalid JSON. Deterministic fallback variants were generated.")
 
     # Initialize or Adjust Session State Variants matching requested variant_count
     current_stored = st.session_state.get("ab_test_variants", [])
