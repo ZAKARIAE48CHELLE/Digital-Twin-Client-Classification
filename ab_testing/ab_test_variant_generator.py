@@ -3,11 +3,13 @@ OSMOS A/B Test Variant Generator & LLM Scientist Integration (Phase 8.8)
 ===========================================================================
 Generates candidate A/B testing campaign variants using local LLM inference or
 deterministic domain rule fallbacks. Strictly enforces prompt boundaries,
-schema validation, character max limits, and human-in-the-loop governance.
+schema validation, character max limits, human-in-the-loop governance,
+and records candidate LLM outputs to 'candidate_llm_output.log' in ab_testing/.
 """
 
 import os
 import logging
+from datetime import datetime
 from typing import Dict, Any, List, Tuple
 from ab_testing.ab_test_schemas import ABVariant
 import ab_testing.ab_test_validator as ab_val
@@ -15,6 +17,49 @@ from llm.llm_client import generate_text, check_llm_available
 from llm.json_utils import repair_and_parse_json, extract_and_parse_json_array
 
 logger = logging.getLogger("OSMOS_AB_VARIANT_GEN")
+
+CANDIDATE_LLM_LOG_PATH = os.path.join(os.path.dirname(__file__), "candidate_llm_output.log")
+
+
+def _log_candidate_llm_output(
+    admin_question: str,
+    objective: str,
+    entity_id: str,
+    status_code: str,
+    raw_output: str,
+    extracted_variants: List[ABVariant] = None
+) -> None:
+    """
+    Appends candidate LLM outputs to 'candidate_llm_output.log' inside the ab_testing directory.
+    Includes timestamp, entity ID, question, status code, raw LLM text, and parsed variant summaries.
+    """
+    try:
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        entry = [
+            f"=" * 80,
+            f"TIMESTAMP       : {timestamp}",
+            f"ENTITY ID       : {entity_id}",
+            f"OBJECTIVE       : {objective}",
+            f"QUESTION        : {admin_question}",
+            f"STATUS CODE     : {status_code}",
+            f"-" * 80,
+            f"RAW LLM OUTPUT  :\n{raw_output}",
+            f"-" * 80
+        ]
+        if extracted_variants:
+            entry.append("EXTRACTED CANDIDATE VARIANTS:")
+            for v in extracted_variants:
+                entry.append(
+                    f"  [{v.variant_label}] Title: {v.variant_title} | Offer: {v.offer_type} | Incentive: {v.incentive_value} | Tone: {v.tone} | CTA: {v.call_to_action}\n"
+                    f"      Message: {v.message_text}"
+                )
+        entry.append(f"=" * 80 + "\n\n")
+
+        log_text = "\n".join(entry)
+        with open(CANDIDATE_LLM_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(log_text)
+    except Exception as e:
+        logger.error(f"Failed to write to candidate_llm_output.log: {e}")
 
 
 def _build_fallback_variants(
@@ -180,6 +225,7 @@ def generate_llm_ab_variants(
     """
     Button-triggered LLM generator producing structured A/B campaign variants as a JSON object containing a "variants" list.
     Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success', 'timeout', or 'invalid_json'.
+    Logs candidate LLM output to 'ab_testing/candidate_llm_output.log'.
     """
     entity_id = entity_profile.get("entity_id", "P_DEMO_001")
     segment = entity_profile.get("customer_segment", "Standard Active Clients")
@@ -194,6 +240,7 @@ def generate_llm_ab_variants(
     if not avail:
         logger.info("Local LLM offline or unconfigured. Using deterministic fallback variant generator.")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+        _log_candidate_llm_output(admin_question, objective, entity_id, "offline_fallback", "LLM Offline / Unconfigured")
         return (variants[:num_variants], default_exp_name, "timeout")
 
     # Prompt requesting a JSON object with a "variants" array
@@ -227,6 +274,7 @@ Required Output Schema:
         if raw_output == "__TIMEOUT__":
             logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "timeout", "__TIMEOUT__")
             return (variants[:num_variants], default_exp_name, "timeout")
 
         # Flexible Parser: Accepts JSON object containing "variants" or raw list
@@ -252,6 +300,7 @@ Required Output Schema:
         if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
             logger.warning("LLM output is incomplete or invalid variants payload. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output)
             return (variants[:num_variants], default_exp_name, "invalid_json")
 
         variants = []
@@ -272,6 +321,7 @@ Required Output Schema:
             if not v_title or not v_msg:
                 logger.warning("LLM variant item missing required title or message. Using fallback generator.")
                 variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+                _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output)
                 return (variants[:num_variants], default_exp_name, "invalid_json")
 
             var_obj = ABVariant(
@@ -294,8 +344,13 @@ Required Output Schema:
                     variants.append(fb_vars[idx])
 
         exp_name = f"A/B ({objective.title()}): {variants[0].variant_title[:30]} vs {variants[1].variant_title[:30]}" if len(variants) >= 2 else default_exp_name
+        
+        # Log successful candidate LLM output
+        _log_candidate_llm_output(admin_question, objective, entity_id, "llm_success", raw_output, variants[:num_variants])
+
         return (variants[:num_variants], exp_name, "llm_success")
     except Exception as e:
         logger.error(f"Error during LLM variant generation: {e}")
         variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+        _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json_exception", str(e))
         return (variants[:num_variants], default_exp_name, "invalid_json")

@@ -382,6 +382,14 @@ class TestABTesting(unittest.TestCase):
             elif "OSMOS_AB_DEBUG_LLM" in os.environ:
                 del os.environ["OSMOS_AB_DEBUG_LLM"]
 
+    def test_candidate_llm_output_logged(self):
+        """Verifies candidate LLM outputs are logged to candidate_llm_output.log in ab_testing directory."""
+        import os
+        from ab_testing.ab_test_variant_generator import CANDIDATE_LLM_LOG_PATH, _log_candidate_llm_output
+        self.assertTrue(CANDIDATE_LLM_LOG_PATH.endswith("candidate_llm_output.log"))
+        _log_candidate_llm_output("Test Question", "retention", "P_TEST_001", "llm_success", '{"variants": []}')
+        self.assertTrue(os.path.exists(CANDIDATE_LLM_LOG_PATH))
+
 
 if __name__ == "__main__":
     unittest.main()
