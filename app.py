@@ -21,12 +21,25 @@ import json
 from pathlib import Path
 from datetime import datetime
 import logging
+import asyncio
 import storage.storage_manager as storage_manager
 from ui.contextual_help import render_floating_help_widget
 from ui.icons import MAIN_PAGES, PAGE_LABELS, icon_html
 from ui.layout import render_page_header, render_section_header, section_header_html
 from ui.theme_manager import apply_osmos_theme, get_theme, render_theme_toggle
 from ui.charts import apply_plotly_theme
+
+# Filter out noisy Tornado / asyncio WebSocketClosedError log entries on tab close/refresh
+class WebSocketClosedFilter(logging.Filter):
+    def filter(self, record):
+        msg = record.getMessage()
+        if "WebSocketClosedError" in msg or "StreamClosedError" in msg or "Task exception was never retrieved" in msg:
+            return False
+        return True
+
+logging.getLogger("asyncio").addFilter(WebSocketClosedFilter())
+logging.getLogger("tornado.application").addFilter(WebSocketClosedFilter())
+logging.getLogger("tornado.general").addFilter(WebSocketClosedFilter())
 
 logger = logging.getLogger("OSMOS_APP")
 
