@@ -259,7 +259,7 @@ REQUIRED STABLE JSON STRUCTURE:
 """
 
     try:
-        raw_output = generate_text(prompt)
+        raw_output = generate_text(prompt, max_tokens=1500)
         if raw_output == "__TIMEOUT__":
             logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
