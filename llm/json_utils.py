@@ -5,13 +5,13 @@ import logging
 logger = logging.getLogger("OSMOS_LLM_JSON_UTILS")
 
 def is_json_truncated(raw_text: str) -> bool:
-    """Detects if raw text appears to be truncated JSON."""
+    """Detects if raw text appears to be a truncated JSON object or array."""
     if not raw_text:
-        return True
+        return False
     s = raw_text.strip()
     s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE).rstrip("`").strip()
-    if not s.startswith("{") and not s.startswith("["):
-        return True
+    if not (s.startswith("{") or s.startswith("[")):
+        return False
     if not (s.endswith("}") or s.endswith("]")):
         return True
     # Count quotes

@@ -9,7 +9,7 @@ records candidate LLM outputs to 'candidate_llm_output.log' in ab_testing/.
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Tuple
 from ab_testing.ab_test_schemas import ABVariant
 import ab_testing.ab_test_validator as ab_val
@@ -35,7 +35,7 @@ def _log_candidate_llm_output(
     Includes timestamp, entity ID, question, status code, raw LLM text, and parsed variant summaries.
     """
     try:
-        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         entry = [
             f"=" * 80,
             f"TIMESTAMP       : {timestamp}",
@@ -337,33 +337,46 @@ Required Output Schema:
 
     try:
         raw_output = generate_text(prompt, temperature=0.1, max_tokens=num_predict)
+
+        # 0. Check for Timeout
         if raw_output == "__TIMEOUT__":
             logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             _log_candidate_llm_output(admin_question, objective, entity_id, "timeout", "__TIMEOUT__")
-        # 0. Check for Empty Output
+            return (variants[:num_variants], default_exp_name, "timeout")
+
+        # 1. Check for Empty Output
         if not raw_output or not raw_output.strip():
             logger.warning("LLM returned empty output. Using deterministic fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             _log_candidate_llm_output(admin_question, objective, entity_id, "empty_llm_output", "<empty>", failure_reason="LLM returned empty output")
             return (variants[:num_variants], default_exp_name, "empty_llm_output")
 
-        # 1. Check for Truncated JSON
+        # 2. Check for Truncated JSON
         if is_json_truncated(raw_output):
             logger.warning("LLM output is truncated or incomplete. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             _log_candidate_llm_output(admin_question, objective, entity_id, "partial_json", raw_output, failure_reason="Output truncated or unclosed brackets/quotes")
             return (variants[:num_variants], default_exp_name, "partial_json")
 
-        # 2. Parse JSON Payload
+        # 3. Parse JSON Payload
         parsed_payload = repair_and_parse_json(raw_output)
 
         raw_array = []
-        if isinstance(parsed_payload, dict) and "variants" in parsed_payload and isinstance(parsed_payload["variants"], list):
-            raw_array = parsed_payload["variants"]
+        is_empty_variants_list = False
+
+        if isinstance(parsed_payload, dict):
+            if "variants" in parsed_payload:
+                if isinstance(parsed_payload["variants"], list):
+                    raw_array = parsed_payload["variants"]
+                    if len(raw_array) == 0:
+                        is_empty_variants_list = True
         elif isinstance(parsed_payload, list):
             raw_array = parsed_payload
-        else:
+            if len(raw_array) == 0:
+                is_empty_variants_list = True
+
+        if not raw_array and not is_empty_variants_list:
             raw_array = extract_and_parse_json_array(raw_output)
 
         # Debug Mode Logging
@@ -375,14 +388,21 @@ Required Output Schema:
                 logger.info(f"[DEBUG_LLM] Payload Keys Found: {list(parsed_payload.keys())}")
             logger.info(f"[DEBUG_LLM] Variants Extracted Count: {len(raw_array)}")
 
-        # 3. Check for Empty Variants List
-        if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
+        # 4. Check for Empty Variants List
+        if is_empty_variants_list:
             logger.warning("LLM output contains empty variants list. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
             _log_candidate_llm_output(admin_question, objective, entity_id, "empty_variants", raw_output, failure_reason="Variants array was empty")
             return (variants[:num_variants], default_exp_name, "empty_variants")
 
-        # 4. Check for Incomplete Variant Count
+        # 5. Check for Invalid / Unparseable JSON
+        if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
+            logger.warning("LLM output is invalid JSON or non-JSON text. Using fallback generator.")
+            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output, failure_reason="Invalid JSON or non-JSON text")
+            return (variants[:num_variants], default_exp_name, "invalid_json")
+
+        # 6. Check for Incomplete Variant Count
         if len(raw_array) < num_variants:
             logger.warning(f"LLM output returned {len(raw_array)} variants, but {num_variants} requested. Using fallback generator.")
             variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
