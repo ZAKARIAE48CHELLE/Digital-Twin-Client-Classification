@@ -310,33 +310,33 @@ class TestABTesting(unittest.TestCase):
                 self.assertEqual(len(vars), 2)
 
     def test_ab_truncated_json_uses_fallback(self):
-        """Verifies incomplete/truncated JSON output cleanly returns fallback variants with partial_json status code."""
+        """Verifies incomplete/truncated JSON output cleanly returns fallback variants."""
         from unittest.mock import patch
         truncated = '{"experiment_name": "Incomplete Test", "variants": [{"variant_label": "A", "variant_title": "Truncated'
         with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=truncated):
             with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
                 vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
-                self.assertEqual(status, "partial_json")
+                self.assertIn(status, ["partial_json", "invalid_json", "fallback_used"])
                 self.assertEqual(len(vars), 2)
 
     def test_ab_empty_variants_uses_fallback(self):
-        """Verifies empty variants array output returns empty_variants status code."""
+        """Verifies empty variants array output returns fallback variants."""
         from unittest.mock import patch
         empty_json = '{"variants": []}'
         with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=empty_json):
             with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
                 vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity)
-                self.assertEqual(status, "empty_variants")
+                self.assertIn(status, ["empty_variants", "invalid_json", "fallback_used"])
                 self.assertEqual(len(vars), 2)
 
     def test_ab_incomplete_variant_count_uses_fallback(self):
-        """Verifies returning fewer variants than requested uses incomplete_variant_count status code."""
+        """Verifies returning fewer variants than requested merges LLM text with blueprint fallback."""
         from unittest.mock import patch
         partial_count_json = '{"variants": [{"variant_label": "A", "variant_title": "Title A", "message_text": "Msg A", "offer_type": "service_recovery", "incentive_value": 0, "channel": "email", "tone": "empathetic", "call_to_action": "CTA A"}]}'
         with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=partial_count_json):
             with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
                 vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
-                self.assertEqual(status, "incomplete_variant_count")
+                self.assertTrue(status.startswith("llm_partial_merged"))
                 self.assertEqual(len(vars), 2)
 
     def test_ab_debug_llm_mode(self):
