@@ -423,6 +423,43 @@ class TestABTesting(unittest.TestCase):
                 os.environ["OSMOS_AB_DEBUG_LLM"] = old_env
             elif "OSMOS_AB_DEBUG_LLM" in os.environ:
                 del os.environ["OSMOS_AB_DEBUG_LLM"]
+        """Verifies build_variant_blueprints constructs deterministic skeletons for 2 and 3 variants."""
+        from ab_testing.ab_test_variant_generator import build_variant_blueprints
+        bps2 = build_variant_blueprints("retention", "Question", self.sample_entity, number_of_variants=2)
+        self.assertEqual(len(bps2), 2)
+        self.assertEqual(bps2[0].variant_label, "A")
+        self.assertEqual(bps2[0].offer_type, "service_recovery")
+        self.assertEqual(bps2[1].variant_label, "B")
+        self.assertEqual(bps2[1].offer_type, "discount")
+
+        bps3 = build_variant_blueprints("retention", "Question", self.sample_entity, number_of_variants=3)
+        self.assertEqual(len(bps3), 3)
+        self.assertEqual([b.variant_label for b in bps3], ["A", "B", "C"])
+
+    def test_partial_llm_output_merges_with_blueprints(self):
+        """Verifies when LLM returns 1 variant for A/B request, LLM text is merged for Variant A and Variant B uses blueprint copy."""
+        from unittest.mock import patch
+        partial_json = '{"variants": [{"variant_label": "A", "variant_title": "LLM Title A", "message_text": "LLM Msg A", "call_to_action": "CTA A", "tone": "empathetic"}]}'
+        with patch("ab_testing.ab_test_variant_generator.generate_text", return_value=partial_json):
+            with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(True, "Connected")):
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+                self.assertEqual(len(vars), 2)
+                self.assertEqual(status, "llm_partial_merged:1/2")
+                self.assertEqual(vars[0].variant_title, "LLM Title A")
+                self.assertEqual(vars[0].offer_type, "service_recovery")
+                self.assertEqual(vars[1].variant_label, "B")
+                self.assertEqual(vars[1].offer_type, "discount")
+                self.assertTrue(len(vars[1].variant_title) > 0)
+
+    def test_offline_llm_immediately_uses_blueprints(self):
+        """Verifies offline LLM immediately returns deterministic blueprint variants without calling LLM text generator."""
+        from unittest.mock import patch
+        with patch("ab_testing.ab_test_variant_generator.check_llm_available", return_value=(False, "Offline")):
+            with patch("ab_testing.ab_test_variant_generator.generate_text") as mock_gen:
+                vars, name, status = generate_llm_ab_variants("Question", "retention", self.sample_entity, num_variants=2)
+                self.assertEqual(len(vars), 2)
+                self.assertEqual(status, "timeout")
+                mock_gen.assert_not_called()
 
 
 if __name__ == "__main__":

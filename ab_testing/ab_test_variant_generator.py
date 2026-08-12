@@ -2,9 +2,9 @@
 OSMOS A/B Test Variant Generator & LLM Scientist Integration (Phase 8.8)
 ===========================================================================
 Generates candidate A/B testing campaign variants using local LLM inference or
-deterministic domain rule fallbacks. Strictly enforces prompt boundaries,
-schema validation, character max limits, semantic governance rules, and
-records candidate LLM outputs to 'candidate_llm_output.log' in ab_testing/.
+deterministic domain rule fallbacks. Uses blueprint-guided LLM synthesis to enforce
+predetermined variant counts, offer types, and channels, seamlessly merging
+LLM copy with fallback blueprints.
 """
 
 import os
@@ -220,6 +220,58 @@ def _build_fallback_variants(
     return [var_a, var_b, var_c]
 
 
+def build_variant_blueprints(
+    objective: str,
+    admin_question: str,
+    entity_profile: Dict[str, Any],
+    number_of_variants: int = 2,
+    channel: str = "email"
+) -> List[ABVariant]:
+    """
+    Creates deterministic variant skeletons (blueprints) with predetermined labels ('A', 'B', 'C'),
+    offer types, incentive values, channels, and default copy.
+    """
+    entity_id = entity_profile.get("entity_id", "P_DEMO_001")
+    segment = entity_profile.get("customer_segment", "Standard Active Clients")
+    persona = entity_profile.get("customer_persona", "Regular Buyer")
+
+    fallback_base = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+    
+    blueprints = []
+    labels = ["A", "B", "C"]
+    
+    for idx in range(min(number_of_variants, 3)):
+        lbl = labels[idx]
+        if idx < len(fallback_base):
+            base_var = fallback_base[idx]
+            bp = ABVariant(
+                variant_label=lbl,
+                variant_title=base_var.variant_title,
+                message_text=base_var.message_text,
+                offer_type=base_var.offer_type,
+                incentive_value=base_var.incentive_value,
+                channel=channel,
+                tone=base_var.tone,
+                call_to_action=base_var.call_to_action,
+                expected_behavior=base_var.expected_behavior
+            )
+        else:
+            bp = ABVariant(
+                variant_label=lbl,
+                variant_title=f"Variant {lbl} Recommendation",
+                message_text=f"Explore our targeted offer tailored for your account.",
+                offer_type="discount" if idx == 1 else "reactivation",
+                incentive_value=10.0 if idx == 1 else 0.0,
+                channel=channel,
+                tone="commercial" if idx == 1 else "informational",
+                call_to_action="Learn More",
+                expected_behavior="Drives customer re-engagement."
+            )
+        blueprints.append(bp)
+        
+    return blueprints
+
+
 def _validate_semantic_rules(
     variants: List[ABVariant],
     objective: str,
@@ -288,10 +340,10 @@ def generate_llm_ab_variants(
     num_variants: int = 2
 ) -> Tuple[List[ABVariant], str, str]:
     """
-    Button-triggered LLM generator producing structured A/B campaign variants as a JSON object containing a "variants" list.
-    Returns (variants_list, experiment_name, status_code) where status_code is 'llm_success_valid', 'partial_json',
-    'invalid_json', 'empty_variants', 'incomplete_variant_count', 'semantic_validation_failed', or 'timeout'.
-    Logs candidate LLM output to 'ab_testing/candidate_llm_output.log'.
+    Button-triggered LLM generator producing structured A/B campaign variants based on blueprints.
+    Fills LLM generated titles, messages, tones, and CTAs into deterministic skeletons.
+    If LLM returns fewer variants, merges LLM text into available blueprints and fills missing variants
+    with deterministic fallback copy.
     """
     entity_id = entity_profile.get("entity_id", "P_DEMO_001")
     segment = entity_profile.get("customer_segment", "Standard Active Clients")
@@ -300,32 +352,39 @@ def generate_llm_ab_variants(
     clv_amount = float(entity_profile.get("predicted_clv_amount_mad", 500.0))
 
     default_exp_name = f"A/B Test ({objective.title()}): {entity_id}"
+    blueprints = build_variant_blueprints(objective, admin_question, entity_profile, number_of_variants=num_variants, channel=channel)
 
-    # Check LLM availability
+    # Check LLM availability once
     avail, _ = check_llm_available()
     if not avail:
-        logger.info("Local LLM offline or unconfigured. Using deterministic fallback variant generator.")
-        variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+        logger.info("Local LLM offline or unconfigured. Immediately using deterministic blueprint variants.")
         _log_candidate_llm_output(admin_question, objective, entity_id, "fallback_used", "LLM Offline / Unconfigured")
-        return (variants[:num_variants], default_exp_name, "timeout")
+        return (blueprints, default_exp_name, "timeout")
 
-    # Prompt requesting a JSON object with a "variants" array
-    prompt = f"""Return ONLY a raw JSON object containing a "variants" array of exactly {num_variants} variant objects. No markdown ```json, no extra text.
+    bp_summary = []
+    for bp in blueprints:
+        bp_summary.append(f"- Variant {bp.variant_label}: offer_type='{bp.offer_type}', incentive_value={bp.incentive_value}")
+    bp_text = "\n".join(bp_summary)
+
+    prompt = f"""You are an expert CRM Marketing Scientist. Refine copy for these pre-configured A/B campaign blueprints.
 
 Question: "{admin_question}"
 Objective: "{objective}", Channel: "{channel}"
-Customer: ID {entity_id}, Segment: {segment}, Persona: {persona}, ChurnRisk: {churn_risk:.2f}, CLV: {clv_amount:.0f} MAD
+Target Customer: ID {entity_id}, Segment: {segment}, Persona: {persona}, ChurnRisk: {churn_risk:.2f}, CLV: {clv_amount:.0f} MAD
 
-Required Output Schema:
+Blueprints to Refine:
+{bp_text}
+
+Return ONLY a raw JSON object with a "variants" array containing copy for each blueprint label ("A", "B", ...).
+Do NOT change variant_label. Do NOT invent new offer_types.
+
+Required JSON Output Format:
 {{
   "variants": [
     {{
       "variant_label": "A",
       "variant_title": "Short Title (max 60 chars)",
       "message_text": "Customer message (max 180 chars)",
-      "offer_type": "service_recovery | discount | vip_perk | onboarding | reactivation | none",
-      "incentive_value": 0,
-      "channel": "{channel}",
       "tone": "empathetic | commercial | informational | exclusive",
       "call_to_action": "CTA text (max 40 chars)"
     }}
@@ -338,142 +397,95 @@ Required Output Schema:
     try:
         raw_output = generate_text(prompt, temperature=0.1, max_tokens=num_predict)
 
-        # 0. Check for Timeout
         if raw_output == "__TIMEOUT__":
-            logger.info("Local LLM request timed out. Using deterministic fallback variant generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            logger.info("Local LLM request timed out. Using deterministic blueprint variants.")
             _log_candidate_llm_output(admin_question, objective, entity_id, "timeout", "__TIMEOUT__")
-            return (variants[:num_variants], default_exp_name, "timeout")
+            return (blueprints, default_exp_name, "timeout")
 
-        # 1. Check for Empty Output
         if not raw_output or not raw_output.strip():
-            logger.warning("LLM returned empty output. Using deterministic fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
+            logger.warning("LLM returned empty output. Using deterministic blueprint variants.")
             _log_candidate_llm_output(admin_question, objective, entity_id, "empty_llm_output", "<empty>", failure_reason="LLM returned empty output")
-            return (variants[:num_variants], default_exp_name, "empty_llm_output")
+            return (blueprints, default_exp_name, "empty_llm_output")
 
-        # 2. Check for Truncated JSON
-        if is_json_truncated(raw_output):
-            logger.warning("LLM output is truncated or incomplete. Using fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "partial_json", raw_output, failure_reason="Output truncated or unclosed brackets/quotes")
-            return (variants[:num_variants], default_exp_name, "partial_json")
-
-        # 3. Parse JSON Payload
+        # Parse JSON Payload
         parsed_payload = repair_and_parse_json(raw_output)
 
         raw_array = []
-        is_empty_variants_list = False
-
-        if isinstance(parsed_payload, dict):
-            if "variants" in parsed_payload:
-                if isinstance(parsed_payload["variants"], list):
-                    raw_array = parsed_payload["variants"]
-                    if len(raw_array) == 0:
-                        is_empty_variants_list = True
+        if isinstance(parsed_payload, dict) and "variants" in parsed_payload and isinstance(parsed_payload["variants"], list):
+            raw_array = parsed_payload["variants"]
         elif isinstance(parsed_payload, list):
             raw_array = parsed_payload
-            if len(raw_array) == 0:
-                is_empty_variants_list = True
-
-        if not raw_array and not is_empty_variants_list:
+        else:
             raw_array = extract_and_parse_json_array(raw_output)
 
-        # Debug Mode Logging
-        debug_mode = os.getenv("OSMOS_AB_DEBUG_LLM", "").lower() in ["true", "1"]
-        if debug_mode:
-            logger.info(f"[DEBUG_LLM] Raw Output: {raw_output[:300]}")
-            logger.info(f"[DEBUG_LLM] Parsed Payload Type: {type(parsed_payload).__name__}")
-            if isinstance(parsed_payload, dict):
-                logger.info(f"[DEBUG_LLM] Payload Keys Found: {list(parsed_payload.keys())}")
-            logger.info(f"[DEBUG_LLM] Variants Extracted Count: {len(raw_array)}")
+        if not raw_array or not isinstance(raw_array, list):
+            logger.warning("LLM output is invalid JSON. Using deterministic blueprint variants.")
+            _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output, failure_reason="Unparseable JSON")
+            return (blueprints, default_exp_name, "invalid_json")
 
-        # 4. Check for Empty Variants List
-        if is_empty_variants_list:
-            logger.warning("LLM output contains empty variants list. Using fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "empty_variants", raw_output, failure_reason="Variants array was empty")
-            return (variants[:num_variants], default_exp_name, "empty_variants")
-
-        # 5. Check for Invalid / Unparseable JSON
-        if not raw_array or not isinstance(raw_array, list) or len(raw_array) == 0:
-            logger.warning("LLM output is invalid JSON or non-JSON text. Using fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output, failure_reason="Invalid JSON or non-JSON text")
-            return (variants[:num_variants], default_exp_name, "invalid_json")
-
-        # 6. Check for Incomplete Variant Count
-        if len(raw_array) < num_variants:
-            logger.warning(f"LLM output returned {len(raw_array)} variants, but {num_variants} requested. Using fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "incomplete_variant_count", raw_output, failure_reason=f"Returned {len(raw_array)} < requested {num_variants}")
-            return (variants[:num_variants], default_exp_name, "incomplete_variant_count")
-
-        # 5. Extract and Strict Required Field Check
-        candidate_variants = []
+        # Map LLM variants by label or index
+        llm_by_label = {}
         labels = ["A", "B", "C"]
-        required_fields = ["variant_label", "variant_title", "message_text", "offer_type", "channel", "tone", "call_to_action"]
+        for idx, rvar in enumerate(raw_array):
+            if isinstance(rvar, dict):
+                lbl = str(rvar.get("variant_label", "")).strip().upper()
+                if lbl in labels:
+                    llm_by_label[lbl] = rvar
+                elif idx < len(labels):
+                    llm_by_label[labels[idx]] = rvar
 
-        for idx, rvar in enumerate(raw_array[:num_variants]):
-            if not isinstance(rvar, dict):
-                logger.warning("LLM variant item is not a dict. Using fallback generator.")
-                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-                _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", raw_output, failure_reason="Variant item not dict")
-                return (variants[:num_variants], default_exp_name, "invalid_json")
+        final_variants = []
+        llm_success_count = 0
 
-            missing = [f for f in required_fields if not str(rvar.get(f, "")).strip()]
-            if missing:
-                logger.warning(f"LLM variant item missing required fields: {missing}. Using fallback generator.")
-                variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-                _log_candidate_llm_output(admin_question, objective, entity_id, "partial_json", raw_output, failure_reason=f"Missing required fields: {missing}")
-                return (variants[:num_variants], default_exp_name, "partial_json")
+        for bp in blueprints:
+            rvar = llm_by_label.get(bp.variant_label)
+            if rvar and isinstance(rvar, dict):
+                v_title = str(rvar.get("variant_title", "")).strip()[:60]
+                v_msg = str(rvar.get("message_text", "")).strip()[:180]
+                v_cta = str(rvar.get("call_to_action", bp.call_to_action)).strip()[:40]
+                v_tone = str(rvar.get("tone", bp.tone)).strip().lower()
+                if v_tone not in ["commercial", "empathetic", "informational", "exclusive"]:
+                    v_tone = bp.tone
 
-            lbl = str(rvar.get("variant_label", labels[idx if idx < len(labels) else 0])).strip()
-            v_title = str(rvar.get("variant_title", "")).strip()[:60]
-            v_msg = str(rvar.get("message_text", "")).strip()[:180]
-            v_cta = str(rvar.get("call_to_action", "Click Here")).strip()[:40]
-            
-            v_offer = str(rvar.get("offer_type", "none")).strip().lower()
-            if v_offer not in ab_val.ALLOWED_OFFER_TYPES:
-                v_offer = "none"
-            v_tone = str(rvar.get("tone", "commercial")).strip().lower()
-            if v_tone not in ["commercial", "empathetic", "informational", "exclusive"]:
-                v_tone = "commercial"
+                if v_title and v_msg:
+                    merged_var = ABVariant(
+                        variant_label=bp.variant_label,
+                        variant_title=v_title,
+                        message_text=v_msg,
+                        offer_type=bp.offer_type,
+                        incentive_value=bp.incentive_value,
+                        channel=bp.channel,
+                        tone=v_tone,
+                        call_to_action=v_cta,
+                        expected_behavior=bp.expected_behavior
+                    )
+                    final_variants.append(merged_var)
+                    llm_success_count += 1
+                else:
+                    final_variants.append(bp)
+            else:
+                final_variants.append(bp)
 
-            try:
-                v_inc = float(rvar.get("incentive_value", 0.0))
-            except (ValueError, TypeError):
-                v_inc = 0.0
-
-            var_obj = ABVariant(
-                variant_label=lbl,
-                variant_title=v_title,
-                message_text=v_msg,
-                offer_type=v_offer,
-                incentive_value=v_inc,
-                channel=rvar.get("channel", channel),
-                tone=v_tone,
-                call_to_action=v_cta,
-                expected_behavior=str(rvar.get("expected_behavior", "Customer behavioral engagement")).strip()[:100]
-            )
-            candidate_variants.append(var_obj)
-
-        # 6. Semantic Validation Check
-        is_valid_semantic, semantic_reason = _validate_semantic_rules(candidate_variants, objective, entity_profile)
+        # Semantic Validation on final merged variants
+        is_valid_semantic, semantic_reason = _validate_semantic_rules(final_variants, objective, entity_profile)
         if not is_valid_semantic:
-            logger.warning(f"LLM variants failed semantic validation: {semantic_reason}. Using fallback generator.")
-            variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
-            _log_candidate_llm_output(admin_question, objective, entity_id, "semantic_validation_failed", raw_output, extracted_variants=candidate_variants, failure_reason=semantic_reason)
-            return (variants[:num_variants], default_exp_name, "semantic_validation_failed")
+            logger.warning(f"LLM merged variants failed semantic validation: {semantic_reason}. Using deterministic blueprints.")
+            _log_candidate_llm_output(admin_question, objective, entity_id, "semantic_validation_failed", raw_output, extracted_variants=final_variants, failure_reason=semantic_reason)
+            return (blueprints, default_exp_name, "semantic_validation_failed")
 
-        exp_name = f"A/B ({objective.title()}): {candidate_variants[0].variant_title[:30]} vs {candidate_variants[1].variant_title[:30]}" if len(candidate_variants) >= 2 else default_exp_name
-        
-        # Log successful candidate LLM output
-        _log_candidate_llm_output(admin_question, objective, entity_id, "llm_success_valid", raw_output, extracted_variants=candidate_variants)
+        exp_name = f"A/B ({objective.title()}): {final_variants[0].variant_title[:30]} vs {final_variants[1].variant_title[:30]}" if len(final_variants) >= 2 else default_exp_name
 
-        return (candidate_variants[:num_variants], exp_name, "llm_success_valid")
+        if llm_success_count == num_variants:
+            status_code = "llm_success_valid"
+        elif llm_success_count > 0:
+            status_code = f"llm_partial_merged:{llm_success_count}/{num_variants}"
+        else:
+            status_code = "fallback_used"
+
+        _log_candidate_llm_output(admin_question, objective, entity_id, status_code, raw_output, extracted_variants=final_variants)
+        return (final_variants, exp_name, status_code)
+
     except Exception as e:
         logger.error(f"Error during LLM variant generation: {e}")
-        variants = _build_fallback_variants(admin_question, objective, entity_id, segment, persona, channel)
         _log_candidate_llm_output(admin_question, objective, entity_id, "invalid_json", str(e), failure_reason=str(e))
-        return (variants[:num_variants], default_exp_name, "invalid_json")
+        return (blueprints, default_exp_name, "invalid_json")

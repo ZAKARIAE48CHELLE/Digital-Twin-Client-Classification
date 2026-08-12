@@ -134,7 +134,7 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
             )
             st.session_state["ab_test_variants"] = gen_vars
             st.session_state["ab_test_experiment_name"] = exp_name
-            st.session_state["ab_test_is_llm_generated"] = (status_code == "llm_success_valid")
+            st.session_state["ab_test_is_llm_generated"] = status_code.startswith("llm_")
 
             # Update widget session_state keys for instant UI input reflection
             for i, v in enumerate(gen_vars):
@@ -147,10 +147,14 @@ def render_ab_test_dashboard(df: pd.DataFrame, history_df: pd.DataFrame):
 
             if status_code == "llm_success_valid":
                 st.success("LLM variants generated successfully.")
+            elif status_code.startswith("llm_partial_merged:"):
+                parts = status_code.split(":")
+                counts = parts[1] if len(parts) > 1 else f"1/{variant_count}"
+                st.info(f"LLM completed {counts} variants. Missing variants were completed deterministically.")
             elif status_code == "empty_llm_output":
-                st.warning("LLM returned empty output. Deterministic fallback variants were loaded.")
+                st.info("LLM returned empty output. Deterministic fallback variants were loaded.")
             else:
-                st.warning("LLM output was incomplete. Safe deterministic variants were loaded.")
+                st.info("Local LLM offline or unconfigured. Default variants loaded.")
 
     # Initialize or Adjust Session State Variants matching requested variant_count
     current_stored = st.session_state.get("ab_test_variants", [])
