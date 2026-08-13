@@ -462,5 +462,106 @@ class TestABTesting(unittest.TestCase):
                 mock_gen.assert_not_called()
 
 
+    def test_llm_generation_updates_offer_type_widget_state(self):
+        """Verifies sync_variants_to_widget_state updates offer_type in session_state widget key."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import sync_variants_to_widget_state
+        sample_vars = [
+            {"variant_label": "A", "variant_title": "Title A", "message_text": "Msg A", "offer_type": "service_recovery", "incentive_value": 0.0, "tone": "empathetic", "call_to_action": "CTA A"},
+            {"variant_label": "B", "variant_title": "Title B", "message_text": "Msg B", "offer_type": "discount", "incentive_value": 15.0, "tone": "commercial", "call_to_action": "CTA B"}
+        ]
+        sync_variants_to_widget_state(sample_vars)
+        self.assertEqual(st.session_state["ab_variant_A_offer_type"], "service_recovery")
+        self.assertEqual(st.session_state["ab_variant_B_offer_type"], "discount")
+
+    def test_llm_generation_updates_incentive_widget_state(self):
+        """Verifies sync_variants_to_widget_state updates incentive_value in session_state widget key."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import sync_variants_to_widget_state
+        sample_vars = [
+            {"variant_label": "A", "incentive_value": 0.0},
+            {"variant_label": "B", "incentive_value": 25.5}
+        ]
+        sync_variants_to_widget_state(sample_vars)
+        self.assertEqual(st.session_state["ab_variant_A_incentive_value"], 0.0)
+        self.assertEqual(st.session_state["ab_variant_B_incentive_value"], 25.5)
+
+    def test_llm_generation_updates_tone_widget_state(self):
+        """Verifies sync_variants_to_widget_state updates tone in session_state widget key."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import sync_variants_to_widget_state
+        sample_vars = [
+            {"variant_label": "A", "tone": "empathetic"},
+            {"variant_label": "B", "tone": "reassuring"}
+        ]
+        sync_variants_to_widget_state(sample_vars)
+        self.assertEqual(st.session_state["ab_variant_A_tone"], "empathetic")
+        self.assertEqual(st.session_state["ab_variant_B_tone"], "reassuring")
+
+    def test_llm_generation_updates_cta_widget_state(self):
+        """Verifies sync_variants_to_widget_state updates CTA in session_state widget key."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import sync_variants_to_widget_state
+        sample_vars = [
+            {"variant_label": "A", "call_to_action": "Claim Support Now"},
+            {"variant_label": "B", "call_to_action": "Get 15% Off"}
+        ]
+        sync_variants_to_widget_state(sample_vars)
+        self.assertEqual(st.session_state["ab_variant_A_cta"], "Claim Support Now")
+        self.assertEqual(st.session_state["ab_variant_B_cta"], "Get 15% Off")
+
+    def test_ab_three_variants_all_fields_render(self):
+        """Verifies collect_variants_from_widget_state returns 3 complete variants for A/B/C."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import collect_variants_from_widget_state, sync_variants_to_widget_state
+        sample_vars = [
+            {"variant_label": "A", "variant_title": "T A", "message_text": "M A", "offer_type": "service_recovery", "incentive_value": 0.0, "tone": "empathetic", "call_to_action": "CTA A"},
+            {"variant_label": "B", "variant_title": "T B", "message_text": "M B", "offer_type": "discount", "incentive_value": 10.0, "tone": "commercial", "call_to_action": "CTA B"},
+            {"variant_label": "C", "variant_title": "T C", "message_text": "M C", "offer_type": "vip_perk", "incentive_value": 0.0, "tone": "exclusive", "call_to_action": "CTA C"}
+        ]
+        sync_variants_to_widget_state(sample_vars)
+        collected = collect_variants_from_widget_state(["A", "B", "C"])
+        self.assertEqual(len(collected), 3)
+        self.assertEqual([v.variant_label for v in collected], ["A", "B", "C"])
+        self.assertEqual(collected[2].offer_type, "vip_perk")
+
+    def test_simulation_uses_edited_widget_values(self):
+        """Verifies simulation reads updated widget values directly from session_state."""
+        import streamlit as st
+        from ab_testing.ab_test_dashboard import collect_variants_from_widget_state
+        st.session_state["ab_variant_A_title"] = "Edited Title A"
+        st.session_state["ab_variant_A_message"] = "Edited Message A"
+        st.session_state["ab_variant_A_offer_type"] = "hybrid"
+        st.session_state["ab_variant_A_incentive_value"] = 50.0
+        st.session_state["ab_variant_A_tone"] = "reassuring"
+        st.session_state["ab_variant_A_cta"] = "Custom CTA A"
+
+        st.session_state["ab_variant_B_title"] = "Edited Title B"
+        st.session_state["ab_variant_B_message"] = "Edited Message B"
+        st.session_state["ab_variant_B_offer_type"] = "goodwill_credit"
+        st.session_state["ab_variant_B_incentive_value"] = 20.0
+        st.session_state["ab_variant_B_tone"] = "exclusive"
+        st.session_state["ab_variant_B_cta"] = "Custom CTA B"
+
+        collected = collect_variants_from_widget_state(["A", "B"])
+        self.assertEqual(collected[0].variant_title, "Edited Title A")
+        self.assertEqual(collected[0].offer_type, "hybrid")
+        self.assertEqual(collected[0].incentive_value, 50.0)
+        self.assertEqual(collected[0].tone, "reassuring")
+        self.assertEqual(collected[1].offer_type, "goodwill_credit")
+
+    def test_invalid_llm_offer_type_is_normalized(self):
+        """Verifies invalid offer_type from LLM normalizes to default 'none'."""
+        from ab_testing.ab_test_validator import normalize_offer_type
+        self.assertEqual(normalize_offer_type("invalid_unknown_offer"), "none")
+        self.assertEqual(normalize_offer_type("SERVICE_RECOVERY"), "service_recovery")
+
+    def test_invalid_llm_tone_is_normalized(self):
+        """Verifies invalid tone from LLM normalizes to default 'commercial'."""
+        from ab_testing.ab_test_validator import normalize_tone
+        self.assertEqual(normalize_tone("unrecognized_tone"), "commercial")
+        self.assertEqual(normalize_tone("EMPATHETIC"), "empathetic")
+
+
 if __name__ == "__main__":
     unittest.main()

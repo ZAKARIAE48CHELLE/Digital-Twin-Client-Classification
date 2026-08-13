@@ -16,7 +16,34 @@ from ab_testing.ab_test_schemas import ABVariant
 logger = logging.getLogger("OSMOS_AB_VALIDATOR")
 
 ALLOWED_CHANNELS = ["email", "sms", "phone", "web_notification", "simulated_only"]
-ALLOWED_OFFER_TYPES = ["discount", "service_recovery", "vip_perk", "onboarding", "reactivation", "none"]
+ALLOWED_OFFER_TYPES = [
+    "none",
+    "service_recovery",
+    "discount",
+    "goodwill_credit",
+    "reactivation",
+    "vip_perk",
+    "hybrid"
+]
+ALLOWED_TONES = [
+    "empathetic",
+    "commercial",
+    "informational",
+    "exclusive",
+    "reassuring"
+]
+
+def normalize_offer_type(val: str, default: str = "none") -> str:
+    if not val:
+        return default
+    v = str(val).strip().lower()
+    return v if v in ALLOWED_OFFER_TYPES else default
+
+def normalize_tone(val: str, default: str = "commercial") -> str:
+    if not val:
+        return default
+    v = str(val).strip().lower()
+    return v if v in ALLOWED_TONES else default
 
 PII_TERMS = ["ssn", "credit_card", "password", "bank_account", "secret", "private_key"]
 FORBIDDEN_DISPATCH_TERMS = ["sent successfully to inbox", "email delivered to customer", "real sms dispatched"]
