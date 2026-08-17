@@ -11,12 +11,12 @@ OSMOS enforces strict safety rules governing all Large Language Model (LLM) oper
 ```mermaid
 flowchart TD
     UserTrigger[User Clicks Action Button] --> Ollama[Local Ollama / Qwen Client]
-    Ollama --> AdvisoryOutput[Advisory Output Draft]
-    AdvisoryOutput --> Validation{Structured Plan?}
+    Ollama --> AdvisoryOutput[Advisory Copywriting Draft]
+    AdvisoryOutput --> Validation{Structured Payload?}
     
-    Validation -->|Yes| RuleValidator[Deterministic Rule Validator]
-    RuleValidator -->|Valid| AdminApproval[Human Admin Approval Queue]
-    RuleValidator -->|Invalid| Block[Plan Blocked / Error Displayed]
+    Validation -->|Yes| BlueprintCheck[Deterministic Blueprint & Rule Normalizer]
+    BlueprintCheck -->|Valid| AdminApproval[Human Admin Approval Queue]
+    BlueprintCheck -->|Invalid| Fallback[Apply Deterministic Blueprint Copy]
     
     Validation -->|No| Display[Display Text Guidance]
     
@@ -25,13 +25,14 @@ flowchart TD
 ```
 
 ### Mandatory Governance Rules:
-1. **Advisory Role Only**: The LLM operates purely in an advisory capacity. It cannot modify customer records, update database rows, or dispatch real marketing campaigns autonomously.
-2. **Button-Triggered Execution**: LLM invocations occur **only** when an administrator explicitly clicks an action button (e.g. "Generate LLM Recommendation", "Generate LLM Scenario Plan"). Zero automatic LLM calls occur on page load, background timers, or inside data fetch routines (`get_data()`).
+1. **Advisory Role Only**: The LLM operates purely in an advisory copywriting capacity. It cannot modify customer records, update database rows, or dispatch real marketing campaigns autonomously.
+2. **Button-Triggered Execution**: LLM invocations occur **only** when an administrator explicitly clicks an action button (e.g. "Generate LLM Recommendation", "Generate A/B Variants with LLM"). Zero automatic LLM calls occur on page load, background timers, or inside data fetch routines (`get_data()`).
 3. **No Direct Database Writes**: The LLM client never issues `INSERT`, `UPDATE`, or `DELETE` SQL queries directly against database tables.
-4. **Deterministic Validation Required**: Any structured payload proposed by an LLM (such as a multi-stage journey scenario plan) must be parsed, normalized, and validated by deterministic business rules before presentation to an administrator.
-5. **Human Approval Mandate**: Admin review and explicit approval are required before any generated action plan can be applied to customer records.
-6. **Local Deployment Privacy**: The LLM runs via a local **Ollama** instance (`qwen2.5` / `llama3`). Zero customer data or telemetry is transmitted to external cloud APIs.
-7. **Deterministic Fallback**: If the local LLM service is offline or unconfigured, system modules fall back gracefully to rule-based template logic without crashing the application.
+4. **Deterministic Validation Required**: Any structured payload proposed by an LLM (such as a multi-stage journey scenario plan or A/B variant text) must be parsed, normalized, and validated by deterministic business rules before presentation to an administrator.
+5. **Human Approval Mandate**: Admin review and explicit approval are required before any generated action plan or winning variant can be converted into a campaign draft or applied as a historical event.
+6. **Local Deployment Privacy**: The LLM runs via a local **Ollama** instance (`qwen3:8b`). Zero customer data or telemetry is transmitted to external cloud APIs.
+7. **Deterministic Fallback**: If the local LLM service is offline or unconfigured, times out, or returns incomplete JSON, system modules fall back gracefully to rule-based blueprint logic without crashing the application.
+8. **Structured Output Oversight**: Local LLMs (such as Qwen3:8B) do not guarantee valid JSON formatting or complete variant counts. Therefore, OSMOS enforces mandatory JSON repair, schema parsing, field normalization, deterministic fallback completion, and human oversight.
 
 ---
 
@@ -60,10 +61,12 @@ The **LLM Journey Planner** (`journey/llm_journey_planner.py`) enables administr
 
 The **A/B Test Variant Generator** (`ab_testing/ab_test_variant_generator.py`) enables administrators to generate marketing campaign variants to answer specific business questions.
 
-### Governance Rules:
-- **Button-Triggered Execution**: Triggered solely when an administrator clicks "🤖 Generate A/B Variants with LLM".
-- **Zero Direct Database Write**: The LLM returns structured candidate variant JSON only; zero DB writes occur during generation.
-- **Deterministic 14-Rule Validator**: Candidate variants are validated by `validate_ab_variants()` (max discount 30%, low CLV protection, frustrated client service recovery option mandate, no PII, no real dispatch claims).
-- **Digital Twin Simulation**: Validated variants are simulated deterministically by the Digital Twin Response Simulator (`digital_twin_response_simulator.py`) to compute predicted open, click, conversion, complaint probabilities, churn reduction, CLV lift, and composite response score ($0-100$).
+### Blueprint-Guided LLM Synthesis Architecture:
+- **Button-Triggered Execution**: Triggered solely when an administrator clicks "Generate A/B Variants with LLM".
+- **Deterministic Blueprints First**: OSMOS constructs deterministic skeletons with pre-assigned variant count (`2` or `3`), labels (`A`, `B`, `C`), offer types (`service_recovery`, `discount`, `vip_perk`), incentive values, and channels.
+- **Copywriting Enrichment Only**: The LLM prompt passes the pre-configured blueprints and instructs the LLM strictly to refine variant titles, message text, CTAs, and tones.
+- **Variant Merging**: Successfully generated LLM text is merged into matching blueprint variants; any missing or malformed variant text is filled deterministically.
+- **Zero Direct Database Write**: Zero DB writes occur during generation.
+- **Deterministic Validator**: Candidate variants are validated by `validate_ab_variants()` (max discount 30%, low CLV protection, frustrated client service recovery option mandate, no PII).
+- **Digital Twin Simulation**: Validated variants are simulated deterministically by the Digital Twin Response Simulator (`ab_test_evaluator.py`) to compute predicted open, click, conversion, complaint probabilities, churn reduction, CLV lift, and composite response score ($0-100$).
 - **Human Approval & Campaign Conversion**: Converting winning variants into simulated campaign drafts or applying response events requires explicit administrator button confirmation.
-

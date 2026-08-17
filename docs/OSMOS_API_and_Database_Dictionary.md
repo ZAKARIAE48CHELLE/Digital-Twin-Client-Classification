@@ -1,6 +1,6 @@
 # OSMOS API & Database Schema Data Dictionary
 
-This document provides a detailed data dictionary for all 16 PostgreSQL relational tables maintained within **OSMOS**.
+This document provides a detailed data dictionary for all 20 PostgreSQL relational tables maintained within **OSMOS**.
 
 ---
 
@@ -24,6 +24,10 @@ erDiagram
     entities ||--o{ agent_approval_queue : approves
     entities ||--o{ audit_logs : audits
     model_registry ||--o{ classification_predictions : registers
+    entities ||--o{ ab_test_experiments : tests
+    ab_test_experiments ||--o{ ab_test_variants : contains
+    ab_test_experiments ||--o{ ab_test_simulated_responses : measures
+    ab_test_experiments ||--o{ ab_test_recommendations : recommends
 ```
 
 ---
@@ -41,7 +45,7 @@ Primary master table storing client and prospect identity records.
 
 ### 2. `customer_profiles`
 Demographic profile table containing customer demographic data (PII).
-- `entity_id` (VARCHAR(50), FK $\rightarrow$ `entities.entity_id`): Foreign key link.
+- `entity_id` (VARCHAR(50), FK -> `entities.entity_id`): Foreign key link.
 - `age`, `sex`, `email`, `phone_number`, `company_name`, `job_title`, `city`, `address`: Contact attributes.
 
 ### 3. `digital_twin_snapshots`
@@ -55,7 +59,7 @@ Real-time state snapshot table storing 30-day/90-day aggregated metrics.
 ### 4. `event_history`
 Complete operational event log recording interaction and purchase transactions.
 - `event_id` (VARCHAR(50), Primary Key): Unique event identifier.
-- `entity_id` (VARCHAR(50), FK $\rightarrow$ `entities.entity_id`): Entity link.
+- `entity_id` (VARCHAR(50), FK -> `entities.entity_id`): Entity link.
 - `event_type` (VARCHAR(100)): Event type (`purchase`, `page_visit`, `complaint`, `email_open`, etc.).
 - `event_date` (TIMESTAMP WITH TIME ZONE): Transaction timestamp.
 - `old_class`, `new_class`, `class_changed`: Lifecycle cohort state change flags.
@@ -63,8 +67,8 @@ Complete operational event log recording interaction and purchase transactions.
 
 ### 5. `rfm_es_scores`
 Versioned historical table tracking RFM-ES calculation results over time.
-- `entity_id` (VARCHAR(50), FK $\rightarrow$ `entities.entity_id`): Entity link.
-- `event_id` (VARCHAR(50), FK $\rightarrow$ `event_history.event_id`): Triggering event link.
+- `entity_id` (VARCHAR(50), FK -> `entities.entity_id`): Entity link.
+- `event_id` (VARCHAR(50), FK -> `event_history.event_id`): Triggering event link.
 - `R_raw`, `F_raw`, `M_raw`, `E_raw`, `S_raw`: Raw unscaled dimension values.
 - `rfm_score_raw_1_to_5`: Scale 1 to 5 score representation.
 - `rfm_score`: Min-max normalized composite score ($0.0 - 1.0$).
@@ -104,14 +108,14 @@ Catalog table defining official stable personas and business action blueprints.
 Digital Twin lifecycle simulation scenario headers and step-by-step stage transition logs.
 - `scenario_id`, `scenario_name`, `status`: Scenario execution headers.
 - `step_id`, `step_order`, `stage_name`: Stage ordering attributes.
-- `trigger_event_id` (FK $\rightarrow$ `event_history.event_id`): Triggering event reference.
+- `trigger_event_id` (FK -> `event_history.event_id`): Triggering event reference.
 - `before_dynamic_class`, `after_dynamic_class`, `before_clv_amount`, `after_clv_amount`: Stage state delta metrics.
 
 ### 11. `campaign_dispatches` & `campaign_responses`
 Closed-loop marketing campaign dispatch headers and customer behavioral responses.
 - `campaign_id`, `campaign_type`, `campaign_channel`, `status`: Campaign dispatch attributes.
 - `response_type` (`Opened`, `Clicked`, `Purchased`, `Complained`, `Unsubscribed`): Behavioral response type.
-- `response_event_id` (FK $\rightarrow$ `event_history.event_id`): Linked event history row.
+- `response_event_id` (FK -> `event_history.event_id`): Linked event history row.
 
 ### 12. `agent_runs`, `agent_outputs`, `agent_approval_queue`
 Multi-agent supervision execution logs, individual agent reports, and human approval queue items.
@@ -129,10 +133,62 @@ System operational audit trails and trained machine learning model metadata regi
 - `action_type`, `details` (JSONB): Audit trail log.
 - `model_type`, `model_name`, `artifact_path`, `metrics` (JSONB): Trained model lineage tracking.
 
-### 15. `ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`
-A/B testing experiment definitions, campaign variant parameters, Digital Twin simulated response metrics, and decision recommendations.
-- `experiment_id`, `admin_question`, `objective`, `status`, `llm_generated`: Experiment headers.
-- `variant_id`, `variant_label` ('A', 'B', 'C'), `message_text`, `offer_type`, `incentive_value`, `channel`, `tone`: Variant definitions.
-- `predicted_open_probability`, `predicted_click_probability`, `predicted_conversion_probability`, `predicted_complaint_probability`, `predicted_churn_delta`, `predicted_clv_delta`, `response_score`: Digital Twin simulated response metrics.
-- `winning_variant_id`, `confidence_score`, `recommendation_summary`, `decision_reason`, `risk_notes`: Academic decision recommendations.
+### 15. `ab_test_experiments`
+Stores experiment metadata, target entity, business question, objective, channel, variant count, status, and creation timestamps.
+- `experiment_id` (SERIAL, Primary Key): Unique experiment identifier.
+- `entity_id` (VARCHAR(50), FK -> `entities.entity_id`): Target customer/prospect entity ID.
+- `experiment_name` (VARCHAR(255)): Descriptive experiment title.
+- `admin_question` (TEXT): Business hypothesis or question posed by the administrator.
+- `objective` (VARCHAR(50)): Strategic objective (`retention`, `conversion`, `upsell`, `reactivation`, `complaint_recovery`, `engagement`).
+- `target_segment` (VARCHAR(100)): Target customer segment at time of test formulation.
+- `target_persona` (VARCHAR(100)): Target customer persona at time of test formulation.
+- `status` (VARCHAR(50)): Experiment state (`Simulated`, `Converted to Draft`, `Event Applied`).
+- `llm_generated` (BOOLEAN): Flag indicating whether variant copy was synthesized via local LLM.
+- `created_at` (TIMESTAMP WITH TIME ZONE): Experiment setup timestamp.
 
+### 16. `ab_test_variants`
+Stores variant definitions including variant label, title, message text, offer type, incentive value, tone, channel, call to action, and deterministic validation status.
+- `variant_id` (SERIAL, Primary Key): Unique variant record identifier.
+- `experiment_id` (INTEGER, FK -> `ab_test_experiments.experiment_id`): Parent experiment link.
+- `variant_label` (VARCHAR(10)): Variant label (`A`, `B`, or `C`).
+- `variant_title` (VARCHAR(255)): Short title for the variant.
+- `message_text` (TEXT): Customer-facing copy text.
+- `offer_type` (VARCHAR(50)): Offer classification (`none`, `service_recovery`, `discount`, `goodwill_credit`, `reactivation`, `vip_perk`, `hybrid`).
+- `incentive_value` (NUMERIC(10,2)): Numerical financial incentive value (e.g. percentage or fixed credit).
+- `channel` (VARCHAR(50)): Communication channel (`email`, `sms`, `phone`, `web_notification`, `simulated_only`).
+- `tone` (VARCHAR(50)): Strategic tone (`empathetic`, `commercial`, `informational`, `exclusive`, `reassuring`).
+- `call_to_action` (VARCHAR(100)): Action button/link text.
+- `expected_behavior` (TEXT): Hypothesized behavioral reaction.
+- `is_valid` (BOOLEAN): Result of deterministic rule validation check.
+- `validation_warnings` (JSONB): Array of rule validation warnings or notes.
+- `created_at` (TIMESTAMP WITH TIME ZONE): Creation timestamp.
+
+### 17. `ab_test_simulated_responses`
+Stores simulated Digital Twin behavioral response metrics and composite scores for each variant.
+- `response_id` (SERIAL, Primary Key): Unique response record identifier.
+- `experiment_id` (INTEGER, FK -> `ab_test_experiments.experiment_id`): Parent experiment link.
+- `variant_id` (INTEGER, FK -> `ab_test_variants.variant_id`): Linked variant identifier.
+- `variant_label` (VARCHAR(10)): Variant label (`A`, `B`, or `C`).
+- `simulated_response_type` (VARCHAR(50)): Modeled outcome (`Opened`, `Clicked`, `Converted`, `Complained`, `Ignored`).
+- `predicted_open_probability` (NUMERIC(5,4)): Estimated open probability ($0.0 - 1.0$).
+- `predicted_click_probability` (NUMERIC(5,4)): Estimated click probability ($0.0 - 1.0$).
+- `predicted_conversion_probability` (NUMERIC(5,4)): Estimated conversion probability ($0.0 - 1.0$).
+- `predicted_complaint_probability` (NUMERIC(5,4)): Estimated complaint probability ($0.0 - 1.0$).
+- `predicted_churn_delta` (NUMERIC(5,4)): Estimated churn risk score change.
+- `predicted_clv_delta` (NUMERIC(12,2)): Estimated monetary CLV lift in MAD.
+- `predicted_rfm_delta` (NUMERIC(5,4)): Estimated RFM composite score change.
+- `predicted_satisfaction_delta` (NUMERIC(5,4)): Estimated satisfaction rating change.
+- `response_score` (NUMERIC(5,2)): Composite evaluation score ($0 - 100$).
+- `created_at` (TIMESTAMP WITH TIME ZONE): Simulation timestamp.
+
+### 18. `ab_test_recommendations`
+Stores executive decision recommendations, winning variant selection, confidence scores, decision reasons, and risk notes.
+- `recommendation_id` (SERIAL, Primary Key): Unique recommendation record identifier.
+- `experiment_id` (INTEGER, FK -> `ab_test_experiments.experiment_id`): Parent experiment link.
+- `winning_variant_id` (INTEGER, FK -> `ab_test_variants.variant_id`): Winning variant identifier.
+- `winning_variant_label` (VARCHAR(10)): Label of recommended variant (`A`, `B`, or `C`).
+- `confidence_score` (NUMERIC(5,4)): Algorithmic confidence probability ($0.0 - 1.0$).
+- `recommendation_summary` (TEXT): Executive summary of the winning strategy.
+- `decision_reason` (TEXT): Analytical justification explaining why this variant won.
+- `risk_notes` (TEXT): Risk assessment notes and operational caveats.
+- `created_at` (TIMESTAMP WITH TIME ZONE): Recommendation timestamp.

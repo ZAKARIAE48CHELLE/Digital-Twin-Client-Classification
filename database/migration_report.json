@@ -1,14 +1,14 @@
 {
-  "dry_run": false,
+  "dry_run": true,
   "counts": {
-    "entities": 1508,
-    "profiles": 2,
-    "snapshots": 1508,
-    "rfm_scores": 1508,
-    "classifications": 1508,
-    "clvs": 8,
-    "segments": 1508,
-    "events": 35,
+    "entities": 1509,
+    "profiles": 4,
+    "snapshots": 1509,
+    "rfm_scores": 1509,
+    "classifications": 1509,
+    "clvs": 13,
+    "segments": 0,
+    "events": 0,
     "models": 2
   },
   "skipped_rows": 0,

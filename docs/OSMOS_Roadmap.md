@@ -12,7 +12,8 @@ timeline
     Phase 1 to 4 : Database & History : PostgreSQL Foundation : Storage Abstraction : Database Intelligence : Historical Intelligence
     Phase 5 to 7.5 : Modeling & Simulation : Local LLM Action Intelligence : Digital Twin & Personas : Campaign Simulation : Journey Tree Simulator
     Phase 8.1 to 8.7 : Multi-Agent & RAG : Multi-Agent Core : Operational Supervision : Human Approval Queue : Domain Debate Mode : Knowledge Memory : Executive Reports : LLM Journey Planner & LangGraph
-    Phase 9 : Future Horizon : Production Hardening : Cloud Multi-Tenancy : Real-Time Streaming
+    Phase 8.8 : A/B Simulator & Blueprints : Blueprint Architecture : LLM Copywriting Layer : Field State Synchronization : Digital Twin Response Simulator
+    Phase 9 : Future Horizon : Production Hardening : Real Measured A/B Uplift : Causal Inference : Real-Time Streaming
 ```
 
 ---
@@ -36,7 +37,7 @@ timeline
 - Added table-level historical intelligence inspection.
 
 ### Phase 5 — Local LLM-Assisted Action Intelligence
-- Integrated local Ollama (Qwen) LLM client for button-triggered marketing action generation.
+- Integrated local Ollama (Qwen3:8B) LLM client for button-triggered marketing action generation.
 - Implemented `ActionRecommendationsRepository` and bilingual output formatting (English / French).
 
 ### Phase 6 — Digital Twin & Persona Modeling
@@ -83,16 +84,22 @@ timeline
 - Added real-time database concurrency stress testing and connection pool monitoring.
 
 ### Phase 8.8 — A/B Test & Digital Twin Response Simulator
-- Developed the `ab_testing/` module allowing administrators to formulate A/B testing questions and generate campaign variants manually or via button-triggered local LLMs.
-- Implemented deterministic 14-rule variant validator, Digital Twin behavioral response simulator, multi-variant score ranking ($0-100$), and academic decision recommendation synthesis.
-- Added human governance controls: saving experiment records in PostgreSQL (`ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`), converting winning variants to simulated campaign drafts, and applying simulated response events.
+- Implemented `ab_testing/` module allowing administrators to formulate A/B hypotheses, define variants (A/B or A/B/C), and execute Digital Twin behavioral simulations.
+- Architected deterministic variant blueprints (`build_variant_blueprints`), ensuring OSMOS controls experiment structure while the LLM acts as copywriting assistant.
+- Implemented graceful variant merging (`llm_partial_merged`) and robust fallback handling for timeouts, empty text, invalid JSON, or partial variant counts.
+- Implemented Streamlit widget session_state synchronization (`sync_variants_to_widget_state`) and live input collection (`collect_variants_from_widget_state`).
+- Created 4 PostgreSQL storage tables (`ab_test_experiments`, `ab_test_variants`, `ab_test_simulated_responses`, `ab_test_recommendations`).
+- Implemented human-supervised approval actions for campaign draft conversion and event history application.
 
 ---
 
 ## Future Horizon
 
-### Phase 9 — Production Hardening & Deployment Readiness
-- **Production Containerization**: Multi-stage Docker packaging for Streamlit frontend, LangGraph supervisor, and PostgreSQL 18 cluster.
-- **Role-Based Access Control (RBAC)**: Fine-grained permissions for marketing managers, data scientists, and system administrators.
-- **Kafka / Event Streaming Integration**: Real-time event ingestion pipeline replacing batch polling.
-- **Automated CI/CD**: End-to-end integration testing and database migration verification pipeline.
+### Phase 9 — Production Hardening & Advanced Simulation Enhancements
+- **Real Measured A/B Testing**: Ingestion of real online randomized experiment telemetry to benchmark predictive Digital Twin simulations against observed customer responses.
+- **Causal Uplift Modeling**: Integration of causal inference estimators (T-Learner / X-Learner) to quantify true incremental treatment effects (ITE) per customer segment.
+- **Native Constrained Decoding**: Integration of schema-guided constrained decoding frameworks (such as Outlines or Guidance) for local LLM inference engines.
+- **Advanced Response Simulation Models**: Deep neural behavioral state transition estimators for fine-grained multi-touch response modeling.
+- **Campaign Platform Dispatch Integration**: Direct API connectors to enterprise CRM dispatch engines (Salesforce Marketing Cloud, Braze, HubSpot) following human approval.
+- **Automated PDF/HTML A/B Experiment Reports**: Automated executive decision reports summarizing A/B test results, confidence metrics, and financial projections.
+- **Role-Based Access Control (RBAC)**: Fine-grained permissions for marketing managers, data scientists, and administrative approvers.

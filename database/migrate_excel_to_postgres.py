@@ -230,13 +230,19 @@ def main():
         
     logger.info(f"Reading Excel sheets from {args.excel_path}...")
     try:
-        dt_df = pd.read_excel(args.excel_path, sheet_name="Digital_Twins")
-        hist_df = pd.read_excel(args.excel_path, sheet_name="Event_History")
+        xl = pd.ExcelFile(args.excel_path)
+        sheet_names = xl.sheet_names
+        dt_sheet = "Digital_Twins" if "Digital_Twins" in sheet_names else sheet_names[0]
+        dt_df = pd.read_excel(args.excel_path, sheet_name=dt_sheet)
+        if "Event_History" in sheet_names:
+            hist_df = pd.read_excel(args.excel_path, sheet_name="Event_History")
+        else:
+            hist_df = pd.DataFrame()
     except Exception as e:
         logger.error(f"Failed to read Excel file sheets: {e}")
         sys.exit(1)
         
-    logger.info(f"Found {len(dt_df)} records in Digital_Twins sheet.")
+    logger.info(f"Found {len(dt_df)} records in {dt_sheet} sheet.")
     logger.info(f"Found {len(hist_df)} records in Event_History sheet.")
     
     # --------------------------------------------------------

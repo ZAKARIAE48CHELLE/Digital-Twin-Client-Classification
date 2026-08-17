@@ -4,53 +4,64 @@ This document provides a step-by-step presentation protocol for showcasing **OSM
 
 ---
 
-## Important Presentation Warning
+## Presentation Warning
 
 > [!CAUTION]  
 > **Demo Readiness Requirement**: Do **not** use demo entity `P_DEMO_001` in an executive presentation before verifying that its **Demo Entity Readiness Status** is **Ready for presentation** or **Partially ready** (with clear explanatory context). Uninitialized demo entities with 0 logged events will trigger operational readiness warnings during multi-agent supervision.
 
 ---
 
-## End-to-End Executive Demonstration Protocol
+## 1. End-to-End Multi-Agent Supervision Protocol
 
-Follow this 16-step protocol for an optimal demonstration:
-
-```mermaid
-flowchart TD
-    S1[1. Start Platform App] --> S2[2. Open Journey Simulator]
-    S2 --> S3[3. Prepare Full Demo Entity]
-    S3 --> S4[4. Generate LLM Journey Plan]
-    S4 --> S5[5. Validate & Approve LLM Plan]
-    S5 --> S6[6. Apply Deterministic Journey Plan]
-    S6 --> S7[7. Verify Demo Entity Readiness]
-    S7 --> S8[8. Open Agent Supervision Center]
-    S8 --> S9[9. Select LangGraph Workflow Engine]
-    S9 --> S10[10. Enable Knowledge Memory]
-    S10 --> S11[11. Enable Domain Debate Mode]
-    S11 --> S12[12. Execute Multi-Agent Analysis]
-    S12 --> S13[13. Review Conflicts & Consensus]
-    S13 --> S14[14. Submit Actions to Approval Queue]
-    S14 --> S15[15. Open Campaign Simulation for Service Recovery]
-    S15 --> S16[16. Export Executive Report]
-```
-
-### Detailed Walkthrough Instructions:
+Follow this 10-step protocol for showcasing multi-agent supervision and decision synthesis:
 
 1. **Start Platform Application**: Launch Streamlit interface (`streamlit run app.py`). Verify active storage backend status (PostgreSQL active).
 2. **Open Journey Simulator Page**: Navigate to the **Digital Twin Journey Tree Simulator** page in the left navigation panel.
-3. **Prepare Full Demo Entity**: Click **"🚀 Prepare Full Demo Entity (P_DEMO_001)"** to seed full 5-stage lifecycle history records.
-4. **Generate LLM Journey Plan (Optional)**: Click **"🤖 Generate LLM Scenario Plan"** to demonstrate local AI scenario planning.
-5. **Validate & Approve LLM Plan**: Observe the deterministic validator score card (`Quality: Excellent, Score: 100/100`). Click **"✅ Approve & Save Journey Plan"**.
-6. **Apply Journey Plan**: Click **"⚡ Apply Scenario to P_DEMO_001"** to execute deterministic stage progression and write PostgreSQL records.
-7. **Check Demo Entity Readiness**: Verify the readiness banner displays `Ready for presentation (Readiness Score: 100/100)`.
-8. **Open Agent Supervision Center**: Navigate to **Agent Supervision Center** in the navigation sidebar.
-9. **Select LangGraph Workflow Engine**: In the workflow settings, select **LangGraph Stateful Graph Workflow** as the orchestration engine.
-10. **Enable Knowledge Memory**: Check **"Include Knowledge Base & Memory"** to activate RAG context retrieval.
-11. **Enable Domain Debate Mode**: Check **"Enable Agent Collaboration & Debate Mode"**.
-12. **Run Multi-Agent Analysis**: Select entity `P_DEMO_001` and click **"Run Multi-Agent Analysis"**.
-13. **Review Conflicts & Consensus**: Examine the cross-agent statement comparison, domain-aware conflict detector findings, and synthesized consensus status (`Partial Consensus` or `Strong Consensus`).
-14. **Create Approval Items**: Scroll to the **Human Approval Queue** action generator and click **"Submit Action to Approval Queue"**.
-15. **Open Campaign Simulation**: Navigate to **Campaign Simulation**, select the generated service recovery draft, and execute a simulated dispatch.
-16. **A/B Test & Response Simulation**: Navigate to **A/B Test Simulator**, formulate a question (*"Should we use a discount or a service recovery apology?"*), click **"🤖 Generate A/B Variants with LLM"**, run **"🔬 Run Digital Twin Response Simulation"**, and convert the winning variant to a campaign draft.
-17. **Generate Executive Report**: Navigate to **Executive Report Generator**, select `P_DEMO_001`, and click **"Generate Report"**. Export as HTML or PDF.
+3. **Prepare Full Demo Entity**: Click **"Prepare Full Demo Entity (P_DEMO_001)"** to seed full 5-stage lifecycle history records.
+4. **Generate LLM Journey Plan**: Click **"Generate LLM Scenario Plan"** to demonstrate local AI scenario planning.
+5. **Validate & Approve LLM Plan**: Observe the deterministic validator score card (`Quality: Excellent, Score: 100/100`). Click **"Approve & Save Journey Plan"**.
+6. **Apply Journey Plan**: Click **"Apply Scenario to P_DEMO_001"** to execute deterministic stage progression and write PostgreSQL records.
+7. **Open Agent Supervision Center**: Navigate to **Agent Supervision Center** in the navigation sidebar.
+8. **Select LangGraph Workflow Engine**: In the workflow settings, select **LangGraph Stateful Graph Workflow** as the orchestration engine.
+9. **Enable Domain Debate Mode & Memory**: Check **"Include Knowledge Base & Memory"** and **"Enable Agent Collaboration & Debate Mode"**.
+10. **Run Multi-Agent Analysis**: Select entity `P_DEMO_001` and click **"Run Multi-Agent Analysis"**. Review cross-agent statement comparison, conflict detector findings, and synthesized consensus.
 
+---
+
+## 2. A/B Test & Digital Twin Response Simulator Protocol
+
+Follow this 14-step protocol to demonstrate hypothesis formulation, LLM copywriting assistance, variant blueprint merging, Digital Twin behavioral simulation, and human governance:
+
+```mermaid
+flowchart TD
+    D1[1. Open A/B Simulator] --> D2[2. Select Entity P_DEMO_001]
+    D2 --> D3[3. Confirm Digital Twin State]
+    D3 --> D4[4. Formulate Business Question]
+    D4 --> D5[5. Select Objective: retention]
+    D5 --> D6[6. Select Channel: email]
+    D6 --> D7[7. Select Variant Count: A/B/C]
+    D7 --> D8[8. Click Generate Variants with LLM]
+    D8 --> D9[9. Verify Synchronized Input Fields]
+    D9 --> D10[10. Edit Visible Fields if Desired]
+    D10 --> D11[11. Click Run Digital Twin Simulation]
+    D11 --> D12[12. Review Winner, Confidence & Deltas]
+    D12 --> D13[13. Convert Winner to Campaign Draft]
+    D13 --> D14[14. Apply Response as Historical Event]
+```
+
+### Detailed Demonstration Steps:
+
+1. **Open A/B Test Simulator**: Navigate to the **A/B Test Simulator** page in the Streamlit navigation panel.
+2. **Select Target Entity**: Choose customer entity `P_DEMO_001` from the entity dropdown selector.
+3. **Confirm Digital Twin State**: Review the overview card confirming segment (`Complaint-Driven Risk Clients`) and persona (`Frustrated Client`).
+4. **Formulate Business Question**: Enter or select the administrative question: *"Should we use a discount or a service recovery apology?"*
+5. **Select Strategic Objective**: Choose `retention` as the strategic goal.
+6. **Select Channel**: Select `email` as the target delivery medium.
+7. **Select Variant Count**: Toggle **"Number of Variants"** to `A/B/C (3 Variants)`.
+8. **Generate Campaign Variants**: Click **"Generate A/B Variants with LLM"**. Note the local LLM synthesis or blueprint fallback execution.
+9. **Verify Field Synchronization**: Observe that all input fields for Variant A, Variant B, and Variant C (Title, Message Text, Offer Type, Incentive Value, Tone, CTA) are fully populated in the UI.
+10. **Edit Visible Fields**: Modify any text string or selectbox value directly in the visible input widgets to demonstrate administrator control.
+11. **Run Response Simulation**: Click **"Run Digital Twin Response Simulation"**.
+12. **Review Simulation Outcome**: Inspect the winning variant banner (e.g. Variant A - Service Recovery), confidence score (e.g. 92%), metric deltas (open %, click %, churn reduction, CLV lift), and analytical decision reason.
+13. **Convert Winner to Draft**: Click **"Convert Winner to Campaign Draft"** after administrative review.
+14. **Apply Event**: Click **"Apply Response as Event (Admin Approved)"** to log the simulated customer response into the historical event ledger upon explicit approval.
