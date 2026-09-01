@@ -138,3 +138,106 @@ def button_class(kind="primary"):
     allowed = {"primary", "secondary", "danger", "success", "ghost"}
     normalized = str(kind).lower()
     return f"osmos-btn osmos-btn-{normalized if normalized in allowed else 'primary'}"
+
+
+def render_mermaid_diagram(code: str, height: int = 320):
+    """Renders a Mermaid JS diagram inside Streamlit components."""
+    import streamlit.components.v1 as components
+
+    code_clean = code.strip()
+    html_code = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {{
+            background-color: transparent;
+            color: #e2e8f0;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }}
+        .mermaid {{
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }}
+    </style>
+</head>
+<body>
+    <div class="mermaid">
+{code_clean}
+    </div>
+    <script>
+        mermaid.initialize({{
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose',
+            themeVariables: {{
+                darkMode: true,
+                background: '#0f172a',
+                primaryColor: '#3b82f6',
+                primaryTextColor: '#f8fafc',
+                primaryBorderColor: '#60a5fa',
+                lineColor: '#94a3b8',
+                secondaryColor: '#10b981',
+                tertiaryColor: '#f59e0b'
+            }}
+        }});
+    </script>
+</body>
+</html>"""
+    components.html(html_code, height=height, scrolling=True)
+
+
+def render_rich_markdown_with_diagrams(content_text: str):
+    """Parses markdown text and converts any ```mermaid or diagram blocks into graphical Mermaid diagrams."""
+    import re
+    import streamlit as st
+
+    if not content_text:
+        return
+
+    mermaid_pattern = re.compile(
+        r"```(?:mermaid|text)?\s*\n((?:flowchart|graph|sequenceDiagram|gantt|classDiagram|stateDiagram|erDiagram|pie|journey|gitGraph)[\s\S]*?)\n```",
+        re.IGNORECASE,
+    )
+
+    last_idx = 0
+    matches = list(mermaid_pattern.finditer(content_text))
+
+    if not matches:
+        st.markdown(content_text)
+        return
+
+    for match in matches:
+        start, end = match.span()
+
+        pre_text = content_text[last_idx:start].strip()
+        if pre_text:
+            st.markdown(pre_text)
+
+        diagram_code = match.group(1).strip()
+        num_lines = len(diagram_code.split("\n"))
+        calc_height = max(220, min(650, num_lines * 35 + 80))
+
+        try:
+            render_mermaid_diagram(diagram_code, height=calc_height)
+        except Exception:
+            st.code(diagram_code, language="mermaid")
+
+        last_idx = end
+
+    post_text = content_text[last_idx:].strip()
+    if post_text:
+        st.markdown(post_text)

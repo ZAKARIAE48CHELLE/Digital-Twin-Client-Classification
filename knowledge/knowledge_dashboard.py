@@ -89,7 +89,8 @@ def render_knowledge_dashboard(df: Optional[pd.DataFrame] = None, history_df: Op
                         with st.expander(f"📖 {c.get('doc_title', c.get('source_name', 'Doc'))} — {c.get('chunk_title')}", expanded=True):
                             st.markdown(f"**Source Document:** `{c.get('source_name')}` | **Section:** `{c.get('section_name')}`")
                             st.markdown("---")
-                            st.markdown(c.get("chunk_text", ""))
+                            from ui.components import render_rich_markdown_with_diagrams
+                            render_rich_markdown_with_diagrams(c.get('chunk_text', ''))
                             keywords = c.get("keywords")
                             if keywords:
                                 st.caption(f"Keywords: {', '.join(keywords[:8])}")
