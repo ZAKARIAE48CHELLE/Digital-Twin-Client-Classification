@@ -283,7 +283,11 @@ def run_full_journey(scenario_id, use_llm=False):
     for _ in range(5):
         step = run_next_journey_step(scenario_id)
         if not step or not step.get("step_id"):
-            logger.error("Run Full Journey stopped due to a failed or missing journey step.")
+            existing = get_journey_steps(scenario_id)
+            if len(existing) >= len(DEFAULT_STAGES):
+                logger.info(f"Journey scenario #{scenario_id} is already complete ({len(existing)} stages).")
+            else:
+                logger.error("Run Full Journey stopped due to a failed or missing journey step.")
             break
         if use_llm:
             generate_llm_journey_explanation(step)
@@ -468,3 +472,4 @@ Respond ONLY with valid JSON matching these keys:
         logger.warning(f"Optional LLM journey explanation failed: {e}")
         
     return step_dict
+

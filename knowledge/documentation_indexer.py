@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from knowledge.knowledge_repository import (
     save_knowledge_document,
     save_knowledge_chunk,
+    save_knowledge_document_and_chunks,
     clear_knowledge_index,
     get_knowledge_index_stats,
 )
@@ -196,7 +197,7 @@ def index_system_governance_rules() -> Dict[str, Any]:
     sections = split_markdown_into_sections(rules_text)
     chunks = create_chunks_from_sections(sections)
 
-    doc_id = save_knowledge_document({
+    doc_id = save_knowledge_document_and_chunks({
         "source_type": "system_rule",
         "source_name": "OSMOS_Governance_Rules",
         "title": "OSMOS System Governance Rules",
@@ -204,12 +205,7 @@ def index_system_governance_rules() -> Dict[str, Any]:
         "section_name": "Governance",
         "section_order": 1,
         "metadata": {"rule_type": "system_governance"},
-    })
-
-    if doc_id:
-        for chk in chunks:
-            chk["document_id"] = doc_id
-            save_knowledge_chunk(chk)
+    }, chunks)
 
     return {"status": "indexed", "document_title": "OSMOS System Governance Rules", "chunks": len(chunks)}
 
@@ -236,7 +232,7 @@ def index_documentation_folder(docs_path: str = "docs/") -> Dict[str, Any]:
             fpath = os.path.join(docs_path, fname)
             parsed = parse_markdown_file(fpath)
             if parsed:
-                doc_id = save_knowledge_document({
+                doc_id = save_knowledge_document_and_chunks({
                     "source_type": "documentation",
                     "source_name": parsed["source_name"],
                     "title": parsed["title"],
@@ -244,13 +240,9 @@ def index_documentation_folder(docs_path: str = "docs/") -> Dict[str, Any]:
                     "section_name": "Overview",
                     "section_order": 1,
                     "metadata": {"file_path": fpath},
-                })
+                }, parsed["chunks"])
 
                 if doc_id:
-                    for chk in parsed["chunks"]:
-                        chk["document_id"] = doc_id
-                        save_knowledge_chunk(chk)
-
                     indexed_count += 1
                     total_chunks += len(parsed["chunks"])
 

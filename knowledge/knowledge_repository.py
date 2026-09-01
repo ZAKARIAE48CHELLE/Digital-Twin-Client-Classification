@@ -258,3 +258,67 @@ def get_knowledge_index_stats() -> Dict[str, Any]:
         "chunk_count": len(_in_memory_chunks),
         "last_indexed": "Unknown",
     }
+
+def save_knowledge_document_and_chunks(doc_dict: Dict[str, Any], chunks: List[Dict[str, Any]]) -> Optional[int]:
+    """Saves a document and all its chunks in a single atomic database transaction."""
+    if not is_knowledge_db_available():
+        doc_id = len(_in_memory_docs) + 1
+        doc_dict["document_id"] = doc_id
+        _in_memory_docs.append(doc_dict)
+        for chk in chunks:
+            chk["chunk_id"] = len(_in_memory_chunks) + 1
+            chk["document_id"] = doc_id
+            _in_memory_chunks.append(chk)
+        return doc_id
+
+    try:
+        from database.db import get_cursor
+        meta_json = psycopg2.extras.Json(doc_dict.get("metadata", {}))
+        with get_cursor(commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO knowledge_documents (
+                    source_type, source_name, title, content, section_name, section_order, metadata
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING document_id;
+                """,
+                (
+                    doc_dict.get("source_type", "documentation"),
+                    doc_dict.get("source_name", "docs"),
+                    doc_dict.get("title", "Untitled Document"),
+                    doc_dict.get("content", ""),
+                    doc_dict.get("section_name", "General"),
+                    doc_dict.get("section_order", 1),
+                    meta_json,
+                ),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            doc_id = row["document_id"] if isinstance(row, dict) else row[0]
+
+            for chk in chunks:
+                chk_meta = psycopg2.extras.Json(chk.get("metadata", {}))
+                keywords = chk.get("keywords", [])
+                cur.execute(
+                    """
+                    INSERT INTO knowledge_chunks (
+                        document_id, chunk_order, chunk_title, chunk_text, keywords, metadata
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s);
+                    """,
+                    (
+                        doc_id,
+                        chk.get("chunk_order", 1),
+                        chk.get("chunk_title", "Chunk"),
+                        chk.get("chunk_text", ""),
+                        keywords,
+                        chk_meta,
+                    ),
+                )
+            return doc_id
+    except Exception as e:
+        logger.error(f"Failed to save document and chunks: {e}", exc_info=True)
+
+    return None

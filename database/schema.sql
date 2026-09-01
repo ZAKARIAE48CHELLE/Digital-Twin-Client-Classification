@@ -571,6 +571,33 @@ CREATE TABLE IF NOT EXISTS ab_test_recommendations (
 CREATE INDEX IF NOT EXISTS idx_ab_rec_exp_id ON ab_test_recommendations(experiment_id);
 CREATE INDEX IF NOT EXISTS idx_ab_rec_win_var_id ON ab_test_recommendations(winning_variant_id);
 
+-- AA. Knowledge Documents & Chunks (Phase 8.5)
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+    document_id SERIAL PRIMARY KEY,
+    source_type TEXT DEFAULT 'documentation',
+    source_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    section_name TEXT,
+    section_order INTEGER DEFAULT 1,
+    metadata JSONB,
+    indexed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+    chunk_id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES knowledge_documents(document_id) ON DELETE CASCADE,
+    chunk_order INTEGER DEFAULT 1,
+    chunk_title TEXT,
+    chunk_text TEXT NOT NULL,
+    keywords TEXT[],
+    metadata JSONB,
+    indexed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_know_chunks_doc_id ON knowledge_chunks(document_id);
+
+
 
 
 
