@@ -88,7 +88,8 @@ def render_knowledge_dashboard(df: Optional[pd.DataFrame] = None, history_df: Op
                     for c in chunks:
                         with st.expander(f"📖 {c.get('doc_title', c.get('source_name', 'Doc'))} — {c.get('chunk_title')}", expanded=True):
                             st.markdown(f"**Source Document:** `{c.get('source_name')}` | **Section:** `{c.get('section_name')}`")
-                            st.markdown(f"```text\n{c.get('chunk_text')}\n```")
+                            st.markdown("---")
+                            st.markdown(c.get("chunk_text", ""))
                             keywords = c.get("keywords")
                             if keywords:
                                 st.caption(f"Keywords: {', '.join(keywords[:8])}")
